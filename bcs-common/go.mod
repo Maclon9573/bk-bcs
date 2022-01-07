@@ -48,8 +48,12 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.28.0
 	go.opentelemetry.io/otel v1.3.0
 	go.opentelemetry.io/otel/exporters/jaeger v1.3.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.26.0
 	go.opentelemetry.io/otel/exporters/zipkin v1.3.0
+	go.opentelemetry.io/otel/metric v0.26.0
 	go.opentelemetry.io/otel/sdk v1.3.0
+	go.opentelemetry.io/otel/sdk/export/metric v0.26.0
+	go.opentelemetry.io/otel/sdk/metric v0.26.0
 	go.opentelemetry.io/otel/trace v1.3.0
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63
 	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1
