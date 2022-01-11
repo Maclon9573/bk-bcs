@@ -30,6 +30,8 @@ import (
 
 func welcomePage(w http.ResponseWriter, r *http.Request) {
 	_, span := utils.Tracer("demo-http-tracer").Start(r.Context(), "WelcomePage")
+	log.Printf("traceID:%v, spanID:%v",
+		span.SpanContext().TraceID().String(), span.SpanContext().SpanID().String())
 	defer span.End()
 	w.Write([]byte("Welcome to my website!\n"))
 }

@@ -16,6 +16,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -30,6 +31,8 @@ import (
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 )
+
+const tracerName = "demo-http-tracer"
 
 func main() {
 
@@ -66,7 +69,7 @@ func main() {
 	requestLatency := otelmetric.Must(meter).NewFloat64Histogram(
 		"demo_client/request_latency",
 		otelmetric.WithDescription("The latency of requests processed"),
-		)
+	)
 
 	requestCount := otelmetric.Must(meter).
 		NewInt64Counter(
@@ -82,7 +85,7 @@ func main() {
 
 	traceOpts := trace.Options{
 		TracingSwitch: "on",
-		ServiceName: "demo-http-client",
+		ServiceName:   "demo-http-client",
 		ExporterURL:   "http://localhost:14268/api/traces",
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("endpoint", "http_client"),
@@ -94,7 +97,7 @@ func main() {
 	traceOp = append(traceOp, trace.ExporterURL(traceOpts.ExporterURL))
 
 	tp, err := trace.InitTracerProvider(traceOpts.ServiceName, traceOp...)
-	tracer := tp.Tracer("demo-http-tracer")
+	tracer := tp.Tracer(tracerName)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	if err != nil {
 		log.Fatal(err)
@@ -127,7 +130,7 @@ func main() {
 		requestLatency.Record(ctx, latencyMs, commonLabels2...)
 
 		fmt.Printf("Latency: %.3fms\n", latencyMs)
-		time.Sleep(time.Duration(10) * time.Second)
+		time.Sleep(time.Duration(300) * time.Second)
 	}
 }
 
@@ -139,9 +142,12 @@ func makeRequest(ctx context.Context) {
 		Transport: otelhttp.NewTransport(http.DefaultTransport),
 	}
 	req, err := http.NewRequestWithContext(ctx, "GET", "http://localhost:9090/", nil)
+	ctx, span := utils.Tracer(tracerName).Start(ctx, "HTTP DO")
+	log.Printf("traceID:%v, spanID:%v",
+		span.SpanContext().TraceID().String(), span.SpanContext().SpanID().String())
 	resp, err := client.Do(req)
+	span.End()
 
-	// span is closed here
 	defer resp.Body.Close()
 	if err != nil {
 		fmt.Printf("get failed, err:%v\n", err)
