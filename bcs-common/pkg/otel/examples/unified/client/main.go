@@ -16,7 +16,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -24,6 +23,7 @@ import (
 
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/metric"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel"
@@ -32,7 +32,10 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-const tracerName = "demo-http-tracer"
+const (
+	serviceName = "demo-http-client"
+	tracerName  = "demo-http-tracer"
+)
 
 func main() {
 
@@ -85,7 +88,7 @@ func main() {
 
 	traceOpts := trace.Options{
 		TracingSwitch: "on",
-		ServiceName:   "demo-http-client",
+		ServiceName:   serviceName,
 		ExporterURL:   "http://localhost:14268/api/traces",
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("endpoint", "http_client"),
