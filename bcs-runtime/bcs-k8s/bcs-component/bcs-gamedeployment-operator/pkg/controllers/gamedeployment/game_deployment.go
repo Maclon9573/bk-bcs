@@ -14,8 +14,10 @@
 package gamedeployment
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	gdv1alpha1 "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-gamedeployment-operator/pkg/apis/tkex/v1alpha1"
@@ -39,6 +41,7 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/kubernetes/common/expectations"
 
 	v1 "k8s.io/api/core/v1"
+	apiextension "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -66,6 +69,10 @@ var (
 // GameDeploymentController controls gamedeployments, is responsible for synchronizing Gamedeployment objects stored
 // in the system with actual running pods
 type GameDeploymentController struct {
+	// client interface
+	kubeClient clientset.Interface
+	// apiextension client interface
+	apiextensionClient apiextension.Interface
 	// GroupVersionKind indicates the controller type.
 	// Different instances of this struct may handle different GVKs.
 	// For example, this struct can be used (with adapters) to handle GameDeploymentController.
@@ -78,6 +85,10 @@ type GameDeploymentController struct {
 	podLister corelisters.PodLister
 	// podListerSynced returns true if the pod shared informer has synced at least once
 	podListerSynced cache.InformerSynced
+	// nodeLister is able to list/get nodes from a shared informer's store
+	nodeLister corelisters.NodeLister
+	// nodeListerSynced returns true if the node shared informer has synced at least once
+	nodeListerSynced cache.InformerSynced
 	// gdLister is able to list/get  gamedeployments from a shared informer's store
 	gdLister gadlister.GameDeploymentLister
 	// gdListerSynced returns true if the gamedeployments store has been synced at least once.
@@ -99,14 +110,17 @@ type GameDeploymentController struct {
 // NewGameDeploymentController creates a new gamedeployment controller.
 func NewGameDeploymentController(
 	podInformer coreinformers.PodInformer,
+	nodeInformer coreinformers.NodeInformer,
 	deployInformer gdinformers.GameDeploymentInformer,
 	hookRunInformer hookinformers.HookRunInformer,
 	hookTemplateInformer hookinformers.HookTemplateInformer,
 	revInformer appsinformers.ControllerRevisionInformer,
 	kubeClient clientset.Interface,
+	apiextensionClient apiextension.Interface,
 	gdClient gdclientset.Interface,
 	recorder record.EventRecorder,
-	hookClient hookclientset.Interface) *GameDeploymentController {
+	hookClient hookclientset.Interface,
+	historyClient history.Interface) *GameDeploymentController {
 
 	gdscheme.AddToScheme(scheme.Scheme)
 
@@ -116,8 +130,10 @@ func NewGameDeploymentController(
 		hookRunInformer.Lister(), hookTemplateInformer.Lister())
 	metrics := gdmetrics.NewMetrics()
 	gdc := &GameDeploymentController{
-		GroupVersionKind: util.ControllerKind,
-		gdClient:         gdClient,
+		kubeClient:         kubeClient,
+		apiextensionClient: apiextensionClient,
+		GroupVersionKind:   util.ControllerKind,
+		gdClient:           gdClient,
 		control: NewDefaultGameDeploymentControl(
 			kubeClient,
 			gdClient,
@@ -126,11 +142,11 @@ func NewGameDeploymentController(
 			hookRunInformer.Lister(),
 			hookTemplateInformer.Lister(),
 			scalecontrol.New(kubeClient, gdClient, recorder, scaleExpectations, hookRunInformer.Lister(),
-				hookTemplateInformer.Lister(), preDeleteControl, metrics),
+				hookTemplateInformer.Lister(), nodeInformer.Lister(), preDeleteControl, metrics),
 			updatecontrol.New(kubeClient, recorder, scaleExpectations, updateExpectations, hookRunInformer.Lister(),
 				hookTemplateInformer.Lister(), preDeleteControl, preInplaceControl, postInpalceControl, metrics),
 			NewRealGameDeploymentStatusUpdater(gdClient, deployInformer.Lister(), recorder, metrics),
-			history.NewHistory(kubeClient, revInformer.Lister()),
+			historyClient,
 			revisioncontrol.NewRevisionControl(),
 			recorder,
 			preDeleteControl,
@@ -154,6 +170,8 @@ func NewGameDeploymentController(
 	})
 	gdc.podLister = podInformer.Lister()
 	gdc.podListerSynced = podInformer.Informer().HasSynced
+	gdc.nodeLister = nodeInformer.Lister()
+	gdc.nodeListerSynced = nodeInformer.Informer().HasSynced
 
 	deployInformer.Informer().AddEventHandler(
 		cache.ResourceEventHandlerFuncs{
@@ -235,10 +253,13 @@ func (gdc *GameDeploymentController) Run(workers int, stopCh <-chan struct{}) er
 	klog.Infof("Starting gamedeployment controller")
 	defer klog.Infof("Shutting down gamedeployment controller")
 
-	if !controller.WaitForCacheSync(constants.GameDeploymentController, stopCh, gdc.podListerSynced, gdc.gdListerSynced,
-		gdc.revListerSynced, gdc.hookRunListerSynced, gdc.hookTemplateListerSynced) {
+	if !cache.WaitForNamedCacheSync(constants.GameDeploymentController, stopCh, gdc.podListerSynced, gdc.gdListerSynced,
+		gdc.revListerSynced, gdc.hookRunListerSynced, gdc.hookTemplateListerSynced, gdc.nodeListerSynced) {
 		return fmt.Errorf("failed to wait for caches to sync")
 	}
+
+	imageVersion, CRDVersion := gdc.getVersion()
+	gdc.metrics.CollectOperatorVersion(imageVersion, CRDVersion)
 
 	for i := 0; i < workers; i++ {
 		go wait.Until(gdc.worker, time.Second, stopCh)
@@ -501,8 +522,10 @@ func (gdc *GameDeploymentController) sync(key string) (retErr error) {
 	}
 
 	// in some case, the GameDeployment get from the informer cache may not be the latest, so get from apiserver directly
-	// deploy, err := gdc.gdLister.GameDeployments(namespace).Get(name)
-	deploy, err := gdc.gdClient.TkexV1alpha1().GameDeployments(namespace).Get(name, metav1.GetOptions{})
+	// deploy, err := gdc.gdClient.TkexV1alpha1().GameDeployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	cachedDeploy, err := gdc.gdLister.GameDeployments(namespace).Get(name)
+	deploy := cachedDeploy.DeepCopy()
+
 	if errors.IsNotFound(err) {
 		// Object not found, return.  Created objects are automatically garbage collected.
 		// For additional cleanup logic use finalizers.
@@ -579,7 +602,7 @@ func (gdc *GameDeploymentController) getPodsForGameDeployment(deploy *gdv1alpha1
 	// If any adoptions are attempted, we should first recheck for deletion with
 	// an uncached quorum read sometime after listing Pods (see #42639).
 	canAdoptFunc := controller.RecheckDeletionTimestamp(func() (metav1.Object, error) {
-		fresh, freshErr := gdc.gdClient.TkexV1alpha1().GameDeployments(deploy.Namespace).Get(deploy.Name, metav1.GetOptions{})
+		fresh, freshErr := gdc.gdClient.TkexV1alpha1().GameDeployments(deploy.Namespace).Get(context.TODO(), deploy.Name, metav1.GetOptions{})
 		if freshErr != nil {
 			return nil, freshErr
 		}
@@ -606,4 +629,36 @@ func (gdc *GameDeploymentController) getPodsForGameDeployment(deploy *gdv1alpha1
 	}
 
 	return filteredPods, allPods, nil
+}
+
+// getVersion returns the image version of operator pods, and the version of CRD
+func (gdc *GameDeploymentController) getVersion() (imageVersion, CRDVerion string) {
+	imageVersion, CRDVerion = "", ""
+
+	deploy, err := gdc.kubeClient.AppsV1().Deployments("bcs-system").Get(
+		context.TODO(), "bcs-gamedeployment-operator", metav1.GetOptions{})
+	if err != nil {
+		klog.Errorf("Failed to get deployment: bcs-system/bcs-gamedeployment-operator, error: %s", err.Error())
+	} else {
+		imageVersion = strings.Split(deploy.Spec.Template.Spec.Containers[0].Image, ":")[1]
+	}
+
+	v1crd, err := gdc.apiextensionClient.ApiextensionsV1().CustomResourceDefinitions().Get(
+		context.TODO(), "gamedeployments.tkex.tencent.com", metav1.GetOptions{})
+	if err != nil {
+		klog.Errorf("Failed to get v1 CRD: gamedeployments.tkex.tencent.com, error: %s", err.Error())
+	} else {
+		CRDVerion = "v1-" + v1crd.GetAnnotations()["version"]
+		return imageVersion, CRDVerion
+	}
+
+	v1beta1crd, err := gdc.apiextensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(
+		context.TODO(), "gamedeployments.tkex.tencent.com", metav1.GetOptions{})
+	if err != nil {
+		klog.Errorf("Failed to get v1beta1 CRD: gamedeployments.tkex.tencent.com, error: %s", err.Error())
+	} else if CRDVerion == "" {
+		CRDVerion = "v1beta1-" + v1beta1crd.GetAnnotations()["version"]
+	}
+
+	return imageVersion, CRDVerion
 }
