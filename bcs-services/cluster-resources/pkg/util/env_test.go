@@ -12,14 +12,22 @@
  * limitations under the License.
  */
 
-package resource
+package util_test
 
 import (
-	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/rest"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util"
 )
 
-func newDynamicClient(conf *rest.Config) dynamic.Interface {
-	client, _ := dynamic.NewForConfig(conf)
-	return client
+func TestGetEnvWithDefault(t *testing.T) {
+	// 不存在的环境变量
+	ret := util.GetEnv("NOT_EXISTS_ENV_KEY", "ENV_VAL")
+	assert.Equal(t, "ENV_VAL", ret)
+
+	// 已存在的环境变量
+	ret = util.GetEnv("PATH", "")
+	assert.NotEqual(t, "", ret)
 }

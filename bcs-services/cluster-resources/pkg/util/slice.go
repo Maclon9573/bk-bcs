@@ -12,10 +12,14 @@
  * limitations under the License.
  */
 
-package common
+package util
 
-// 以下变量值可通过 --ldflags 的方式修改
-var (
-	// RunMode 运行模式，可选值为 Prod，Stag，UnitTest
-	RunMode = "Prod"
-)
+// StringInSlice 判断字符串是否存在 Slice 中
+func StringInSlice(str string, list []string) bool {
+	for _, item := range list {
+		if item == str {
+			return true
+		}
+	}
+	return false
+}

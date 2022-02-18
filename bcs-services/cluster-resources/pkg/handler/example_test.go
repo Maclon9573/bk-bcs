@@ -12,7 +12,26 @@
  * limitations under the License.
  */
 
-package common
+package handler
 
-// ContextKey 默认使用的 Context 键类型
-type ContextKey string
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource/example"
+	clusterRes "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/proto/cluster-resources"
+)
+
+func TestGetK8SResTemplate(t *testing.T) {
+	crh := NewClusterResourcesHandler()
+	ctx := context.TODO()
+
+	for _, kind := range example.HasDemoManifestResKinds {
+		req, resp := clusterRes.GetK8SResTemplateReq{Kind: kind}, clusterRes.CommonResp{}
+		err := crh.GetK8SResTemplate(ctx, &req, &resp)
+		assert.Nil(t, err)
+		assert.Equal(t, kind, resp.Data.AsMap()["kind"])
+	}
+}
