@@ -13,22 +13,10 @@
 
 package jaeger
 
-import (
-	sdkresource "go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-)
+import "go.opentelemetry.io/otel/exporters/jaeger"
 
-type TracerProvider struct {
-	Exporter      sdktrace.SpanExporter
-	SpanProcessor sdktrace.SpanProcessor
-	Batch         BatchSpanProcessor
-	IDGenerator   sdktrace.IDGenerator
-	Resource      sdkresource.Resource
-	Sampler       sdktrace.Sampler
-	SpanLimits    sdktrace.SpanLimits
-}
-
-type EndpointConfig struct {
-	CollectorEndpointConfig *CollectorEndpointConfig `json:"collectorEndpointConfig"`
-	AgentEndpointConfig     *AgentEndpointConfig     `json:"AgentClientConfig"`
+// New returns an OTel Exporter implementation that exports the collected
+// spans to Jaeger.
+func New(endpointOption jaeger.EndpointOption) (*jaeger.Exporter, error) {
+	return jaeger.New(endpointOption)
 }

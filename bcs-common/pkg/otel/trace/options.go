@@ -15,6 +15,9 @@ package trace
 
 import (
 	"go.opentelemetry.io/otel/attribute"
+	"log"
+	"net/http"
+	"time"
 )
 
 // TraceType tracing type
@@ -50,10 +53,73 @@ func ServiceName(sn string) Option {
 	}
 }
 
-// ExporterURL sets a exporter url for tracing system
-func ExporterURL(eu string) Option {
+// JaegerCollectorEndpoint sets the Endpoint url for tracing system
+func JaegerCollectorEndpoint(ep string) Option {
 	return func(o *Options) {
-		o.ExporterURL = eu
+		o.JaegerConfig.CollectorEndpointConfig.CollectorEndpoint = ep
+	}
+}
+
+// JaegerCollectorUsername sets the username url for tracing system
+func JaegerCollectorUsername(name string) Option {
+	return func(o *Options) {
+		o.JaegerConfig.CollectorEndpointConfig.Username = name
+	}
+}
+
+// JaegerCollectorPassword sets the password url for tracing system
+func JaegerCollectorPassword(password string) Option {
+	return func(o *Options) {
+		o.JaegerConfig.CollectorEndpointConfig.Password = password
+	}
+}
+
+// JaegerCollectorHttpClient sets the http client for tracing system
+func JaegerCollectorHttpClient(client *http.Client) Option {
+	return func(o *Options) {
+		o.JaegerConfig.CollectorEndpointConfig.HttpClient = client
+	}
+}
+
+// JaegerAgentHost sets the jaeger agent host for tracing system
+func JaegerAgentHost(host string) Option {
+	return func(o *Options) {
+		o.JaegerConfig.AgentEndpointConfig.Host = host
+	}
+}
+
+// JaegerAgentPort sets the jaeger agent host for tracing system
+func JaegerAgentPort(port string) Option {
+	return func(o *Options) {
+		o.JaegerConfig.AgentEndpointConfig.Port = port
+	}
+}
+
+// JaegerAgentMaxPacketSize sets the jaeger agent max package size for tracing system
+func JaegerAgentMaxPacketSize(size int) Option {
+	return func(o *Options) {
+		o.JaegerConfig.AgentEndpointConfig.MaxPacketSize = size
+	}
+}
+
+// JaegerAgentLogger sets the jaeger agent logger for tracing system
+func JaegerAgentLogger(l *log.Logger) Option {
+	return func(o *Options) {
+		o.JaegerConfig.AgentEndpointConfig.Logger = l
+	}
+}
+
+// JaegerAgentDisableReconnecting disables reconnecting udp client
+func JaegerAgentDisableReconnecting() Option {
+	return func(o *Options) {
+		o.JaegerConfig.AgentEndpointConfig.AttemptReconnecting = false
+	}
+}
+
+// JaegerAgentReconnectInterval the interval between attempts to connect agent endpoint
+func JaegerAgentReconnectInterval(t time.Duration) Option {
+	return func(o *Options) {
+		o.JaegerConfig.AgentEndpointConfig.AttemptReconnectInterval = t
 	}
 }
 
@@ -61,5 +127,48 @@ func ExporterURL(eu string) Option {
 func ResourceAttrs(ra []attribute.KeyValue) Option {
 	return func(o *Options) {
 		o.ResourceAttrs = append(o.ResourceAttrs, ra...)
+	}
+}
+
+// WithAlwaysOnSampler sets a always on Sampler
+func WithAlwaysOnSampler(s bool) Option {
+	return func(o *Options) {
+		o.AlwaysOnSampler = true
+	}
+}
+
+// WithAlwaysOffSampler sets a always off Sampler
+func WithAlwaysOffSampler(s bool) Option {
+	return func(o *Options) {
+		o.AlwaysOffSampler = true
+	}
+}
+
+// todo
+// WithParentBasedSampler sets a parent based Sampler
+//func WithParentBasedSampler(s bool) Option {
+//	return func(o *Options) {
+//		o.ParentBasedSampler = true
+//	}
+//}
+
+// WithRatioBasedSampler sets a ratio based Sampler
+func WithRatioBasedSampler(r float64) Option {
+	return func(o *Options) {
+		o.RatioBasedSampler = r
+	}
+}
+
+// WithDefaultOnSampler sets a default on Sampler if parent span is not sampled
+func WithDefaultOnSampler(s bool) Option {
+	return func(o *Options) {
+		o.DefaultOnSampler = true
+	}
+}
+
+// WithDefaultOffSampler sets a default off Sampler if parent span is not sampled
+func WithDefaultOffSampler(s bool) Option {
+	return func(o *Options) {
+		o.DefaultOffSampler = true
 	}
 }
