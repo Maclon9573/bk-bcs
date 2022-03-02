@@ -13,22 +13,12 @@
 
 package jaeger
 
-import (
-	sdkresource "go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-)
+import "time"
 
-type TracerProvider struct {
-	Exporter      sdktrace.SpanExporter
-	SpanProcessor sdktrace.SpanProcessor
-	Batch         BatchSpanProcessor
-	IDGenerator   sdktrace.IDGenerator
-	Resource      sdkresource.Resource
-	Sampler       sdktrace.Sampler
-	SpanLimits    sdktrace.SpanLimits
-}
-
-type EndpointConfig struct {
-	CollectorEndpointConfig *CollectorEndpointConfig `json:"collectorEndpointConfig"`
-	AgentEndpointConfig     *AgentEndpointConfig     `json:"AgentClientConfig"`
+type BatchSpanProcessor struct {
+	MaxQueueSize       int
+	MaxExportBatchSize int
+	BatchTimeout       time.Duration
+	ExportTimeout      time.Duration
+	Blocking           bool
 }
