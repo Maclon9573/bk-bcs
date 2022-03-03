@@ -11,24 +11,20 @@
  *
  */
 
-package jaeger
+package otlpgrpctrace
 
 import (
-	sdkresource "go.opentelemetry.io/otel/sdk/resource"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp"
 )
 
-type TracerProvider struct {
-	Exporter      sdktrace.SpanExporter
-	SpanProcessor sdktrace.SpanProcessor
-	Batch         BatchSpanProcessor
-	IDGenerator   sdktrace.IDGenerator
-	Resource      sdkresource.Resource
-	Sampler       sdktrace.Sampler
-	SpanLimits    sdktrace.SpanLimits
+// NewClient creates a new gRPC trace client.
+func NewClient(opts ...otlptracegrpc.Option) otlp.Client {
+	return otlptracegrpc.NewClient(opts...)
 }
 
-type EndpointConfig struct {
-	CollectorEndpointConfig *CollectorEndpointConfig `json:"collectorEndpointConfig"`
-	AgentEndpointConfig     *AgentEndpointConfig     `json:"AgentClientConfig"`
+type GrpcConfig struct {
+	Endpoint string
+	URLPath  string
 }

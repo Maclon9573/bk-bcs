@@ -11,22 +11,17 @@
  *
  */
 
-package otlpgrpctrace
+package jaeger
 
-import (
-	"context"
+import "go.opentelemetry.io/otel/exporters/jaeger"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/otlp"
-)
-
-// New constructs a new Exporter and starts it.
-func New(ctx context.Context, opts ...otlptracegrpc.Option) (*otlp.Exporter, error) {
-	return otlp.New(ctx, NewClient(opts...))
+// New returns an OTel Exporter implementation that exports the collected
+// spans to Jaeger.
+func New(endpointOption jaeger.EndpointOption) (*jaeger.Exporter, error) {
+	return jaeger.New(endpointOption)
 }
 
-// NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(opts ...otlptracegrpc.Option) *otlp.Exporter {
-	return otlp.NewUnstarted(NewClient(opts...))
+type EndpointConfig struct {
+	CollectorEndpointConfig *CollectorEndpointConfig `json:"collectorEndpointConfig"`
+	AgentEndpointConfig     *AgentEndpointConfig     `json:"AgentClientConfig"`
 }

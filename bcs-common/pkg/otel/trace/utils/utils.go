@@ -56,6 +56,14 @@ func NewTracerProvider(opts ...sdktrace.TracerProviderOption) *sdktrace.TracerPr
 	return sdktrace.NewTracerProvider(opts...)
 }
 
+// NewBatchSpanProcessor creates a new SpanProcessor that will send completed
+// span batches to the exporter with the supplied options.
+//
+// If the exporter is nil, the span processor will preform no action.
+func NewBatchSpanProcessor(exporter sdktrace.SpanExporter, options ...sdktrace.BatchSpanProcessorOption) sdktrace.SpanProcessor {
+	return sdktrace.NewBatchSpanProcessor(exporter, options...)
+}
+
 // WithSyncer registers the exporter with the TracerProvider using a
 // SimpleSpanProcessor.
 //
@@ -75,8 +83,10 @@ func WithBatcher(e sdktrace.SpanExporter, opts ...sdktrace.BatchSpanProcessorOpt
 }
 
 // WithSpanProcessor registers the SpanProcessor with a TracerProvider.
-func WithSpanProcessor(sp sdktrace.SpanProcessor) sdktrace.TracerProviderOption {
-	return sdktrace.WithSpanProcessor(sp)
+func WithSpanProcessor(sp []sdktrace.SpanProcessor) {
+	for i := 0; i < len(sp); i++ {
+		sdktrace.WithSpanProcessor(sp[i])
+	}
 }
 
 // WithResource returns a TracerProviderOption that will configure the

@@ -31,7 +31,7 @@ const (
 )
 
 func main() {
-	opts := trace.Options{
+	opts := trace.TracerProviderConfig{
 		TracingSwitch: "on",
 		TracingType:   "jaeger",
 		ServiceName:   service,
@@ -40,23 +40,10 @@ func main() {
 			attribute.Int64("ID", id),
 		},
 	}
+	op := trace.ValidateTracerProviderOption(&opts)
+	op = append(op, trace.WithDefaultOnSampler())
 
-	op := []trace.Option{}
-	if opts.TracingSwitch != "" {
-		op = append(op, trace.TracerSwitch(opts.TracingSwitch))
-	}
-	if opts.TracingType != "" {
-		op = append(op, trace.TracerType(opts.TracingType))
-	}
-	if opts.ServiceName != "" {
-		op = append(op, trace.ServiceName(opts.ServiceName))
-	}
-	if opts.ResourceAttrs != nil {
-		op = append(op, trace.ResourceAttrs(opts.ResourceAttrs))
-	}
-
-	tp, err := trace.InitTracerProvider(opts.ServiceName,
-		trace.JaegerCollectorEndpoint("http://localhost:14268/api/traces"))
+	tp, err := trace.InitTracerProvider(opts.ServiceName, op...)
 	if err != nil {
 		log.Fatal(err)
 	}
