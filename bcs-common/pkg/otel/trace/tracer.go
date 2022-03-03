@@ -14,17 +14,22 @@
 package trace
 
 import (
+	"context"
 	"errors"
-	"strconv"
+	"fmt"
+	"net/http"
+	"os"
 
-	"go.opentelemetry.io/otel"
+	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/resource"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
+
 	"go.opentelemetry.io/otel/attribute"
 	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-
-	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/jaeger"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/resource"
+	"google.golang.org/grpc"
 )
 
 var (
@@ -41,21 +46,26 @@ const (
 	defaultSwitchType = "off"
 	// defaultTracingType for default tracing type
 	defaultTracingType = "jaeger"
-	// defaultCollectorEndpoint sets default collector endpoint
-	defaultCollectorEndpoint = "http://localhost:14268/api/traces"
+	// defaultJaegerCollectorEndpoint sets default jaeger collector endpoint
+	defaultJaegerCollectorEndpoint = "http://localhost:14268/api/traces"
+	// defaultAgentEndpointHost sets default jaeger agent endpoint host
+	defaultJaegerAgentEndpointHost = "localhost"
+	// defaultAgentEndpointPort sets default jaeger agent endpoint host
+	defaultJaegerAgentEndpointPort = "6831"
 )
 
-// Options set options for different tracing systems
-type Options struct {
+// TracerProviderConfig set TracerProviderConfig for different tracing systems
+type TracerProviderConfig struct {
 	TracingSwitch string `json:"tracingSwitch" value:"off" usage:"tracing switch"`
 	TracingType   string `json:"tracingType" value:"jaeger" usage:"tracing type(default jaeger)"`
 	ServiceName   string `json:"serviceName" value:"bcs-common/pkg/otel" usage:"tracing serviceName"`
 	// Jaeger exporter endpoint
-	JaegerConfig *jaeger.EndpointConfig `json:"jaegerConfig"`
-
+	JaegerConfig jaeger.EndpointConfig `json:"jaegerConfig"`
+	// GrpcConfig
+	GrpcConfig otlpgrpctrace.GrpcConfig
+	// Resource attributes
 	ResourceAttrs []attribute.KeyValue `json:"resourceAttrs" value:"" usage:"attributes of traced service"`
-
-	// Sampler type
+	// Sampler kinds
 	AlwaysOnSampler   bool
 	AlwaysOffSampler  bool
 	RatioBasedSampler float64
@@ -64,19 +74,33 @@ type Options struct {
 	// ParentBasedSampler bool
 }
 
-// Option for init Options
-type Option func(f *Options)
-
-// InitTracerProvider initialize an OTLP tracer provider
-func InitTracerProvider(serviceName string, opt ...Option) (*sdktrace.TracerProvider, error) {
-	defaultOptions := &Options{
+// InitTracerProvider initialize an OTLP tracer provider with processors and exporters.
+func InitTracerProvider(serviceName string, tpos ...TracerProviderOption) (*sdktrace.TracerProvider, error) {
+	defaultOptions := &TracerProviderConfig{
 		TracingSwitch: defaultSwitchType,
 		TracingType:   defaultTracingType,
 		ServiceName:   serviceName,
+		JaegerConfig: jaeger.EndpointConfig{
+			CollectorEndpointConfig: &jaeger.CollectorEndpointConfig{
+				CollectorEndpoint: defaultJaegerCollectorEndpoint,
+				Username:          "",
+				Password:          "",
+				HttpClient:        http.DefaultClient,
+			},
+		},
+		GrpcConfig: otlpgrpctrace.GrpcConfig{
+			Endpoint: fmt.Sprintf("%s:%d", DefaultCollectorHost, DefaultCollectorPort),
+			URLPath:  DefaultTracesPath,
+		},
+		AlwaysOnSampler:   false,
+		AlwaysOffSampler:  false,
+		RatioBasedSampler: 0,
+		DefaultOnSampler:  false,
+		DefaultOffSampler: false,
 	}
 
-	for _, o := range opt {
-		o(defaultOptions)
+	for _, t := range tpos {
+		t(defaultOptions)
 	}
 
 	err := validateTracingOptions(defaultOptions)
@@ -88,130 +112,122 @@ func InitTracerProvider(serviceName string, opt ...Option) (*sdktrace.TracerProv
 	if defaultOptions.TracingSwitch == "off" {
 		return &sdktrace.TracerProvider{}, nil
 	}
+	sampler := initSampler(defaultOptions)
 	switch defaultOptions.TracingType {
-	case "jaeger":
+	case string(Jaeger):
 		err := validateJaegerEndpoint(defaultOptions)
 		if err != nil {
 			blog.Errorf("failed to create jaeger exporter:", err.Error())
 			return nil, err
 		}
 		blog.Info("Using jaeger exporter")
-		if defaultOptions.JaegerConfig.CollectorEndpointConfig != nil {
-			defaultOptions = &Options{
-				TracingSwitch: "on",
-				TracingType:   "jaeger",
-				ServiceName:   serviceName,
-				JaegerConfig: &jaeger.EndpointConfig{
-					CollectorEndpointConfig: &jaeger.CollectorEndpointConfig{
-						CollectorEndpoint: "http://localhost:14268/api/traces",
-					},
-				},
-			}
-			opts := initCollectorEndpoint(defaultOptions.JaegerConfig.CollectorEndpointConfig)
-			jaegerExporter, err := jaeger.New(jaeger.WithCollectorEndpoint(opts...))
-			if err != nil {
-				blog.Errorf("failed to create jaeger exporter:", err.Error())
-				return nil, err
-			}
-			sampler := initSampler(defaultOptions)
-			return newTracerProvider(jaegerExporter, defaultOptions.ServiceName, sampler)
-		} else {
-			opts := initAgentEndpoint(defaultOptions.JaegerConfig.AgentEndpointConfig)
-			jaegerExporter, err := jaeger.New(jaeger.WithAgentEndpoint(opts...))
-			if err != nil {
-				blog.Errorf("failed to create jaeger exporter:", err.Error())
-				return nil, err
-			}
-			sampler := initSampler(defaultOptions)
-			return newTracerProvider(jaegerExporter, defaultOptions.ServiceName, sampler)
+		opts := initCollectorEndpoint(defaultOptions.JaegerConfig.CollectorEndpointConfig)
+		jaegerExporter, err := jaeger.New(jaeger.WithCollectorEndpoint(opts...))
+		if err != nil {
+			blog.Errorf("failed to create jaeger exporter:", err.Error())
+			return nil, err
 		}
-	case "otlpgrpc":
+		processors := initProcessors(jaegerExporter)
+		return newTracerProvider(defaultOptions.ServiceName, processors, sampler)
+	case string(OTLPGrpc):
 		blog.Info("Using otlpgrpc exporter")
-
-	case "otlphttp":
+		ctx := context.Background()
+		otelAgentAddr, ok := os.LookupEnv("OTEL_EXPORTER_OTLP_ENDPOINT")
+		if !ok {
+			otelAgentAddr = "0.0.0.0:4317"
+		}
+		traceClient := otlpgrpctrace.NewClient(
+			otlpgrpctrace.WithInsecure(),
+			otlpgrpctrace.WithEndpoint(otelAgentAddr),
+			otlpgrpctrace.WithDialOption(grpc.WithBlock()))
+		grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
+		handleErr(err, "failed to create otelgrpc exporter")
+		processors := initProcessors(grpcExporter)
+		return newTracerProvider(defaultOptions.ServiceName, processors, sampler)
+	case string(OTLPHttp):
 		blog.Info("Using otlphttp exporter")
 
-	case "zipkin":
+	case string(Zipkin):
 	}
 	return &sdktrace.TracerProvider{}, nil
 }
 
-func newTracerProvider(exporter sdktrace.SpanExporter, serviceName string, sampler sdktrace.Sampler) (*sdktrace.TracerProvider, error) {
-	processor := sdktrace.NewBatchSpanProcessor(exporter)
-	tp := sdktrace.NewTracerProvider(
-		// Always be sure to batch in production.
-		sdktrace.WithSpanProcessor(processor),
-		// Record information about this application in an Resource.
-		sdktrace.WithResource(resource.New(serviceName)),
-		sdktrace.WithSampler(sampler),
-	)
-	otel.SetTracerProvider(tp)
+func newTracerProvider(serviceName string, processors []sdktrace.SpanProcessor, sampler sdktrace.Sampler) (*sdktrace.TracerProvider, error) {
+	var tpos []sdktrace.TracerProviderOption
+	for i := 0; i < len(processors); i++ {
+		tpos = append(tpos, sdktrace.WithSpanProcessor(processors[i]))
+	}
+	tpos = append(tpos, utils.WithResource(resource.New(serviceName)), utils.WithSampler(sampler))
+	tp := utils.NewTracerProvider(tpos...)
+	utils.SetTracerProvider(tp)
 	return tp, nil
 }
 
-func validateTracingOptions(opt *Options) error {
-	err := validateTracingSwitch(opt.TracingSwitch)
-	if err != nil {
-		return err
-	}
-
-	err = validateTracingType(opt.TracingType)
-	if err != nil {
-		return err
-	}
-
-	err = validateServiceName(opt.ServiceName)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func validateTracingSwitch(s string) error {
-	if s == "on" || s == "off" {
-		return nil
-	}
-	return errSwitchType
-}
-
-func validateTracingType(t string) error {
-	if t == string(Jaeger) || t == string(Zipkin) || t == "otlpgrpc" || t == "otlphttp" {
-		return nil
-	}
-	return errTracingType
-}
-
-func validateServiceName(sn string) error {
-	if sn == "" {
-		return errServiceName
-	}
-	return nil
-}
-
-func validateJaegerEndpoint(op *Options) error {
+// ValidateTracerProviderOption set a slice of TracerProviderOption based on the tracer provider configuration.
+func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProviderOption {
+	var tpos []TracerProviderOption
 	switch {
-	case op.JaegerConfig.CollectorEndpointConfig == nil && op.JaegerConfig.AgentEndpointConfig == nil:
-		return errors.New("neither a jaeger collector nor a jaeger agent endpoint is configured")
-	case op.JaegerConfig.CollectorEndpointConfig != nil && op.JaegerConfig.AgentEndpointConfig != nil:
-		return errors.New("a jaeger collector can't be configured with a jaeger agent endpoint at the same time")
+	case config.TracingSwitch != "":
+		tpos = append(tpos, TracerSwitch(config.TracingSwitch))
+	case config.TracingType != "":
+		tpos = append(tpos, TracerType(config.TracingType))
+	case config.ServiceName != "":
+		tpos = append(tpos, ServiceName(config.ServiceName))
+	case config.ResourceAttrs != nil:
+		tpos = append(tpos, ResourceAttrs(config.ResourceAttrs))
+	case config.JaegerConfig.CollectorEndpointConfig != nil:
+		switch {
+		case config.JaegerConfig.CollectorEndpointConfig.CollectorEndpoint != "":
+			tpos = append(tpos, JaegerCollectorEndpoint(config.JaegerConfig.CollectorEndpointConfig.CollectorEndpoint))
+		case config.JaegerConfig.CollectorEndpointConfig.Username != "":
+			tpos = append(tpos, JaegerCollectorUsername(config.JaegerConfig.CollectorEndpointConfig.Username))
+		case config.JaegerConfig.CollectorEndpointConfig.Password != "":
+			tpos = append(tpos, JaegerCollectorPassword(config.JaegerConfig.CollectorEndpointConfig.Password))
+		case config.JaegerConfig.CollectorEndpointConfig.HttpClient != nil:
+			tpos = append(tpos, JaegerCollectorHttpClient(config.JaegerConfig.CollectorEndpointConfig.HttpClient))
+		}
+	case config.GrpcConfig.Endpoint != "":
+		tpos = append(tpos, WithGrpcEndpoint(config.GrpcConfig.Endpoint))
+	case config.GrpcConfig.URLPath != "":
+		tpos = append(tpos, WithGrpcURLPath(config.GrpcConfig.URLPath))
+	case config.AlwaysOnSampler:
+		tpos = append(tpos, WithAlwaysOnSampler())
+	case config.AlwaysOffSampler:
+		tpos = append(tpos, WithAlwaysOffSampler())
+	case fmt.Sprint(config.RatioBasedSampler) != "0":
+		tpos = append(tpos, WithRatioBasedSampler(config.RatioBasedSampler))
+	case config.DefaultOnSampler:
+		tpos = append(tpos, WithDefaultOnSampler())
+	case config.DefaultOffSampler:
+		tpos = append(tpos, WithDefaultOffSampler())
 	}
-	return nil
+	return tpos
 }
 
-func initSampler(op *Options) sdktrace.Sampler {
-	if op.AlwaysOnSampler {
+// initProcessors sets processors for OTEL.
+func initProcessors(exporter sdktrace.SpanExporter) (sps []sdktrace.SpanProcessor) {
+	// By default, no processors are enabled. Depending on the data source, it may be recommended
+	// that multiple processors be enabled. Processors must be enabled for every data source.
+	// Always be sure to batch in production.
+	sp := utils.NewBatchSpanProcessor(exporter)
+	sps = append(sps, sp)
+	return sps
+}
+
+func initSampler(tpc *TracerProviderConfig) sdktrace.Sampler {
+	if tpc.AlwaysOnSampler {
 		return sdktrace.AlwaysSample()
 	}
-	if op.AlwaysOffSampler {
+	if tpc.AlwaysOffSampler {
 		return sdktrace.NeverSample()
 	}
-	if strconv.Itoa(int(op.RatioBasedSampler)) != "" {
-		return sdktrace.TraceIDRatioBased(op.RatioBasedSampler)
+	if fmt.Sprint(tpc.RatioBasedSampler) != "0" {
+		return sdktrace.TraceIDRatioBased(tpc.RatioBasedSampler)
 	}
-	if op.DefaultOnSampler {
+	if tpc.DefaultOnSampler {
 		return sdktrace.ParentBased(sdktrace.AlwaysSample())
 	}
-	if op.DefaultOffSampler {
+	if tpc.DefaultOffSampler {
 		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
 	// will not sample if parent sampler was not set
@@ -254,4 +270,56 @@ func initAgentEndpoint(a *jaeger.AgentEndpointConfig, op ...oteljaeger.AgentEndp
 		op = append(op, oteljaeger.WithAttemptReconnectingInterval(a.AttemptReconnectInterval))
 	}
 	return op
+}
+
+func validateTracingOptions(opt *TracerProviderConfig) error {
+	err := validateTracingSwitch(opt.TracingSwitch)
+	if err != nil {
+		return err
+	}
+
+	err = validateTracingType(opt.TracingType)
+	if err != nil {
+		return err
+	}
+
+	err = validateServiceName(opt.ServiceName)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func validateTracingSwitch(s string) error {
+	if s == "on" || s == "off" {
+		return nil
+	}
+	return errSwitchType
+}
+
+func validateTracingType(t string) error {
+	if t == string(Jaeger) || t == string(Zipkin) || t == "otlpgrpc" || t == "otlphttp" {
+		return nil
+	}
+	return errTracingType
+}
+
+func validateServiceName(sn string) error {
+	if sn == "" {
+		return errServiceName
+	}
+	return nil
+}
+
+func validateJaegerEndpoint(op *TracerProviderConfig) error {
+	if op.JaegerConfig.CollectorEndpointConfig == nil && op.JaegerConfig.AgentEndpointConfig == nil {
+		return errors.New("neither a jaeger collector nor a jaeger agent endpoint is configured")
+	}
+	return nil
+}
+
+func handleErr(err error, message string) {
+	if err != nil {
+		blog.Errorf("%s: %v", message, err)
+	}
 }

@@ -11,12 +11,4 @@
  *
  */
 
-package jaeger
-
-import "go.opentelemetry.io/otel/exporters/jaeger"
-
-// New returns an OTel Exporter implementation that exports the collected
-// spans to Jaeger.
-func New(endpointOption jaeger.EndpointOption) (*jaeger.Exporter, error) {
-	return jaeger.New(endpointOption)
-}
+package zipkin

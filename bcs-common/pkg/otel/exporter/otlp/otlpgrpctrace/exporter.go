@@ -14,12 +14,17 @@
 package otlpgrpctrace
 
 import (
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"context"
 
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/otlp"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 )
 
-// NewClient creates a new gRPC trace client.
-func NewClient(opts ...otlptracegrpc.Option) otlp.Client {
-	return otlptracegrpc.NewClient(opts...)
+// New constructs a new Exporter and starts it.
+func New(ctx context.Context, client otlptrace.Client) (*otlptrace.Exporter, error) {
+	return otlptrace.New(ctx, client)
+}
+
+// NewUnstarted constructs a new Exporter and does not start it.
+func NewUnstarted(client otlptrace.Client) *otlptrace.Exporter {
+	return otlptrace.NewUnstarted(client)
 }
