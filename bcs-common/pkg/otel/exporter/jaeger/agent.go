@@ -14,6 +14,7 @@
 package jaeger
 
 import (
+	"go.opentelemetry.io/otel/exporters/jaeger"
 	"log"
 	"time"
 )
@@ -25,4 +26,53 @@ type AgentEndpointConfig struct {
 	Logger                   *log.Logger   `json:"logger" usage:"logger to be used by agent client"`
 	AttemptReconnecting      bool          `json:"attemptReconnecting" value:"false" usage:"attemptReconnecting disables reconnecting udp client"`
 	AttemptReconnectInterval time.Duration `json:"attemptReconnectInterval" usage:"attemptReconnectInterval sets the interval between attempts to connect agent endpoint"`
+}
+
+// WithAgentEndpoint configures the Jaeger exporter to send spans to a Jaeger agent
+// over compact thrift protocol. This will use the following environment variables for
+// configuration if no explicit option is provided:
+//
+// - OTEL_EXPORTER_JAEGER_AGENT_HOST is used for the agent address host
+// - OTEL_EXPORTER_JAEGER_AGENT_PORT is used for the agent address port
+//
+// The passed options will take precedence over any environment variables and default values
+// will be used if neither are provided.
+func WithAgentEndpoint(options ...jaeger.AgentEndpointOption) jaeger.EndpointOption {
+	return jaeger.WithAgentEndpoint(options...)
+}
+
+// WithAgentHost sets a host to be used in the agent client endpoint.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_AGENT_HOST environment variable.
+// If this option is not passed and the env var is not set, "localhost" will be used by default.
+func WithAgentHost(host string) jaeger.AgentEndpointOption {
+	return jaeger.WithAgentHost(host)
+}
+
+// WithAgentPort sets a port to be used in the agent client endpoint.
+// This option overrides any value set for the
+// OTEL_EXPORTER_JAEGER_AGENT_PORT environment variable.
+// If this option is not passed and the env var is not set, "6831" will be used by default.
+func WithAgentPort(port string) jaeger.AgentEndpointOption {
+	return jaeger.WithAgentPort(port)
+}
+
+// WithLogger sets a logger to be used by agent client.
+func WithLogger(logger *log.Logger) jaeger.AgentEndpointOption {
+	return jaeger.WithLogger(logger)
+}
+
+// WithDisableAttemptReconnecting sets option to disable reconnecting udp client.
+func WithDisableAttemptReconnecting() jaeger.AgentEndpointOption {
+	return jaeger.WithDisableAttemptReconnecting()
+}
+
+// WithAttemptReconnectingInterval sets the interval between attempts to re resolve agent endpoint.
+func WithAttemptReconnectingInterval(interval time.Duration) jaeger.AgentEndpointOption {
+	return jaeger.WithAttemptReconnectingInterval(interval)
+}
+
+// WithMaxPacketSize sets the maximum UDP packet size for transport to the Jaeger agent.
+func WithMaxPacketSize(size int) jaeger.AgentEndpointOption {
+	return jaeger.WithMaxPacketSize(size)
 }
