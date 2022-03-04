@@ -32,16 +32,19 @@ const (
 
 func main() {
 	opts := trace.TracerProviderConfig{
-		TracingSwitch: "on",
-		TracingType:   "jaeger",
-		ServiceName:   service,
+		TracingSwitch:     "on",
+		TracingType:       "jaeger",
+		ServiceName:       service,
+		JaegerColEndpoint: "aaa",
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("environment", environment),
 			attribute.Int64("ID", id),
 		},
 	}
+	//var op [] trace.TracerProviderOption
 	op := trace.ValidateTracerProviderOption(&opts)
 	op = append(op, trace.WithDefaultOnSampler())
+	//op = append(op, trace.JaegerCollectorEndpoint(opts.JaegerColEndpoint))
 
 	tp, err := trace.InitTracerProvider(opts.ServiceName, op...)
 	if err != nil {
