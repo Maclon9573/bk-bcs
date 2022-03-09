@@ -21,7 +21,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/metric"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
@@ -88,22 +87,14 @@ func main() {
 	}()
 
 	traceOpts := trace.TracerProviderConfig{
-		TracingSwitch: "on",
-		ServiceName:   serviceName,
-		JaegerConfig: jaeger.EndpointConfig{
-			CollectorEndpointConfig: &jaeger.CollectorEndpointConfig{
-				CollectorEndpoint: "http://localhost:14268/api/traces",
-			},
-		},
+		TracingSwitch:     "on",
+		ServiceName:       serviceName,
+		JaegerColEndpoint: trace.DefaultJaegerCollectorEndpoint,
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("endpoint", "http_client"),
 		},
 	}
-	var traceOp []trace.TracerProviderOption
-	traceOp = append(traceOp, trace.TracerSwitch(traceOpts.TracingSwitch))
-	traceOp = append(traceOp, trace.ResourceAttrs(traceOpts.ResourceAttrs))
-	traceOp = append(traceOp, trace.JaegerCollectorEndpoint(traceOpts.JaegerConfig.CollectorEndpointConfig.CollectorEndpoint))
-	traceOp = append(traceOp, trace.WithDefaultOnSampler())
+	traceOp := trace.ValidateTracerProviderOption(&traceOpts)
 
 	tp, err := trace.InitTracerProvider(traceOpts.ServiceName, traceOp...)
 	tracer := tp.Tracer(tracerName)

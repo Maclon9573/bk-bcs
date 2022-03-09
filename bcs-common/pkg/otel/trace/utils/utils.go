@@ -42,6 +42,13 @@ func SetTracerProvider(tp trace.TracerProvider) {
 	otel.SetTracerProvider(tp)
 }
 
+// NewNoopTracerProvider returns an implementation of TracerProvider that
+// performs no operations. The Tracer and Spans created from the returned
+// TracerProvider also perform no operations.
+func NewNoopTracerProvider() trace.TracerProvider {
+	return trace.NewNoopTracerProvider()
+}
+
 // NewTracerProvider returns a new and configured TracerProvider.
 //
 // By default the returned TracerProvider is configured with:
@@ -83,10 +90,8 @@ func WithBatcher(e sdktrace.SpanExporter, opts ...sdktrace.BatchSpanProcessorOpt
 }
 
 // WithSpanProcessor registers the SpanProcessor with a TracerProvider.
-func WithSpanProcessor(sp []sdktrace.SpanProcessor) {
-	for i := 0; i < len(sp); i++ {
-		sdktrace.WithSpanProcessor(sp[i])
-	}
+func WithSpanProcessor(sp sdktrace.SpanProcessor) sdktrace.TracerProviderOption {
+	return sdktrace.WithSpanProcessor(sp)
 }
 
 // WithResource returns a TracerProviderOption that will configure the

@@ -14,11 +14,10 @@
 package otlphttptrace
 
 import (
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/otlp"
 )
 
-func NewClient(opts ...otlptracehttp.Option) otlp.Client {
+func NewClient(opts ...otlptracehttp.Option) otlptrace.Client {
 	return otlptracehttp.NewClient(opts...)
 }

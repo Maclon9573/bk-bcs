@@ -16,17 +16,16 @@ package otlphttptrace
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/otlp"
 )
 
 // New constructs a new Exporter and starts it.
-func New(ctx context.Context, opts ...otlptracehttp.Option) (*otlp.Exporter, error) {
-	return otlp.New(ctx, otlptracehttp.NewClient(opts...))
+func New(ctx context.Context, opts ...otlptracehttp.Option) (*otlptrace.Exporter, error) {
+	return otlptracehttp.New(ctx, opts...)
 }
 
 // NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(opts ...otlptracehttp.Option) *otlp.Exporter {
-	return otlp.NewUnstarted(otlptracehttp.NewClient(opts...))
+func NewUnstarted(client otlptrace.Client) *otlptrace.Exporter {
+	return otlptrace.NewUnstarted(client)
 }
