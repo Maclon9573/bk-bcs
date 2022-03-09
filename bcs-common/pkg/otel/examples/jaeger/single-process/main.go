@@ -16,8 +16,10 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
@@ -35,16 +37,14 @@ func main() {
 		TracingSwitch:     "on",
 		TracingType:       "jaeger",
 		ServiceName:       service,
-		JaegerColEndpoint: "aaa",
+		JaegerColEndpoint: "http://localhost:14268/api/traces",
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("environment", environment),
 			attribute.Int64("ID", id),
 		},
 	}
-	//var op [] trace.TracerProviderOption
 	op := trace.ValidateTracerProviderOption(&opts)
-	op = append(op, trace.WithDefaultOnSampler())
-	//op = append(op, trace.JaegerCollectorEndpoint(opts.JaegerColEndpoint))
+	op = append(op, trace.JaegerCollectorOptions(jaeger.WithHTTPClient(http.DefaultClient)))
 
 	tp, err := trace.InitTracerProvider(opts.ServiceName, op...)
 	if err != nil {
@@ -67,8 +67,8 @@ func main() {
 	tr := tp.Tracer("component-main")
 
 	ctx, span := tr.Start(ctx, "foo")
+	span.SetAttributes(attribute.String("testkey", "testvalue"))
 	defer span.End()
-
 	bar(ctx)
 }
 
@@ -76,6 +76,5 @@ func bar(ctx context.Context) {
 	// Use the global TracerProvider.
 	tr := utils.Tracer("component-bar")
 	_, span := tr.Start(ctx, "bar")
-	span.SetAttributes(attribute.Key("testkey").String("testvalue"))
 	defer span.End()
 }

@@ -14,13 +14,19 @@
 package resource
 
 import (
+	"context"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.7.0"
 )
 
-// New returns a resource describing this application.
-func New(serviceName string, attrs ...attribute.KeyValue) *resource.Resource {
+// New returns a Resource combined from the user-provided detectors.
+func New(ctx context.Context, opts ...resource.Option) (*resource.Resource, error) {
+	return resource.New(ctx, opts...)
+}
+
+// New2 returns a resource describing this application.
+func New2(serviceName string, attrs ...attribute.KeyValue) *resource.Resource {
 	r, _ := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(semconv.SchemaURL,

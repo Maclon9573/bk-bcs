@@ -19,14 +19,14 @@ import (
 	"time"
 )
 
-type AgentEndpointConfig struct {
-	Host                     string        `json:"host" value:"localhost" usage:"host to be used in the agent client endpoint"`
-	Port                     string        `json:"port" value:"6831" usage:"port to be used in the agent client endpoint"`
-	MaxPacketSize            int           `json:"maxPacketSize" usage:"maxPacketSize for transport to the Jaeger agent"`
-	Logger                   *log.Logger   `json:"logger" usage:"logger to be used by agent client"`
-	AttemptReconnecting      bool          `json:"attemptReconnecting" value:"false" usage:"attemptReconnecting disables reconnecting udp client"`
-	AttemptReconnectInterval time.Duration `json:"attemptReconnectInterval" usage:"attemptReconnectInterval sets the interval between attempts to connect agent endpoint"`
-}
+//type AgentEndpointConfig struct {
+//	Host                     string        `json:"host" value:"localhost" usage:"host to be used in the agent client endpoint"`
+//	Port                     string        `json:"port" value:"6831" usage:"port to be used in the agent client endpoint"`
+//	MaxPacketSize            int           `json:"maxPacketSize" usage:"maxPacketSize for transport to the Jaeger agent"`
+//	Logger                   *log.Logger   `json:"logger" usage:"logger to be used by agent client"`
+//	AttemptReconnecting      bool          `json:"attemptReconnecting" value:"false" usage:"attemptReconnecting disables reconnecting udp client"`
+//	AttemptReconnectInterval time.Duration `json:"attemptReconnectInterval" usage:"attemptReconnectInterval sets the interval between attempts to connect agent endpoint"`
+//}
 
 // WithAgentEndpoint configures the Jaeger exporter to send spans to a Jaeger agent
 // over compact thrift protocol. This will use the following environment variables for

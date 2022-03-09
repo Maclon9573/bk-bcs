@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
@@ -39,21 +38,13 @@ func welcomePage(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	opts := trace.TracerProviderConfig{
-		TracingSwitch: "on",
-		JaegerConfig: jaeger.EndpointConfig{
-			CollectorEndpointConfig: &jaeger.CollectorEndpointConfig{
-				CollectorEndpoint: "http://localhost:14268/api/traces",
-			},
-		},
+		TracingSwitch:     "on",
+		JaegerColEndpoint: trace.DefaultJaegerCollectorEndpoint,
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("endpoint", "http_server"),
 		},
 	}
-	var op []trace.TracerProviderOption
-	op = append(op, trace.TracerSwitch(opts.TracingSwitch))
-	op = append(op, trace.ResourceAttrs(opts.ResourceAttrs))
-	op = append(op, trace.JaegerCollectorEndpoint(opts.JaegerConfig.CollectorEndpointConfig.CollectorEndpoint))
-	op = append(op, trace.WithDefaultOnSampler())
+	op := trace.ValidateTracerProviderOption(&opts)
 
 	tp, err := trace.InitTracerProvider("demo-http-server", op...)
 	otel.SetTextMapPropagator(propagation.TraceContext{})

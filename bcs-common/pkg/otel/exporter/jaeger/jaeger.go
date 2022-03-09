@@ -15,10 +15,10 @@ package jaeger
 
 import "go.opentelemetry.io/otel/exporters/jaeger"
 
-type EndpointConfig struct {
-	CollectorEndpointConfig *CollectorEndpointConfig `json:"collectorEndpointConfig"`
-	AgentEndpointConfig     *AgentEndpointConfig     `json:"AgentClientConfig"`
-}
+//type EndpointConfig struct {
+//	CollectorEndpointConfig *CollectorEndpointConfig `json:"collectorEndpointConfig"`
+//	AgentEndpointConfig     *AgentEndpointConfig     `json:"AgentClientConfig"`
+//}
 
 // NewCollectorExporter returns an OTel Exporter implementation that exports the collected
 // spans to Jaeger collector.

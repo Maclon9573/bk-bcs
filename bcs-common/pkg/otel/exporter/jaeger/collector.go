@@ -18,14 +18,13 @@ import (
 	"net/http"
 )
 
-type CollectorEndpointConfig struct {
-	ServiceName string `json:"serviceName"`
-	// Jaeger collector
-	CollectorEndpoint string       `json:"collectorEndpoint" value:"" usage:"collectorEndpoint for sending spans directly to a collector"`
-	Username          string       `json:"username" value:"" usage:"username to be used for authentication with the collector collectorEndpoint"`
-	Password          string       `json:"password" value:"" usage:"password to be used for authentication with the collector collectorEndpoint"`
-	HttpClient        *http.Client `json:"httpClient" value:"" usage:"httpClient to be used to make requests to the collector collectorEndpoint"`
-}
+//type CollectorEndpointConfig struct {
+//	// Jaeger collector
+//	CollectorEndpoint string       `json:"collectorEndpoint" value:"" usage:"collectorEndpoint for sending spans directly to a collector"`
+//	Username          string       `json:"username" value:"" usage:"username to be used for authentication with the collector collectorEndpoint"`
+//	Password          string       `json:"password" value:"" usage:"password to be used for authentication with the collector collectorEndpoint"`
+//	HttpClient        *http.Client `json:"httpClient" value:"" usage:"httpClient to be used to make requests to the collector collectorEndpoint"`
+//}
 
 // WithCollectorEndpoint defines the full URL to the Jaeger HTTP Thrift collector. This will
 // use the following environment variables for configuration if no explicit option is provided:

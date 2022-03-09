@@ -14,8 +14,13 @@
 package trace
 
 import (
+	"net/http"
+
 	"go.opentelemetry.io/otel/attribute"
+	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	otelresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
 // TraceType tracing type
@@ -24,23 +29,27 @@ type TraceType string
 const (
 	// Jaeger show jaeger system
 	Jaeger TraceType = "jaeger"
-	// OTLPGrpc show otlpgrpc system
-	OTLPGrpc TraceType = "otlpgrpc"
-	// OTLPHttp show otlphttp system
-	OTLPHttp TraceType = "otlphttp"
+	// OTLP_GRPC show otlpgrpc system
+	OTLP_GRPC TraceType = "otlpgrpc"
+	// OTLP_HTTP show otlphttp system
+	OTLP_HTTP TraceType = "otlphttp"
 	// Zipkin show zipkin system
 	Zipkin TraceType = "zipkin"
-	// NullTrace show opentracing NoopTracer
-	NullTrace TraceType = "null"
 )
 
 const (
-	// OTELGrpcCollectorHost is the host address the Exporter will attempt
-	// connect to if no collector address is provided.
-	OTELGrpcCollectorHost string = "localhost"
-	// OTELGrpcCollectorPort is the port the Exporter will attempt connect to
+	// DefaultJaegerCollectorEndpoint sets default jaeger collector endpoint
+	DefaultJaegerCollectorEndpoint = "http://localhost:14268/api/traces"
+	// DefaultJaegerAgentEndpointHost sets default jaeger agent endpoint host
+	DefaultJaegerAgentEndpointHost = "localhost"
+	// DefaultJaegerAgentEndpointPort sets default jaeger agent endpoint host
+	DefaultJaegerAgentEndpointPort = "6831"
+	// DefaultOTLPCollectorPort is the port the Exporter will attempt connect to
 	// if no collector port is provided.
-	OTELGrpcCollectorPort uint16 = 4317
+	DefaultOTLPCollectorPort uint16 = 4317
+	// DefaultOTLPCollectorHost is the host address the Exporter will attempt
+	// connect to if no collector address is provided.
+	DefaultOTLPCollectorHost string = "localhost"
 	// OTELGrpcTracesPath is a default URL path for endpoint that
 	// receives spans.
 	OTELGrpcTracesPath string = "/v1/traces"
@@ -59,7 +68,7 @@ func TracerSwitch(s string) TracerProviderOption {
 // TracerType sets a factory tracing type
 func TracerType(t string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.TracingType = string(t)
+		o.TracingType = t
 	}
 }
 
@@ -70,6 +79,27 @@ func ServiceName(sn string) TracerProviderOption {
 	}
 }
 
+// JaegerAgentHost sets the jaeger agent host for tracing system
+func JaegerAgentHost(host string) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.JaegerAgentHost = host
+	}
+}
+
+// JaegerAgentPort sets the jaeger agent host for tracing system
+func JaegerAgentPort(port string) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.JaegerAgentPort = port
+	}
+}
+
+// JaegerAgentOptions imports oteljaeger.AgentEndpointOption
+func JaegerAgentOptions(option oteljaeger.AgentEndpointOption) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.JaegerAgentOptions = append(o.JaegerAgentOptions, option)
+	}
+}
+
 // JaegerCollectorEndpoint sets the endpoint url for tracing system
 func JaegerCollectorEndpoint(ep string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
@@ -77,93 +107,80 @@ func JaegerCollectorEndpoint(ep string) TracerProviderOption {
 	}
 }
 
-//// JaegerCollectorUsername sets the username url for tracing system
-//func JaegerCollectorUsername(name string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.CollectorEndpointConfig.Username = name
-//	}
-//}
-//
-//// JaegerCollectorPassword sets the password url for tracing system
-//func JaegerCollectorPassword(password string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.CollectorEndpointConfig.Password = password
-//	}
-//}
-//
-//// JaegerCollectorHttpClient sets the http client for tracing system
-//func JaegerCollectorHttpClient(client *http.Client) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.CollectorEndpointConfig.HttpClient = client
-//	}
-//}
-//
-//// JaegerAgentHost sets the jaeger agent host for tracing system
-//func JaegerAgentHost(host string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.AgentEndpointConfig.Host = host
-//	}
-//}
-//
-//// JaegerAgentPort sets the jaeger agent host for tracing system
-//func JaegerAgentPort(port string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.AgentEndpointConfig.Port = port
-//	}
-//}
-//
-//// JaegerAgentMaxPacketSize sets the jaeger agent max package size for tracing system
-//func JaegerAgentMaxPacketSize(size int) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.AgentEndpointConfig.MaxPacketSize = size
-//	}
-//}
-//
-//// JaegerAgentLogger sets the jaeger agent logger for tracing system
-//func JaegerAgentLogger(l *log.Logger) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.AgentEndpointConfig.Logger = l
-//	}
-//}
-//
-//// JaegerAgentDisableReconnecting disables reconnecting udp client
-//func JaegerAgentDisableReconnecting() TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.AgentEndpointConfig.AttemptReconnecting = false
-//	}
-//}
-//
-//// JaegerAgentReconnectInterval the interval between attempts to connect agent endpoint
-//func JaegerAgentReconnectInterval(t time.Duration) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		o.JaegerConfig.AgentEndpointConfig.AttemptReconnectInterval = t
-//	}
-//}
-
-// WithGrpcEndpoint sets grpc endpoint
-func WithGrpcEndpoint(endpoint string) TracerProviderOption {
+// JaegerCollectorUsername sets the username url for tracing system
+func JaegerCollectorUsername(name string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.GrpcConfig.Endpoint = endpoint
+		o.JaegerColUsername = name
 	}
 }
 
-// WithGrpcURLPath sets grpc url path
-func WithGrpcURLPath(path string) TracerProviderOption {
+// JaegerCollectorPassword sets the password url for tracing system
+func JaegerCollectorPassword(password string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.GrpcConfig.URLPath = path
+		o.JaegerColPassword = password
 	}
 }
 
-// WithGrpcInsecure sets grpc url path
-func WithGrpcInsecure() TracerProviderOption {
+// JaegerCollectorHttpClient sets the http client for tracing system
+func JaegerCollectorHttpClient(client *http.Client) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.GrpcConfig.Insecure = true
+		o.JaegerColHttpClient = client
 	}
 }
 
-func WithGrpcOption(grpcOpt otlptracegrpc.Option) TracerProviderOption {
+// JaegerCollectorOptions imports oteljaeger.CollectorEndpointOption
+func JaegerCollectorOptions(option oteljaeger.CollectorEndpointOption) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.GrpcOpt = append(o.GrpcOpt, grpcOpt)
+		o.JaegerColOptions = append(o.JaegerColOptions, option)
+	}
+}
+
+// WithOTLPGRPCEndpoint sets OTLP GRPC endpoint
+func WithOTLPGRPCEndpoint(endpoint string) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.OTLPGRPCEndpoint = endpoint
+	}
+}
+
+// WithOTLPGRPCInsecure sets OTLP GRPC endpoint
+func WithOTLPGRPCInsecure() TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.OTLPGRPCInsecure = true
+	}
+}
+
+// WithGRPCOption imports otlptracegrpc.Option
+func WithGRPCOption(option otlptracegrpc.Option) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.GRPCOptions = append(o.GRPCOptions, option)
+	}
+}
+
+// WithOTLPHTTPEndpoint sets OTLP HTTP endpoint
+func WithOTLPHTTPEndpoint(endpoint string) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.OTLPHTTPEndpoint = endpoint
+	}
+}
+
+// WithOTLPHTTPInsecure sets OTLP HTTP endpoint
+func WithOTLPHTTPInsecure() TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.OTLPHTTPInsecure = true
+	}
+}
+
+// WithHTTPOption imports otlptracegrpc.Option
+func WithHTTPOption(option otlptracehttp.Option) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.HTTPOptions = append(o.HTTPOptions, option)
+	}
+}
+
+// WithResourceOption imports otelresource.Option
+func WithResourceOption(option otelresource.Option) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		o.ResourceOptions = append(o.ResourceOptions, option)
 	}
 }
 
