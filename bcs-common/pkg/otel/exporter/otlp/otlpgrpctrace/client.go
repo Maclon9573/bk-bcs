@@ -16,17 +16,9 @@ package otlpgrpctrace
 import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"google.golang.org/grpc"
 )
 
 // NewClient creates a new gRPC trace client.
 func NewClient(opts ...otlptracegrpc.Option) otlptrace.Client {
 	return otlptracegrpc.NewClient(opts...)
-}
-
-type GrpcConfig struct {
-	Endpoint string
-	URLPath  string
-	Insecure bool
-	GRPCConn *grpc.ClientConn
 }

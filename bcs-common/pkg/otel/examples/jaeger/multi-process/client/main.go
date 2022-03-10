@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -31,16 +32,20 @@ import (
 
 func main() {
 	opts := trace.TracerProviderConfig{
-		TracingSwitch:   "on",
-		TracingType:     "jaeger",
-		JaegerAgentHost: trace.DefaultJaegerAgentEndpointHost,
-		JaegerAgentPort: trace.DefaultJaegerAgentEndpointPort,
+		TracingSwitch: "on",
+		TracingType:   "jaeger",
+		JaegerConfig: &jaeger.EndpointConfig{
+			AgentEndpoint: &jaeger.AgentEndpoint{
+				Host: "localhost",
+				Port: "6831",
+			},
+		},
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("EndPoint", "HttpClient"),
 		},
 	}
 	op := trace.ValidateTracerProviderOption(&opts)
-	op = append(op, trace.WithDefaultOnSampler())
+	op = append(op, trace.WithAlwaysOnSampler())
 
 	tp, err := trace.InitTracerProvider("http-client", op...)
 	otel.SetTextMapPropagator(propagation.TraceContext{})

@@ -14,6 +14,9 @@
 package trace
 
 import (
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlphttptrace"
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -50,9 +53,9 @@ const (
 	// DefaultOTLPCollectorHost is the host address the Exporter will attempt
 	// connect to if no collector address is provided.
 	DefaultOTLPCollectorHost string = "localhost"
-	// OTELGrpcTracesPath is a default URL path for endpoint that
+	// DefaultOTLPColTracesPath is a default URL path for endpoint that
 	// receives spans.
-	OTELGrpcTracesPath string = "/v1/traces"
+	DefaultOTLPColTracesPath string = "/v1/traces"
 )
 
 // TracerProviderOption for init TracerProviderConfig
@@ -82,98 +85,193 @@ func ServiceName(sn string) TracerProviderOption {
 // JaegerAgentHost sets the jaeger agent host for tracing system
 func JaegerAgentHost(host string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerAgentHost = host
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				AgentEndpoint: &jaeger.AgentEndpoint{},
+			}
+		}
+		o.JaegerConfig.AgentEndpoint.Host = host
 	}
 }
 
 // JaegerAgentPort sets the jaeger agent host for tracing system
 func JaegerAgentPort(port string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerAgentPort = port
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				AgentEndpoint: &jaeger.AgentEndpoint{},
+			}
+		}
+		o.JaegerConfig.AgentEndpoint.Port = port
 	}
 }
 
 // JaegerAgentOptions imports oteljaeger.AgentEndpointOption
 func JaegerAgentOptions(option oteljaeger.AgentEndpointOption) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerAgentOptions = append(o.JaegerAgentOptions, option)
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				AgentEndpoint: &jaeger.AgentEndpoint{},
+			}
+		}
+		o.JaegerConfig.AgentEndpoint.AgentOptions = append(o.JaegerConfig.AgentEndpoint.AgentOptions, option)
 	}
 }
 
 // JaegerCollectorEndpoint sets the endpoint url for tracing system
 func JaegerCollectorEndpoint(ep string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerColEndpoint = ep
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				CollectorEndpoint: &jaeger.CollectorEndpoint{},
+			}
+		}
+		o.JaegerConfig.CollectorEndpoint.Endpoint = ep
 	}
 }
 
 // JaegerCollectorUsername sets the username url for tracing system
 func JaegerCollectorUsername(name string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerColUsername = name
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				CollectorEndpoint: &jaeger.CollectorEndpoint{},
+			}
+		}
+		o.JaegerConfig.CollectorEndpoint.Username = name
 	}
 }
 
 // JaegerCollectorPassword sets the password url for tracing system
 func JaegerCollectorPassword(password string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerColPassword = password
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				CollectorEndpoint: &jaeger.CollectorEndpoint{},
+			}
+		}
+		o.JaegerConfig.CollectorEndpoint.Password = password
 	}
 }
 
 // JaegerCollectorHttpClient sets the http client for tracing system
 func JaegerCollectorHttpClient(client *http.Client) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerColHttpClient = client
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				CollectorEndpoint: &jaeger.CollectorEndpoint{},
+			}
+		}
+		o.JaegerConfig.CollectorEndpoint.HttpClient = client
 	}
 }
 
 // JaegerCollectorOptions imports oteljaeger.CollectorEndpointOption
 func JaegerCollectorOptions(option oteljaeger.CollectorEndpointOption) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.JaegerColOptions = append(o.JaegerColOptions, option)
+		if o.JaegerConfig == nil {
+			o.JaegerConfig = &jaeger.EndpointConfig{
+				CollectorEndpoint: &jaeger.CollectorEndpoint{},
+			}
+		}
+		o.JaegerConfig.CollectorEndpoint.CollectorOptions =
+			append(o.JaegerConfig.CollectorEndpoint.CollectorOptions, option)
 	}
 }
 
 // WithOTLPGRPCEndpoint sets OTLP GRPC endpoint
 func WithOTLPGRPCEndpoint(endpoint string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.OTLPGRPCEndpoint = endpoint
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+			}
+		}
+		o.OTLPConfig.GRPCConfig.GRPCEndpoint = endpoint
+	}
+}
+
+// WithOTLPGRPCURLPath sets OTLP GRPC endpoint
+func WithOTLPGRPCURLPath(url string) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+			}
+		}
+		o.OTLPConfig.GRPCConfig.GRPCURLPath = url
 	}
 }
 
 // WithOTLPGRPCInsecure sets OTLP GRPC endpoint
 func WithOTLPGRPCInsecure() TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.OTLPGRPCInsecure = true
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+			}
+		}
+		o.OTLPConfig.GRPCConfig.GRPCInsecure = true
 	}
 }
 
 // WithGRPCOption imports otlptracegrpc.Option
 func WithGRPCOption(option otlptracegrpc.Option) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.GRPCOptions = append(o.GRPCOptions, option)
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+			}
+		}
+		o.OTLPConfig.GRPCConfig.GRPCOptions = append(o.OTLPConfig.GRPCConfig.GRPCOptions, option)
 	}
 }
 
 // WithOTLPHTTPEndpoint sets OTLP HTTP endpoint
 func WithOTLPHTTPEndpoint(endpoint string) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.OTLPHTTPEndpoint = endpoint
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				HTTPConfig: &otlphttptrace.HTTPConfig{},
+			}
+		}
+		o.OTLPConfig.HTTPConfig.HTTPEndpoint = endpoint
+	}
+}
+
+// WithOTLPHTTPURLPath sets OTLP GRPC endpoint
+func WithOTLPHTTPURLPath(url string) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				HTTPConfig: &otlphttptrace.HTTPConfig{},
+			}
+		}
+		o.OTLPConfig.HTTPConfig.HTTPURLPath = url
 	}
 }
 
 // WithOTLPHTTPInsecure sets OTLP HTTP endpoint
 func WithOTLPHTTPInsecure() TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.OTLPHTTPInsecure = true
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				HTTPConfig: &otlphttptrace.HTTPConfig{},
+			}
+		}
+		o.OTLPConfig.HTTPConfig.HTTPInsecure = true
 	}
 }
 
 // WithHTTPOption imports otlptracegrpc.Option
 func WithHTTPOption(option otlptracehttp.Option) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.HTTPOptions = append(o.HTTPOptions, option)
+		if o.OTLPConfig == nil {
+			o.OTLPConfig = &OTLPConfig{
+				HTTPConfig: &otlphttptrace.HTTPConfig{},
+			}
+		}
+		o.OTLPConfig.HTTPConfig.HTTPOptions = append(o.OTLPConfig.HTTPConfig.HTTPOptions, option)
 	}
 }
 
@@ -194,34 +292,49 @@ func ResourceAttrs(ra []attribute.KeyValue) TracerProviderOption {
 // WithAlwaysOnSampler sets a always on Sampler
 func WithAlwaysOnSampler() TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.AlwaysOnSampler = true
+		if o.Sampler == nil {
+			o.Sampler = &SamplerType{}
+		}
+		o.Sampler.AlwaysOnSampler = true
 	}
 }
 
 // WithAlwaysOffSampler sets a always off Sampler
 func WithAlwaysOffSampler() TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.AlwaysOffSampler = true
+		if o.Sampler == nil {
+			o.Sampler = &SamplerType{}
+		}
+		o.Sampler.AlwaysOffSampler = true
 	}
 }
 
 // WithRatioBasedSampler sets a ratio based Sampler
 func WithRatioBasedSampler(r float64) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.RatioBasedSampler = r
+		if o.Sampler == nil {
+			o.Sampler = &SamplerType{}
+		}
+		o.Sampler.RatioBasedSampler = r
 	}
 }
 
 // WithDefaultOnSampler sets a default on Sampler if parent span is not sampled
 func WithDefaultOnSampler() TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.DefaultOnSampler = true
+		if o.Sampler == nil {
+			o.Sampler = &SamplerType{}
+		}
+		o.Sampler.DefaultOnSampler = true
 	}
 }
 
 // WithDefaultOffSampler sets a default off Sampler if parent span is not sampled
 func WithDefaultOffSampler() TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		o.DefaultOffSampler = true
+		if o.Sampler == nil {
+			o.Sampler = &SamplerType{}
+		}
+		o.Sampler.DefaultOffSampler = true
 	}
 }

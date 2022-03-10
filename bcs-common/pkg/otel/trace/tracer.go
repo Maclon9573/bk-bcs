@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
@@ -53,36 +52,28 @@ const (
 
 // TracerProviderConfig set TracerProviderConfig for different tracing systems
 type TracerProviderConfig struct {
-	TracingSwitch string `json:"tracingSwitch" value:"off" usage:"tracing switch"`
-	TracingType   string `json:"tracingType" value:"jaeger" usage:"tracing type(default jaeger)"`
-	ServiceName   string `json:"serviceName" value:"bcs-common/pkg/otel" usage:"tracing serviceName"`
-	// Jaeger agent endpoint config
-	JaegerAgentHost    string                           `json:"jaegerAgentHost,omitempty" value:"localhost" usage:"host to be used in the agent client endpoint"`
-	JaegerAgentPort    string                           `json:"JaegerAgentPort,omitempty" value:"6831" usage:"port to be used in the agent client endpoint"`
-	JaegerAgentOptions []oteljaeger.AgentEndpointOption `json:"-"`
-	// Jaeger collector endpoint config
-	JaegerColEndpoint   string                               `json:"jaegerColEndpoint,omitempty" usage:"jaegerCollectorEndpoint for sending spans directly to a collector"`
-	JaegerColUsername   string                               `json:"jaegerUsername,omitempty" usage:"jaegerUsername to be used for authentication with the collector endpoint"`
-	JaegerColPassword   string                               `json:"jaegerPassword,omitempty" usage:"jaegerPassword to be used for authentication with the collector endpoint"`
-	JaegerColHttpClient *http.Client                         `json:"jaegerHttpClient,omitempty" usage:"jaegerHttpClient to be used to make requests to the collector endpoint"`
-	JaegerColOptions    []oteljaeger.CollectorEndpointOption `json:"-"`
-	// OTLP collector GRPC endpoint
-	OTLPGRPCEndpoint string                 `json:"OTLPGRPCEndpoint,omitempty" usage:"OTLPGRPCEndpoint sets GRPC client endpoint"`
-	OTLPGRPCInsecure bool                   `json:"OTLPGRPCSecure,omitempty" usage:"OTLPGRPCInsecure disables GRPC client transport security"`
-	GRPCOptions      []otlptracegrpc.Option `json:"-"`
-	// OTLP collector HTTP endpoint
-	OTLPHTTPEndpoint string                 `json:"OTLPHTTPEndpoint,omitempty" usage:"OTLPHTTPEndpoint sets HTTP client endpoint"`
-	OTLPHTTPInsecure bool                   `json:"OTLPHTTPInsecure,omitempty" usage:"OTLPHTTPInsecure disables HTTP client transport security"`
-	HTTPOptions      []otlptracehttp.Option `json:"-"`
+	TracingSwitch string                 `json:"tracingSwitch" value:"off" usage:"tracing switch"`
+	TracingType   string                 `json:"tracingType" value:"jaeger" usage:"tracing type(default jaeger)"`
+	ServiceName   string                 `json:"serviceName" value:"bcs-common/pkg/otel" usage:"tracing serviceName"`
+	JaegerConfig  *jaeger.EndpointConfig `json:"jaegerConfig,omitempty"`
+	OTLPConfig    *OTLPConfig            `json:"OTLPConfig,omitempty"`
 	// Resource attributes
-	ResourceAttrs   []attribute.KeyValue  `json:"resourceAttrs,omitempty" usage:"attributes of traced service"`
+	ResourceAttrs   []attribute.KeyValue  `json:"resourceAttrs,omitempty" usage:"attributes for the traced service"`
 	ResourceOptions []otelresource.Option `json:"-"`
-	// Sampler kinds
-	AlwaysOnSampler   bool    `json:"alwaysOnSampler,omitempty"`
-	AlwaysOffSampler  bool    `json:"alwaysOffSampler,omitempty"`
-	RatioBasedSampler float64 `json:"ratioBasedSampler,omitempty"`
-	DefaultOnSampler  bool    `json:"defaultOnSampler,omitempty"`
-	DefaultOffSampler bool    `json:"defaultOffSampler,omitempty"`
+	Sampler         *SamplerType          `json:"sampler,omitempty"`
+}
+
+type OTLPConfig struct {
+	GRPCConfig *otlpgrpctrace.GRPCConfig `json:"GRPCConfig,omitempty"`
+	HTTPConfig *otlphttptrace.HTTPConfig `json:"HTTPConfig,omitempty"`
+}
+
+type SamplerType struct {
+	AlwaysOnSampler   bool    `json:"alwaysOnSampler,omitempty" value:"false" usage:"alwaysOnSampler will always sample"`
+	AlwaysOffSampler  bool    `json:"alwaysOffSampler,omitempty" value:"false" usage:"alwaysOffSampler will never sample"`
+	RatioBasedSampler float64 `json:"ratioBasedSampler,omitempty" value:"0" usage:"ratioBasedSampler will sample base on a ratio"`
+	DefaultOnSampler  bool    `json:"defaultOnSampler,omitempty" value:"false" usage:"defaultOnSampler set a parent based always on sample"`
+	DefaultOffSampler bool    `json:"defaultOffSampler,omitempty" value:"false" usage:"defaultOffSampler set a parent based always off sample"`
 }
 
 // InitTracerProvider initialize an OTLP tracer provider with processors and exporters.
@@ -106,75 +97,150 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 	if defaultOptions.TracingSwitch == "off" {
 		return &sdktrace.TracerProvider{}, nil
 	}
-	resource := initResource(defaultOptions)
+
+	resource, err := initResource(defaultOptions)
+	if err != nil {
+		return &sdktrace.TracerProvider{}, err
+	}
 	sampler := initSampler(defaultOptions)
 
 	switch defaultOptions.TracingType {
 	case string(Jaeger):
 		blog.Info("Creating jaeger exporter...")
-		if defaultOptions.JaegerAgentHost != "" && defaultOptions.JaegerAgentPort != "" {
-			opts := append(initAgentEndpointOptions(defaultOptions), defaultOptions.JaegerAgentOptions...)
+		if defaultOptions.JaegerConfig == nil {
+			defaultOptions.JaegerConfig = &jaeger.EndpointConfig{
+				AgentEndpoint: &jaeger.AgentEndpoint{
+					Host: DefaultJaegerAgentEndpointHost,
+					Port: DefaultJaegerAgentEndpointPort,
+				},
+			}
+			blog.Info("Jaeger agent and collector are not set, trying default agent endpoint %s:%v first...",
+				DefaultJaegerAgentEndpointHost, DefaultJaegerAgentEndpointPort)
+			agentOpts := initAgentEndpointOptions(defaultOptions)
+			jaegerExporter, err := jaeger.NewAgentExporter(agentOpts...)
+			if err != nil {
+				defaultOptions.JaegerConfig = &jaeger.EndpointConfig{
+					CollectorEndpoint: &jaeger.CollectorEndpoint{
+						Endpoint: DefaultJaegerCollectorEndpoint,
+					},
+				}
+				blog.Info("failed to connect default jaeger agent, trying default jaeger collector endpoint %s...",
+					DefaultJaegerCollectorEndpoint)
+				collectorOpts := initCollectorEndpointOptions(defaultOptions)
+				jaegerExporter, err = jaeger.NewCollectorExporter(collectorOpts...)
+				if err != nil {
+					blog.Errorf("%s: %v", "failed to create jaeger exporter", err)
+					return &sdktrace.TracerProvider{}, err
+				}
+			}
+			processors := initProcessors(jaegerExporter)
+			return newTracerProvider(processors, resource, sampler)
+		}
+		if defaultOptions.JaegerConfig.AgentEndpoint != nil {
+			if defaultOptions.JaegerConfig.AgentEndpoint.Host == "" {
+				defaultOptions.JaegerConfig.AgentEndpoint.Host = DefaultJaegerAgentEndpointHost
+			}
+			if defaultOptions.JaegerConfig.AgentEndpoint.Port == "" {
+				defaultOptions.JaegerConfig.AgentEndpoint.Port = DefaultJaegerAgentEndpointPort
+			}
+			opts := append(initAgentEndpointOptions(defaultOptions),
+				defaultOptions.JaegerConfig.AgentEndpoint.AgentOptions...)
 			jaegerExporter, err := jaeger.NewAgentExporter(opts...)
-			handleErr(err, "failed to create jaeger exporter")
+			if err != nil {
+				blog.Errorf("%s: %v", "failed to create jaeger exporter", err)
+				return &sdktrace.TracerProvider{}, err
+			}
 			processors := initProcessors(jaegerExporter)
 			return newTracerProvider(processors, resource, sampler)
 		}
-		if defaultOptions.JaegerColEndpoint != "" {
-			opts := append(initCollectorEndpointOptions(defaultOptions), defaultOptions.JaegerColOptions...)
-			jaegerExporter, err := jaeger.NewCollectorExporter(opts...)
-			handleErr(err, "failed to create jaeger exporter")
-			processors := initProcessors(jaegerExporter)
-			return newTracerProvider(processors, resource, sampler)
+		if defaultOptions.JaegerConfig.CollectorEndpoint.Endpoint == "" {
+			defaultOptions.JaegerConfig.CollectorEndpoint.Endpoint = DefaultJaegerCollectorEndpoint
 		}
-		blog.Info("Jaeger agent and collector are not set, trying default agent endpoint %s:%v first...",
-			DefaultJaegerAgentEndpointHost, DefaultJaegerAgentEndpointPort)
-		opts := append(initAgentEndpointOptions(defaultOptions), defaultOptions.JaegerAgentOptions...)
-		jaegerExporter, err := jaeger.NewAgentExporter(opts...)
+		opts := append(initCollectorEndpointOptions(defaultOptions),
+			defaultOptions.JaegerConfig.CollectorEndpoint.CollectorOptions...)
+		jaegerExporter, err := jaeger.NewCollectorExporter(opts...)
 		if err != nil {
-			blog.Info("failed to connect jaeger agent, trying default jaeger collector endpoint %s...",
-				DefaultJaegerCollectorEndpoint)
-			opts := append(initCollectorEndpointOptions(defaultOptions), defaultOptions.JaegerColOptions...)
-			jaegerExporter, err = jaeger.NewCollectorExporter(opts...)
-			handleErr(err, "failed to create jaeger exporter")
-			processors := initProcessors(jaegerExporter)
-			return newTracerProvider(processors, resource, sampler)
+			blog.Errorf("%s: %v", "failed to create jaeger exporter", err)
+			return &sdktrace.TracerProvider{}, err
 		}
 		processors := initProcessors(jaegerExporter)
 		return newTracerProvider(processors, resource, sampler)
 	case string(OTLP_GRPC):
 		blog.Info("Using otlpgrpc exporter...")
-		opts := append(initGRPCConfigOptions(defaultOptions), defaultOptions.GRPCOptions...)
-		if defaultOptions.OTLPGRPCEndpoint != "" {
+		if defaultOptions.OTLPConfig == nil {
+			defaultOptions.OTLPConfig = &OTLPConfig{
+				GRPCConfig: &otlpgrpctrace.GRPCConfig{
+					GRPCEndpoint: fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort),
+					GRPCURLPath:  DefaultOTLPColTracesPath,
+					GRPCInsecure: true,
+				},
+			}
+			blog.Info("Using default OTLPGrpc endpoint: %s:%v", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
+			opts := initGRPCConfigOptions(defaultOptions)
 			ctx := context.Background()
 			traceClient := otlpgrpctrace.NewClient(opts...)
 			grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
-			handleErr(err, "failed to create otelgrpc exporter")
+			if err != nil {
+				blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
+				return &sdktrace.TracerProvider{}, err
+			}
 			processors := initProcessors(grpcExporter)
 			return newTracerProvider(processors, resource, sampler)
 		}
-		blog.Info("Using default OTLPGrpc endpoint: %s:%v", DefaultOTLPCollectorHost,
-			DefaultOTLPCollectorPort)
+		if defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint == "" {
+			defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint =
+				fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
+		}
+		if defaultOptions.OTLPConfig.GRPCConfig.GRPCURLPath == "" {
+			defaultOptions.OTLPConfig.GRPCConfig.GRPCURLPath = DefaultOTLPColTracesPath
+		}
+		opts := append(initGRPCConfigOptions(defaultOptions), defaultOptions.OTLPConfig.GRPCConfig.GRPCOptions...)
 		ctx := context.Background()
 		traceClient := otlpgrpctrace.NewClient(opts...)
 		grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
-		handleErr(err, "failed to create otelgrpc exporter")
+		if err != nil {
+			blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
+			return &sdktrace.TracerProvider{}, err
+		}
+
 		processors := initProcessors(grpcExporter)
 		return newTracerProvider(processors, resource, sampler)
 	case string(OTLP_HTTP):
 		blog.Info("Using otlphttp exporter...")
-		opts := append(initHTTPConfigOptions(defaultOptions), defaultOptions.HTTPOptions...)
-		if defaultOptions.OTLPHTTPEndpoint != "" {
+		if defaultOptions.OTLPConfig == nil {
+			defaultOptions.OTLPConfig = &OTLPConfig{
+				HTTPConfig: &otlphttptrace.HTTPConfig{
+					HTTPEndpoint: fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort),
+					HTTPURLPath:  DefaultOTLPColTracesPath,
+					HTTPInsecure: true,
+				},
+			}
+			blog.Info("Using default OTLPHttp endpoint: %s:%v", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
+			opts := initHTTPConfigOptions(defaultOptions)
 			ctx := context.Background()
-			httpExporter, err := otlphttptrace.New(ctx, opts...)
-			handleErr(err, "failed to create otlphttp exporter")
-			processors := initProcessors(httpExporter)
+			grpcExporter, err := otlphttptrace.New(ctx, opts...)
+			if err != nil {
+				blog.Errorf("%s: %v", "failed to create otlphttp exporter", err)
+				return &sdktrace.TracerProvider{}, err
+			}
+			processors := initProcessors(grpcExporter)
 			return newTracerProvider(processors, resource, sampler)
 		}
-		blog.Info("Using default OTLPHttp endpoint: %s:%v", DefaultOTLPCollectorHost,
-			DefaultOTLPCollectorPort)
+		if defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint == "" {
+			defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint =
+				fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
+		}
+		if defaultOptions.OTLPConfig.HTTPConfig.HTTPURLPath == "" {
+			defaultOptions.OTLPConfig.HTTPConfig.HTTPURLPath = DefaultOTLPColTracesPath
+		}
+		opts := append(initHTTPConfigOptions(defaultOptions), defaultOptions.OTLPConfig.HTTPConfig.HTTPOptions...)
 		ctx := context.Background()
 		httpExporter, err := otlphttptrace.New(ctx, opts...)
-		handleErr(err, "failed to create otlphttp exporter")
+		if err != nil {
+			blog.Errorf("%s: %v", "failed to create otlphttp exporter", err)
+			return &sdktrace.TracerProvider{}, err
+		}
+
 		processors := initProcessors(httpExporter)
 		return newTracerProvider(processors, resource, sampler)
 	case string(Zipkin):
@@ -206,125 +272,155 @@ func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProvider
 	if config.ServiceName != "" {
 		tpos = append(tpos, ServiceName(config.ServiceName))
 	}
-	if config.JaegerColEndpoint != "" {
-		tpos = append(tpos, JaegerCollectorEndpoint(config.JaegerColEndpoint))
+	if config.JaegerConfig != nil {
+		if config.JaegerConfig.CollectorEndpoint != nil {
+			if config.JaegerConfig.CollectorEndpoint.Endpoint != "" {
+				tpos = append(tpos, JaegerCollectorEndpoint(config.JaegerConfig.CollectorEndpoint.Endpoint))
+			}
+			if config.JaegerConfig.CollectorEndpoint.Username != "" {
+				tpos = append(tpos, JaegerCollectorUsername(config.JaegerConfig.CollectorEndpoint.Username))
+			}
+			if config.JaegerConfig.CollectorEndpoint.Password != "" {
+				tpos = append(tpos, JaegerCollectorPassword(config.JaegerConfig.CollectorEndpoint.Password))
+			}
+			if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
+				tpos = append(tpos, JaegerCollectorHttpClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
+			}
+		}
+		if config.JaegerConfig.AgentEndpoint != nil {
+			if config.JaegerConfig.AgentEndpoint.Host != "" {
+				tpos = append(tpos, JaegerAgentHost(config.JaegerConfig.AgentEndpoint.Host))
+			}
+			if config.JaegerConfig.AgentEndpoint.Port != "" {
+				tpos = append(tpos, JaegerAgentPort(config.JaegerConfig.AgentEndpoint.Port))
+			}
+		}
 	}
-	if config.JaegerColUsername != "" {
-		tpos = append(tpos, JaegerCollectorUsername(config.JaegerColUsername))
-	}
-	if config.JaegerColPassword != "" {
-		tpos = append(tpos, JaegerCollectorPassword(config.JaegerColPassword))
-	}
-	if config.JaegerColHttpClient != nil {
-		tpos = append(tpos, JaegerCollectorHttpClient(config.JaegerColHttpClient))
-	}
-	if config.JaegerAgentHost != "" {
-		tpos = append(tpos, JaegerAgentHost(config.JaegerAgentHost))
-	}
-	if config.JaegerAgentPort != "" {
-		tpos = append(tpos, JaegerAgentPort(config.JaegerAgentPort))
-	}
-	if config.OTLPGRPCEndpoint != "" {
-		tpos = append(tpos, WithOTLPGRPCEndpoint(config.OTLPGRPCEndpoint))
-	}
-	if config.OTLPGRPCInsecure {
-		tpos = append(tpos, WithOTLPGRPCInsecure())
-	}
-	if config.OTLPHTTPEndpoint != "" {
-		tpos = append(tpos, WithOTLPHTTPEndpoint(config.OTLPGRPCEndpoint))
-	}
-	if config.OTLPHTTPInsecure {
-		tpos = append(tpos, WithOTLPHTTPInsecure())
+	if config.OTLPConfig != nil {
+		if config.OTLPConfig.GRPCConfig != nil {
+			if config.OTLPConfig.GRPCConfig.GRPCEndpoint != "" {
+				tpos = append(tpos, WithOTLPGRPCEndpoint(config.OTLPConfig.GRPCConfig.GRPCEndpoint))
+			}
+			if config.OTLPConfig.GRPCConfig.GRPCURLPath != "" {
+				tpos = append(tpos, WithOTLPGRPCURLPath(config.OTLPConfig.GRPCConfig.GRPCURLPath))
+			}
+			if config.OTLPConfig.GRPCConfig.GRPCInsecure {
+				tpos = append(tpos, WithOTLPGRPCInsecure())
+			}
+		}
+		if config.OTLPConfig.HTTPConfig != nil {
+			if config.OTLPConfig.HTTPConfig.HTTPEndpoint != "" {
+				tpos = append(tpos, WithOTLPHTTPEndpoint(config.OTLPConfig.HTTPConfig.HTTPEndpoint))
+			}
+			if config.OTLPConfig.HTTPConfig.HTTPURLPath != "" {
+				tpos = append(tpos, WithOTLPHTTPURLPath(config.OTLPConfig.HTTPConfig.HTTPURLPath))
+			}
+			if config.OTLPConfig.HTTPConfig.HTTPInsecure {
+				tpos = append(tpos, WithOTLPHTTPInsecure())
+			}
+		}
 	}
 	if config.ResourceAttrs != nil {
 		tpos = append(tpos, ResourceAttrs(config.ResourceAttrs))
 	}
-	if config.AlwaysOnSampler {
-		tpos = append(tpos, WithAlwaysOnSampler())
-	}
-	if config.AlwaysOffSampler {
-		tpos = append(tpos, WithAlwaysOffSampler())
-	}
-	if fmt.Sprint(config.RatioBasedSampler) != "0" {
-		tpos = append(tpos, WithRatioBasedSampler(config.RatioBasedSampler))
-	}
-	if config.DefaultOnSampler {
-		tpos = append(tpos, WithDefaultOnSampler())
-	}
-	if config.DefaultOffSampler {
-		tpos = append(tpos, WithDefaultOffSampler())
+	if config.Sampler != nil {
+		if config.Sampler.AlwaysOnSampler {
+			tpos = append(tpos, WithAlwaysOnSampler())
+		}
+		if config.Sampler.AlwaysOffSampler {
+			tpos = append(tpos, WithAlwaysOffSampler())
+		}
+		if fmt.Sprint(config.Sampler.RatioBasedSampler) != "0" {
+			tpos = append(tpos, WithRatioBasedSampler(config.Sampler.RatioBasedSampler))
+		}
+		if config.Sampler.DefaultOnSampler {
+			tpos = append(tpos, WithDefaultOnSampler())
+		}
+		if config.Sampler.DefaultOffSampler {
+			tpos = append(tpos, WithDefaultOffSampler())
+		}
 	}
 	return tpos
 }
 
 func initSampler(tpc *TracerProviderConfig) sdktrace.Sampler {
-	if tpc.AlwaysOnSampler {
-		return sdktrace.AlwaysSample()
-	}
-	if tpc.AlwaysOffSampler {
-		return sdktrace.NeverSample()
-	}
-	if fmt.Sprint(tpc.RatioBasedSampler) != "0" {
-		return sdktrace.TraceIDRatioBased(tpc.RatioBasedSampler)
-	}
-	if tpc.DefaultOnSampler {
+	if tpc.Sampler == nil {
+		tpc.Sampler = &SamplerType{
+			DefaultOnSampler: true,
+		}
 		return sdktrace.ParentBased(sdktrace.AlwaysSample())
 	}
-	if tpc.DefaultOffSampler {
+	if tpc.Sampler.AlwaysOnSampler {
+		return sdktrace.AlwaysSample()
+	}
+	if tpc.Sampler.AlwaysOffSampler {
+		return sdktrace.NeverSample()
+	}
+	if fmt.Sprint(tpc.Sampler.RatioBasedSampler) != "0" {
+		return sdktrace.TraceIDRatioBased(tpc.Sampler.RatioBasedSampler)
+	}
+	if tpc.Sampler.DefaultOnSampler {
+		return sdktrace.ParentBased(sdktrace.AlwaysSample())
+	}
+	if tpc.Sampler.DefaultOffSampler {
 		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
 	return sdktrace.ParentBased(sdktrace.AlwaysSample())
 }
 
-func initResource(tpc *TracerProviderConfig) *otelresource.Resource {
+func initResource(tpc *TracerProviderConfig) (*otelresource.Resource, error) {
 	ctx := context.Background()
 	tpc.ResourceOptions = append(tpc.ResourceOptions,
 		otelresource.WithSchemaURL(semconv.SchemaURL),
 		otelresource.WithAttributes(resource.ServiceNameKey.String(tpc.ServiceName)))
 	r, err := otelresource.New(ctx, tpc.ResourceOptions...)
-	handleErr(err, "failed to create resource")
+	if err != nil {
+		blog.Errorf("%s: %v", "failed to create resource", err)
+		return &otelresource.Resource{}, err
+	}
 	if tpc.ResourceAttrs != nil {
 		for _, a := range tpc.ResourceAttrs {
 			r, _ = otelresource.Merge(r, otelresource.NewSchemaless(a))
 		}
 	}
-	return r
+	tpc.ResourceAttrs = append([]attribute.KeyValue{resource.ServiceNameKey.String(tpc.ServiceName)}, tpc.ResourceAttrs...)
+	return r, nil
 }
 
 func initCollectorEndpointOptions(config *TracerProviderConfig) []oteljaeger.CollectorEndpointOption {
 	var op []oteljaeger.CollectorEndpointOption
-	if config.JaegerColEndpoint != "" {
-		op = append(op, oteljaeger.WithEndpoint(config.JaegerColEndpoint))
+	if config.JaegerConfig.CollectorEndpoint.Endpoint != "" {
+		op = append(op, oteljaeger.WithEndpoint(config.JaegerConfig.CollectorEndpoint.Endpoint))
 	}
-	if config.JaegerColUsername != "" {
-		op = append(op, oteljaeger.WithUsername(config.JaegerColUsername))
+	if config.JaegerConfig.CollectorEndpoint.Username != "" {
+		op = append(op, oteljaeger.WithUsername(config.JaegerConfig.CollectorEndpoint.Username))
 	}
-	if config.JaegerColPassword != "" {
-		op = append(op, oteljaeger.WithPassword(config.JaegerColPassword))
+	if config.JaegerConfig.CollectorEndpoint.Password != "" {
+		op = append(op, oteljaeger.WithPassword(config.JaegerConfig.CollectorEndpoint.Password))
 	}
-	if config.JaegerColHttpClient != nil {
-		op = append(op, oteljaeger.WithHTTPClient(config.JaegerColHttpClient))
+	if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
+		op = append(op, oteljaeger.WithHTTPClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
 	}
 	return op
 }
 
 func initAgentEndpointOptions(config *TracerProviderConfig) []oteljaeger.AgentEndpointOption {
 	var op []oteljaeger.AgentEndpointOption
-	if config.JaegerAgentHost != "" {
-		op = append(op, oteljaeger.WithAgentHost(config.JaegerAgentHost))
+	if config.JaegerConfig.AgentEndpoint.Host != "" {
+		op = append(op, oteljaeger.WithAgentHost(config.JaegerConfig.AgentEndpoint.Host))
 	}
-	if config.JaegerAgentPort != "" {
-		op = append(op, oteljaeger.WithAgentPort(config.JaegerAgentPort))
+	if config.JaegerConfig.AgentEndpoint.Port != "" {
+		op = append(op, oteljaeger.WithAgentPort(config.JaegerConfig.AgentEndpoint.Port))
 	}
 	return op
 }
 
 func initGRPCConfigOptions(config *TracerProviderConfig) []otlptracegrpc.Option {
 	var op []otlptracegrpc.Option
-	if config.OTLPGRPCEndpoint != "" {
-		op = append(op, otlptracegrpc.WithEndpoint(config.OTLPGRPCEndpoint))
+	if config.OTLPConfig.GRPCConfig.GRPCEndpoint != "" {
+		op = append(op, otlptracegrpc.WithEndpoint(config.OTLPConfig.GRPCConfig.GRPCEndpoint))
 	}
-	if config.OTLPGRPCInsecure {
+	if config.OTLPConfig.GRPCConfig.GRPCInsecure {
 		op = append(op, otlptracegrpc.WithInsecure())
 	}
 	return op
@@ -332,10 +428,13 @@ func initGRPCConfigOptions(config *TracerProviderConfig) []otlptracegrpc.Option 
 
 func initHTTPConfigOptions(config *TracerProviderConfig) []otlptracehttp.Option {
 	var op []otlptracehttp.Option
-	if config.OTLPHTTPEndpoint != "" {
-		op = append(op, otlptracehttp.WithEndpoint(config.OTLPHTTPEndpoint))
+	if config.OTLPConfig.HTTPConfig.HTTPEndpoint != "" {
+		op = append(op, otlptracehttp.WithEndpoint(config.OTLPConfig.HTTPConfig.HTTPEndpoint))
 	}
-	if config.OTLPHTTPInsecure {
+	if config.OTLPConfig.HTTPConfig.HTTPURLPath != "" {
+		op = append(op, otlptracehttp.WithURLPath(config.OTLPConfig.HTTPConfig.HTTPURLPath))
+	}
+	if config.OTLPConfig.HTTPConfig.HTTPInsecure {
 		op = append(op, otlptracehttp.WithInsecure())
 	}
 	return op
@@ -389,6 +488,21 @@ func validateServiceName(sn string) error {
 	}
 	return nil
 }
+
+//
+//func validateJaegerAgent(ep *jaeger.AgentEndpoint) error {
+//	if ep.Host == "" || ep.Port == "" {
+//		return errors.New("empty host or port")
+//	}
+//	return nil
+//}
+
+//func validateJaegerCollector(ep *jaeger.CollectorEndpoint) error {
+//	if ep.Endpoint == "" {
+//		return errors.New("empty endpoint")
+//	}
+//	return nil
+//}
 
 func handleErr(err error, message string) {
 	if err != nil {

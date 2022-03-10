@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/metric"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
@@ -87,9 +88,14 @@ func main() {
 	}()
 
 	traceOpts := trace.TracerProviderConfig{
-		TracingSwitch:     "on",
-		ServiceName:       serviceName,
-		JaegerColEndpoint: trace.DefaultJaegerCollectorEndpoint,
+		TracingSwitch: "on",
+		ServiceName:   serviceName,
+		JaegerConfig: &jaeger.EndpointConfig{
+			AgentEndpoint: &jaeger.AgentEndpoint{
+				Host: "localhost",
+				Port: "6831",
+			},
+		},
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("endpoint", "http_client"),
 		},

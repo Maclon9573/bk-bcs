@@ -14,17 +14,19 @@
 package jaeger
 
 import (
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"net/http"
+
+	"go.opentelemetry.io/otel/exporters/jaeger"
 )
 
-//type CollectorEndpointConfig struct {
-//	// Jaeger collector
-//	CollectorEndpoint string       `json:"collectorEndpoint" value:"" usage:"collectorEndpoint for sending spans directly to a collector"`
-//	Username          string       `json:"username" value:"" usage:"username to be used for authentication with the collector collectorEndpoint"`
-//	Password          string       `json:"password" value:"" usage:"password to be used for authentication with the collector collectorEndpoint"`
-//	HttpClient        *http.Client `json:"httpClient" value:"" usage:"httpClient to be used to make requests to the collector collectorEndpoint"`
-//}
+// CollectorEndpoint configs jaeger agent endpoint
+type CollectorEndpoint struct {
+	Endpoint         string                           `json:"endpoint,omitempty" value:"http://localhost:14268/api/traces" usage:"endpoint for sending spans directly to a collector"`
+	Username         string                           `json:"username,omitempty" usage:"username to be used for authentication with the collector collectorEndpoint"`
+	Password         string                           `json:"password,omitempty" usage:"password to be used for authentication with the collector collectorEndpoint"`
+	HttpClient       *http.Client                     `json:"httpClient,omitempty" usage:"httpClient to be used to make requests to the collector collectorEndpoint"`
+	CollectorOptions []jaeger.CollectorEndpointOption `json:"-"`
+}
 
 // WithCollectorEndpoint defines the full URL to the Jaeger HTTP Thrift collector. This will
 // use the following environment variables for configuration if no explicit option is provided:

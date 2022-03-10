@@ -14,19 +14,18 @@
 package jaeger
 
 import (
-	"go.opentelemetry.io/otel/exporters/jaeger"
 	"log"
 	"time"
+
+	"go.opentelemetry.io/otel/exporters/jaeger"
 )
 
-//type AgentEndpointConfig struct {
-//	Host                     string        `json:"host" value:"localhost" usage:"host to be used in the agent client endpoint"`
-//	Port                     string        `json:"port" value:"6831" usage:"port to be used in the agent client endpoint"`
-//	MaxPacketSize            int           `json:"maxPacketSize" usage:"maxPacketSize for transport to the Jaeger agent"`
-//	Logger                   *log.Logger   `json:"logger" usage:"logger to be used by agent client"`
-//	AttemptReconnecting      bool          `json:"attemptReconnecting" value:"false" usage:"attemptReconnecting disables reconnecting udp client"`
-//	AttemptReconnectInterval time.Duration `json:"attemptReconnectInterval" usage:"attemptReconnectInterval sets the interval between attempts to connect agent endpoint"`
-//}
+// AgentEndpoint configs jaeger agent endpoint
+type AgentEndpoint struct {
+	Host         string                       `json:"jaegerAgentHost,omitempty" value:"localhost" usage:"host to be used in the agent client endpoint"`
+	Port         string                       `json:"JaegerAgentPort,omitempty" value:"6831" usage:"port to be used in the agent client endpoint"`
+	AgentOptions []jaeger.AgentEndpointOption `json:"-"`
+}
 
 // WithAgentEndpoint configures the Jaeger exporter to send spans to a Jaeger agent
 // over compact thrift protocol. This will use the following environment variables for
