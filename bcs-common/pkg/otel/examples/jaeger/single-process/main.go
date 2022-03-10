@@ -15,11 +15,11 @@ package main
 
 import (
 	"context"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"log"
-	"net/http"
 	"time"
 
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
@@ -34,17 +34,21 @@ const (
 
 func main() {
 	opts := trace.TracerProviderConfig{
-		TracingSwitch:     "on",
-		TracingType:       "jaeger",
-		ServiceName:       service,
-		JaegerColEndpoint: "http://localhost:14268/api/traces",
+		TracingSwitch: "on",
+		TracingType:   "jaeger",
+		ServiceName:   service,
+		JaegerConfig: &jaeger.EndpointConfig{
+			CollectorEndpoint: &jaeger.CollectorEndpoint{
+				Endpoint: "http://localhost:14268/api/traces",
+			},
+		},
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("environment", environment),
 			attribute.Int64("ID", id),
 		},
 	}
 	op := trace.ValidateTracerProviderOption(&opts)
-	op = append(op, trace.JaegerCollectorOptions(jaeger.WithHTTPClient(http.DefaultClient)))
+	op = append(op, trace.WithResourceOption(resource.WithFromEnv()))
 
 	tp, err := trace.InitTracerProvider(opts.ServiceName, op...)
 	if err != nil {
