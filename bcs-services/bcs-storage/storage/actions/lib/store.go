@@ -122,9 +122,9 @@ func (a *Store) Get(ctx context.Context, resourceType string, opt *StoreGetOptio
 		OperationName   = "storage-Get"
 		OperationMethod = "Get"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 
 	projection := fieldsToProjection(opt.Fields)
 	mList := make([]operator.M, 0)
@@ -178,9 +178,9 @@ func (a *Store) GetIndex(ctx context.Context, resourceType string) (*drivers.Ind
 		OperationName   = "storage-GetIndex"
 		OperationMethod = "GetIndex"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 
 	err := a.ensureTable(ctx, resourceType, drivers.Index{})
 	if err != nil {
@@ -221,9 +221,9 @@ func (a *Store) CreateIndex(ctx context.Context, resourceType string, index driv
 		OperationName   = "storage-CreateIndex"
 		OperationMethod = "CreateIndex"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 	err := a.ensureTable(ctx, resourceType, index)
 	if err != nil {
 		span.RecordError(err)
@@ -239,9 +239,9 @@ func (a *Store) DeleteIndex(ctx context.Context, resourceType string, indexName 
 		OperationName   = "storage-DeleteIndex"
 		OperationMethod = "DeleteIndex"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 	err := a.mDriver.Table(resourceType).DropIndex(ctx, indexName)
 	if err != nil {
 		span.RecordError(err)
@@ -256,9 +256,9 @@ func (a *Store) Count(ctx context.Context, resourceType string, opt *StoreGetOpt
 		OperationName   = "storage-Count"
 		OperationMethod = "Count"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 
 	if opt == nil {
 		err := fmt.Errorf("StoreGetOption cannot be empty")
@@ -364,9 +364,10 @@ func (a *Store) Put(ctx context.Context, resourceType string, data operator.M, o
 		OperationName   = "storage-Put"
 		OperationMethod = "Put"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	utils.SpanFromContext(ctx)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 
 	if opt == nil {
 		err := fmt.Errorf("StorePutOption cannot be empty")
@@ -435,9 +436,9 @@ func (a *Store) Remove(ctx context.Context, resourceType string, opt *StoreRemov
 		OperationName   = "storage-Remove"
 		OperationMethod = "Remove"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
 	defer span.End()
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 
 	if opt == nil {
 		err := fmt.Errorf("StoreRemoveOption cannot be empty")
@@ -565,8 +566,8 @@ func (a *Store) Watch(ctx context.Context, resourceType string, opt *StoreWatchO
 		OperationName   = "storage-Watch"
 		OperationMethod = "Watch"
 	)
-	ctx, span := utils.Tracer("").Start(ctx, OperationName)
-	setDBSpanTags(a, span, resourceType, OperationMethod)
+	ctx, span := utils.Tracer(OperationName).Start(ctx, OperationName)
+	setDBSpanAttributes(a, span, resourceType, OperationMethod)
 
 	id := uuid.New().String()
 	span.SetAttributes(attribute.Key("uuid").String(id))
@@ -660,7 +661,7 @@ func (a *Store) Watch(ctx context.Context, resourceType string, opt *StoreWatchO
 	return retEvent, nil
 }
 
-func setDBSpanTags(s *Store, span trace.Span, table string, operation string) {
+func setDBSpanAttributes(s *Store, span trace.Span, table string, operation string) {
 	utils.SetDBSpanTags(span, utils.DBSystemKey, dbType)
 	utils.SetDBSpanTags(span, utils.DBNameKey, s.mDriver.DataBase())
 	utils.SetDBSpanTags(span, utils.DBTableKey, table)

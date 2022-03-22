@@ -15,13 +15,16 @@ package app
 
 import (
 	"context"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common"
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/app/options"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 )
 
 const (
@@ -38,6 +41,7 @@ func Run(op *options.StorageOptions) error {
 	if err != nil {
 		blog.Error("failed to create tracer provider. err:%s", err.Error())
 	}
+	otel.SetTextMapPropagator(propagation.TraceContext{})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
