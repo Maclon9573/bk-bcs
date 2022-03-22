@@ -17,14 +17,18 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/config"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/types"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/i18n"
+
+	logger "github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/gorilla/websocket"
 	"github.com/pkg/errors"
-	"go-micro.dev/v4/logger"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -177,12 +181,14 @@ func (r *RemoteStreamConn) Run() error {
 	pingInterval := time.NewTicker(10 * time.Second)
 	defer pingInterval.Stop()
 
-	PreparedGuideMessage(r.ctx, r.wsConn, GuideMessages)
+	guideMessages := helloMessage(r.bindMgr.PodCtx.Source)
+
+	PreparedGuideMessage(r.ctx, r.wsConn, guideMessages)
 
 	for {
 		select {
 		case <-r.ctx.Done():
-			logger.Info("close RemoteStreamConn done")
+			logger.Infof("close %s RemoteStreamConn done", r.bindMgr.PodCtx.PodName)
 			return r.ctx.Err()
 		case output := <-r.outputMsgChan:
 			if err := r.wsConn.WriteMessage(websocket.TextMessage, output); err != nil {
@@ -197,11 +203,11 @@ func (r *RemoteStreamConn) Run() error {
 }
 
 // WaitStreamDone: stream 流处理
-func (r *RemoteStreamConn) WaitStreamDone(podCtx *types.PodContext) error {
-	host := fmt.Sprintf("%s/clusters/%s", config.G.BCS.Host, podCtx.ClusterId)
+func (r *RemoteStreamConn) WaitStreamDone(bcsConf *config.BCSConf, podCtx *types.PodContext) error {
+	host := fmt.Sprintf("%s/clusters/%s", bcsConf.Host, podCtx.ClusterId)
 	k8sConfig := &rest.Config{
 		Host:        host,
-		BearerToken: config.G.BCS.Token,
+		BearerToken: bcsConf.Token,
 	}
 	k8sClient, err := kubernetes.NewForConfig(k8sConfig)
 	if err != nil {
@@ -214,21 +220,18 @@ func (r *RemoteStreamConn) WaitStreamDone(podCtx *types.PodContext) error {
 		Namespace(podCtx.Namespace).
 		SubResource("exec")
 
-	req.VersionedParams(
-		&v1.PodExecOptions{
-			Command:   podCtx.Commands,
-			Container: podCtx.ContainerName,
-			Stdin:     true,
-			Stdout:    true,
-			Stderr:    true,
-			TTY:       true,
-		},
-		scheme.ParameterCodec,
-	)
+	req.VersionedParams(&v1.PodExecOptions{
+		Command:   podCtx.Commands,
+		Container: podCtx.ContainerName,
+		Stdin:     true,
+		Stdout:    true,
+		Stderr:    true,
+		TTY:       true,
+	}, scheme.ParameterCodec)
 
 	executor, err := remotecommand.NewSPDYExecutor(k8sConfig, "POST", req.URL())
 	if err != nil {
-		logger.Warnf("start remote stream error, reason: %s", err)
+		logger.Warnf("start remote stream error, err: %s", err)
 		return err
 	}
 
@@ -245,25 +248,23 @@ func (r *RemoteStreamConn) WaitStreamDone(podCtx *types.PodContext) error {
 	})
 
 	if err != nil {
-		logger.Warnf("remote stream closed, reason: %s", err)
+		logger.Warnf("remote stream %s closed, err: %s", podCtx.PodName, err)
 		return err
 	}
 
-	logger.Info("remote stream closed normal")
+	logger.Info("remote stream %s closed normal", podCtx.PodName)
 
 	return nil
 }
 
 // PreparedGuideMessage, 使用 PreparedMessage, gorilla 有缓存, 提高性能
-func PreparedGuideMessage(ctx context.Context, ws *websocket.Conn, guideMessages []string) error {
-	for _, msg := range guideMessages {
-		preparedMsg, err := websocket.NewPreparedMessage(websocket.TextMessage, []byte(base64.StdEncoding.EncodeToString([]byte(msg))))
-		if err != nil {
-			return err
-		}
-		if err := ws.WritePreparedMessage(preparedMsg); err != nil {
-			return err
-		}
+func PreparedGuideMessage(ctx context.Context, ws *websocket.Conn, guideMessages string) error {
+	preparedMsg, err := websocket.NewPreparedMessage(websocket.TextMessage, []byte(base64.StdEncoding.EncodeToString([]byte(guideMessages))))
+	if err != nil {
+		return err
+	}
+	if err := ws.WritePreparedMessage(preparedMsg); err != nil {
+		return err
 	}
 	return nil
 }
@@ -289,4 +290,61 @@ func GracefulCloseWebSocket(ctx context.Context, ws *websocket.Conn, connected b
 	}
 
 	<-ctx.Done()
+}
+
+func helloMessage(source string) string {
+
+	var guideMsg []string
+	var messages []string
+
+	if source == "mgr" {
+		guideMsg = []string{
+			config.G.WebConsole.GuideDocLink,
+			i18n.GetMessage("mgrGuideMessage"),
+		}
+	} else {
+		guideMsg = []string{
+			config.G.WebConsole.GuideDocLink,
+			i18n.GetMessage("guideMessage"),
+		}
+	}
+
+	// 两边一个#字符，加一个空格
+	var width int
+	for _, s := range guideMsg {
+		if ZhLength(s)+3 > width {
+			width = ZhLength(s) + 3
+		}
+	}
+
+	messages = append(messages, strings.Repeat("#", width))
+	leftSpace := (width - 2 - len(helloBcsMessage)) / 2
+	rightSpace := width - 2 - leftSpace - len(helloBcsMessage)
+	console := "#" + strings.Repeat(" ", leftSpace) + helloBcsMessage + strings.Repeat(" ", rightSpace) + "#"
+	messages = append(messages, console)
+	messages = append(messages, strings.Repeat("#", width))
+
+	for _, s := range guideMsg {
+		messages = append(messages, "#"+s+strings.Repeat(" ", width-ZhLength(s)-2)+"#")
+	}
+
+	messages = append(messages, strings.Repeat("#", width))
+
+	return strings.Join(messages, "\r\n") + "\r\n"
+}
+
+// ZhLength 计算中文字符串长度, 中文为2个长度
+func ZhLength(str string) int {
+
+	var length int
+
+	for _, i := range str {
+		if unicode.Is(unicode.Han, i) {
+			length += 2
+		} else {
+			length += 1
+		}
+	}
+
+	return length
 }

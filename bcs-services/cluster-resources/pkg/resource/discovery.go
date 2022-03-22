@@ -31,7 +31,9 @@ import (
 
 	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/cache"
 	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/cache/redis"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/common/errcode"
 	log "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/logging"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util/errorx"
 )
 
 // RedisCacheClient 基于 Redis 缓存的，单个集群资源信息 Client
@@ -101,12 +103,17 @@ func (d *RedisCacheClient) Fresh() bool {
 	return d.cacheValid
 }
 
+// ClearCache 清理缓存内容 慎用！
+func (d *RedisCacheClient) ClearCache() error {
+	log.Warn("invalidate cluster %s discovery cache", d.clusterID)
+	return d.rdsCache.DeleteByPrefix(d.clusterID)
+}
+
 // ServerGroups 获取集群中的 Group，包含 versions, preferred 信息（支持 redis 缓存）
 func (d *RedisCacheClient) ServerGroups() (*metav1.APIGroupList, error) {
 	if cachedBytes, err := d.readCache(""); err == nil {
 		cachedGroups := &metav1.APIGroupList{}
 		if err = runtime.DecodeInto(scheme.Codecs.UniversalDecoder(), cachedBytes, cachedGroups); err == nil {
-			log.Info("cluster: %s, get cache (ServerGroups) from redis", d.clusterID)
 			return cachedGroups, nil
 		}
 	}
@@ -132,7 +139,6 @@ func (d *RedisCacheClient) ServerResourcesForGroupVersion(groupVersion string) (
 	if cachedBytes, err := d.readCache(groupVersion); err == nil {
 		cachedResources := &metav1.APIResourceList{}
 		if err = runtime.DecodeInto(scheme.Codecs.UniversalDecoder(), cachedBytes, cachedResources); err == nil {
-			log.Info("cluster: %s, get cache (ServerResources, groupVersion: %s) from redis", d.clusterID, groupVersion)
 			return cachedResources, nil
 		}
 	}
@@ -151,52 +157,6 @@ func (d *RedisCacheClient) ServerResourcesForGroupVersion(groupVersion string) (
 		log.Warn("cluster: %s, failed to write cache due to %v", d.clusterID, err)
 	}
 	return liveResources, nil
-}
-
-// GetGroupVersionResource 根据配置，名称等信息，获取指定资源对应的 GroupVersionResource
-// 若指定 GroupVersion，则在对应的 Group 中寻找资源信息，否则获取 preferred version
-// 包含刷新缓存逻辑，若首次从缓存中找不到对应资源，会刷新缓存再次查询，若还是找不到，则返回错误
-func GetGroupVersionResource(
-	conf *ClusterConf, kind, groupVersion string,
-) (schema.GroupVersionResource, error) {
-	cli, err := newRedisCacheClient4Conf(conf)
-	if err != nil {
-		return schema.GroupVersionResource{}, err
-	}
-	// 按指定 groupVersion 查询（含刷新缓存重试）
-	if len(groupVersion) != 0 {
-		res, err := cli.getResWithGroupVersion(kind, groupVersion)
-		if err != nil {
-			cli.Invalidate()
-			return cli.getResWithGroupVersion(kind, groupVersion)
-		}
-		return res, nil
-	}
-	// 查询 preferred version（含刷新缓存重试）
-	res, err := cli.getPreferredResource(kind)
-	if err != nil {
-		cli.Invalidate()
-		return cli.getPreferredResource(kind)
-	}
-	return res, nil
-}
-
-// 根据 kind 过滤出对应的资源信息
-func filterResByKind(kind string, allRes []*metav1.APIResourceList) (schema.GroupVersionResource, error) {
-	for _, apiResList := range allRes {
-		for _, res := range apiResList.APIResources {
-			if res.Kind == kind {
-				// 可能存在如 v1 这种只有 version，group 为空的情况
-				group, version := "", apiResList.GroupVersion
-				if strings.Contains(apiResList.GroupVersion, "/") {
-					splitRet := strings.Split(apiResList.GroupVersion, "/")
-					group, version = splitRet[0], splitRet[1]
-				}
-				return schema.GroupVersionResource{Group: group, Version: version, Resource: res.Name}, nil
-			}
-		}
-	}
-	return schema.GroupVersionResource{}, fmt.Errorf("not result for %s", kind)
 }
 
 // 根据指定的 Group, Version 获取对应资源信息
@@ -218,24 +178,15 @@ func (d *RedisCacheClient) getPreferredResource(kind string) (schema.GroupVersio
 	return filterResByKind(kind, all)
 }
 
-func genCacheKey(clusterID, groupVersion string) cache.StringKey {
-	// 不指定 groupVersion 说明是整个集群的 group 资源
-	if len(groupVersion) == 0 {
-		return cache.NewStringKey(fmt.Sprintf("%s:all:servergroups", clusterID))
-	}
-	// 否则则为指定 group version 拥有的资源
-	return cache.NewStringKey(fmt.Sprintf("%s:%s:serverresources", clusterID, groupVersion))
-}
-
 // 读缓存逻辑
 func (d *RedisCacheClient) readCache(groupVersion string) ([]byte, error) {
 	if !d.Fresh() {
-		return nil, fmt.Errorf("cache invalidated")
+		return nil, errorx.New(errcode.General, "cache invalidated")
 	}
 
 	key := genCacheKey(d.clusterID, groupVersion)
 	if !d.rdsCache.Exists(key) {
-		return nil, fmt.Errorf("key %s cache not exists", key.Key())
+		return nil, errorx.New(errcode.General, "key %s cache not exists", key.Key())
 	}
 
 	var ret []byte
@@ -256,12 +207,76 @@ func (d *RedisCacheClient) writeCache(groupVersion string, obj runtime.Object) e
 	if err != nil {
 		return err
 	}
-	log.Info("write %s to redis done", key)
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	d.cacheValid = true
 	return nil
+}
+
+// GetGroupVersionResource 根据配置，名称等信息，获取指定资源对应的 GroupVersionResource
+// 若指定 GroupVersion，则在对应的 Group 中寻找资源信息，否则获取 preferred version
+// 包含刷新缓存逻辑，若首次从缓存中找不到对应资源，会刷新缓存再次查询，若还是找不到，则返回错误
+func GetGroupVersionResource(
+	conf *ClusterConf, kind, groupVersion string,
+) (schema.GroupVersionResource, error) {
+	cli, err := NewRedisCacheClient4Conf(conf)
+	if err != nil {
+		return schema.GroupVersionResource{}, err
+	}
+	// 按指定 groupVersion 查询（含刷新缓存重试）
+	if len(groupVersion) != 0 {
+		res, err := cli.getResWithGroupVersion(kind, groupVersion)
+		if err != nil {
+			cli.Invalidate()
+			return cli.getResWithGroupVersion(kind, groupVersion)
+		}
+		return res, nil
+	}
+	// 查询 preferred version（含刷新缓存重试）
+	res, err := cli.getPreferredResource(kind)
+	if err != nil {
+		cli.Invalidate()
+		return cli.getPreferredResource(kind)
+	}
+	return res, nil
+}
+
+// NewRedisCacheClient4Conf 根据 Conf 创建 RedisCacheClient
+func NewRedisCacheClient4Conf(conf *ClusterConf) (*RedisCacheClient, error) {
+	delegate, err := discovery.NewDiscoveryClientForConfig(conf.Rest)
+	if err != nil {
+		return nil, err
+	}
+	rdsCache := redis.NewCache(ResCacheKeyPrefix, ResCacheTTL*time.Second)
+	return newRedisCacheClient(delegate, conf.ClusterID, rdsCache), nil
+}
+
+// 根据 kind 过滤出对应的资源信息
+func filterResByKind(kind string, allRes []*metav1.APIResourceList) (schema.GroupVersionResource, error) {
+	for _, apiResList := range allRes {
+		for _, res := range apiResList.APIResources {
+			if res.Kind == kind {
+				// 可能存在如 v1 这种只有 version，group 为空的情况
+				group, version := "", apiResList.GroupVersion
+				if strings.Contains(apiResList.GroupVersion, "/") {
+					splitRet := strings.Split(apiResList.GroupVersion, "/")
+					group, version = splitRet[0], splitRet[1]
+				}
+				return schema.GroupVersionResource{Group: group, Version: version, Resource: res.Name}, nil
+			}
+		}
+	}
+	return schema.GroupVersionResource{}, errorx.New(errcode.General, "not result for %s", kind)
+}
+
+func genCacheKey(clusterID, groupVersion string) cache.StringKey {
+	// 不指定 groupVersion 说明是整个集群的 group 资源
+	if groupVersion == "" {
+		return cache.NewStringKey(fmt.Sprintf("%s:all:servergroups", clusterID))
+	}
+	// 否则则为指定 group version 拥有的资源
+	return cache.NewStringKey(fmt.Sprintf("%s:%s:serverresources", clusterID, groupVersion))
 }
 
 func newRedisCacheClient(
@@ -275,14 +290,4 @@ func newRedisCacheClient(
 		rdsCache:   rdsCache,
 		cacheValid: true,
 	}
-}
-
-// 根据 Conf 创建 RedisCacheClient
-func newRedisCacheClient4Conf(conf *ClusterConf) (*RedisCacheClient, error) {
-	delegate, err := discovery.NewDiscoveryClientForConfig(conf.Rest)
-	if err != nil {
-		return nil, err
-	}
-	rdsCache := redis.NewCache(ResCacheKeyPrefix, ResCacheTTL*time.Second)
-	return newRedisCacheClient(delegate, conf.ClusterID, rdsCache), nil
 }

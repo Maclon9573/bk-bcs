@@ -16,9 +16,11 @@ package podmanager
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/components/bcs"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/config"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/types"
 
@@ -28,25 +30,30 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	clientcmdv1 "k8s.io/client-go/tools/clientcmd/api/v1"
 	"sigs.k8s.io/yaml"
 )
 
 type StartupManager struct {
 	ctx       context.Context
+	mode      types.WebConsoleMode
 	clusterId string
 	k8sClient *kubernetes.Clientset
 }
 
-func NewStartupManager(ctx context.Context, clusterId string) (*StartupManager, error) {
-	k8sClient, err := GetK8SClientByClusterId(clusterId)
+func NewStartupManager(ctx context.Context, mode types.WebConsoleMode, clusterId string) (*StartupManager, error) {
+	mgr := &StartupManager{
+		ctx:       ctx,
+		mode:      mode,
+		clusterId: clusterId,
+	}
+
+	k8sClient, err := mgr.getK8SClientByClusterId(clusterId)
 	if err != nil {
 		return nil, err
 	}
-	mgr := &StartupManager{
-		ctx:       ctx,
-		clusterId: clusterId,
-		k8sClient: k8sClient,
-	}
+	mgr.k8sClient = k8sClient
+
 	return mgr, nil
 }
 
@@ -58,18 +65,37 @@ func (m *StartupManager) WaitPodUp(namespace, username string) (string, error) {
 	}
 
 	// 确保 configmap 配置正确
-	if err := m.ensureConfigmap(m.ctx, namespace, m.clusterId, username); err != nil {
+	if err := m.ensureConfigmap(m.ctx, m.clusterId, namespace, username); err != nil {
 		return "", err
 	}
-
 	// 确保 pod 配置正确
-	image := config.G.WebConsole.Image
-	podName, err := m.ensurePod(m.ctx, namespace, m.clusterId, username, image)
+	image := config.G.WebConsole.KubectldImage + ":" + m.getKubectldVersion()
+	podName, err := m.ensurePod(m.ctx, m.clusterId, namespace, username, image)
 	if err != nil {
 		return "", err
 	}
 
 	return podName, nil
+}
+
+//getKubectldVersion 获取服务端Kubectld版本
+func (m *StartupManager) getKubectldVersion() string {
+
+	info, err := m.k8sClient.ServerVersion()
+	if err != nil {
+		return config.G.WebConsole.KubectldTag
+	}
+
+	for kubectld, patterns := range config.G.WebConsole.KubectldTagMatch {
+		for _, pattern := range patterns {
+			r, err := regexp.Compile(pattern)
+			if err == nil && r.MatchString(info.GitVersion) {
+				return kubectld
+			}
+		}
+	}
+
+	return config.G.WebConsole.KubectldTag
 }
 
 // GetK8sContextByContainerID 通过 containerID 获取pod, namespace
@@ -113,12 +139,6 @@ func (m *StartupManager) ensureNamespace(ctx context.Context, name string) error
 		}
 	}
 
-	// serviceAccount 名称和 namespace 保持一致
-	if err := m.ensureServiceAccountRBAC(ctx, name); err != nil {
-		blog.Errorf("create ServiceAccountRbac failed, err : %v", err)
-		return err
-	}
-
 	return nil
 }
 
@@ -144,18 +164,18 @@ func (m *StartupManager) ensureServiceAccountRBAC(ctx context.Context, name stri
 }
 
 // ensureConfigmap: 确保 configmap 配置正确
-func (m *StartupManager) ensureConfigmap(ctx context.Context, namespace, clusterId, username string) error {
+func (m *StartupManager) ensureConfigmap(ctx context.Context, clusterId, namespace, username string) error {
 	configmapName := getConfigMapName(clusterId, username)
 	if _, err := m.k8sClient.CoreV1().ConfigMaps(namespace).Get(ctx, configmapName, metav1.GetOptions{}); err == nil {
 		return nil
 	}
 
-	serviceAccountToken, err := m.getServiceAccountToken(ctx, namespace)
+	authInfo, err := m.getClusterAuth(ctx, clusterId, namespace, username)
 	if err != nil {
 		return err
 	}
 
-	kubeConfig := genKubeConfig(clusterId, namespace, serviceAccountToken, username)
+	kubeConfig := genKubeConfig(clusterId, username, authInfo)
 	kubeConfigYaml, err := yaml.Marshal(kubeConfig)
 	if err != nil {
 		return err
@@ -166,26 +186,83 @@ func (m *StartupManager) ensureConfigmap(ctx context.Context, namespace, cluster
 	// 不存在，创建
 	if _, err = m.k8sClient.CoreV1().ConfigMaps(namespace).Create(ctx, configMap, metav1.CreateOptions{}); err != nil {
 		// 创建失败
-		blog.Errorf("create configmap failed, err :%v", err)
+		blog.Errorf("create configmap failed, err :%s", err)
 		return err
 	}
 
 	return nil
 }
 
+func (m *StartupManager) getK8SClientByClusterId(clusterId string) (*kubernetes.Clientset, error) {
+	if m.mode == types.ClusterInternalMode {
+		return GetK8SClientByClusterId(clusterId)
+	}
+	return GetK8SClientByClusterId(config.G.WebConsole.AdminClusterId)
+}
+
+func (m *StartupManager) getClusterAuth(ctx context.Context, clusterId, namespace, username string) (*clusterAuth, error) {
+	if m.mode == types.ClusterInternalMode {
+		return m.getInternalClusterAuth(ctx, clusterId, namespace, username)
+	}
+	return m.getExternalClusterAuth(ctx, clusterId, namespace, username)
+}
+
+// getInternalClusterAuth inCluster集群鉴权
+func (m *StartupManager) getInternalClusterAuth(ctx context.Context, clusterId, namespace, username string) (*clusterAuth, error) {
+	// serviceAccount 名称和 namespace 保持一致
+	if err := m.ensureServiceAccountRBAC(ctx, namespace); err != nil {
+		blog.Errorf("create ServiceAccountRbac failed, err : %s", err)
+		return nil, err
+	}
+
+	token, err := m.getServiceAccountToken(ctx, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	authInfo := &clusterAuth{
+		Token: token,
+		Cluster: clientcmdv1.Cluster{
+			Server:               "https://kubernetes.default.svc",
+			CertificateAuthority: "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
+		},
+	}
+
+	return authInfo, nil
+}
+
+// getExternalClusterAuth 外部集群鉴权
+func (m *StartupManager) getExternalClusterAuth(ctx context.Context, clusterId, namespace, username string) (*clusterAuth, error) {
+	bcsConf := GetBCSConfByClusterId(clusterId)
+	tokenObj, err := bcs.CreateTempToken(ctx, bcsConf, username)
+	if err != nil {
+		return nil, err
+	}
+
+	authInfo := &clusterAuth{
+		Token: tokenObj.Token,
+		Cluster: clientcmdv1.Cluster{
+			Server:                fmt.Sprintf("%s/clusters/%s", bcsConf.Host, clusterId),
+			InsecureSkipTLSVerify: true,
+		},
+	}
+
+	return authInfo, nil
+}
+
 // ensurePod 确保 pod 配置正确
-func (m *StartupManager) ensurePod(ctx context.Context, namespace, clusterId, username, image string) (string, error) {
+func (m *StartupManager) ensurePod(ctx context.Context, clusterId, namespace, username, image string) (string, error) {
 	podName := getPodName(clusterId, username)
 	configmapName := getConfigMapName(clusterId, username)
 
 	// k8s 客户端
 	pod, err := m.k8sClient.CoreV1().Pods(namespace).Get(ctx, podName, metav1.GetOptions{})
 	if err == nil {
-		if pod.Status.Phase == "Running" {
+		if pod.Status.Phase == v1.PodRunning {
 			return podName, nil
 		}
 
-		if pod.Status.Phase == "Pending" {
+		if pod.Status.Phase == v1.PodPending {
 			// 等待pod启动成功
 			if err := m.waitUserPodReady(ctx, namespace, podName); err != nil {
 				return "", err
@@ -245,24 +322,29 @@ func (m *StartupManager) waitUserPodReady(ctx context.Context, namespace, name s
 	// 异常情况最多7次
 	allowableNumberOfErrors := 7
 
+	// context.WithDeadline()
+	interval := time.NewTicker(time.Second)
+	defer interval.Stop()
+
 	for {
 		select {
-		default:
+		case <-interval.C:
 			pod, err := m.k8sClient.CoreV1().Pods(namespace).Get(ctx, name, metav1.GetOptions{})
 			if err != nil {
-				blog.Errorf("查询pod失败，errorCount: %d", errorCount)
-				// 获取不到pod信息，最多等待7秒
-				// 记录查询次数，超过七次退出
-				errorCount++
-				if errorCount > allowableNumberOfErrors {
-					return fmt.Errorf("申请pod资源失败，请稍后再试")
-				}
-			} else {
-				if pod.Status.Phase == "Running" {
-					return nil
-				}
+				return err
 			}
-			time.Sleep(time.Second)
+
+			ready, reason := IsPodReady(pod)
+			if ready {
+				return nil
+			}
+
+			errorCount++
+
+			if errorCount > allowableNumberOfErrors {
+				return errors.New(reason)
+			}
+
 		case <-time.After(time.Second * time.Duration(waitTimeout)):
 			// 超时退出
 			return fmt.Errorf("申请pod资源超时，请稍后再试")
@@ -289,10 +371,11 @@ func getConfigMapName(clusterID, username string) string {
 
 // GetK8SClientByClusterId 通过集群 ID 获取 k8s client 对象
 func GetK8SClientByClusterId(clusterId string) (*kubernetes.Clientset, error) {
-	host := fmt.Sprintf("%s/clusters/%s", config.G.BCS.Host, clusterId)
+	bcsConf := GetBCSConfByClusterId(clusterId)
+	host := fmt.Sprintf("%s/clusters/%s", bcsConf.Host, clusterId)
 	config := &rest.Config{
 		Host:        host,
-		BearerToken: config.G.BCS.Token,
+		BearerToken: bcsConf.Token,
 	}
 	k8sClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -309,4 +392,95 @@ func GetNamespace() string {
 	}
 	// 其他环境, 使用 web-console-dev
 	return fmt.Sprintf("%s-%s", Namespace, config.G.Base.RunEnv)
+}
+
+// IsPodReady returns status string calculated based on the same logic as kubectl
+// Base code: https://github.com/kubernetes/dashboard/blob/master/src/app/backend/resource/pod/common.go#L40
+func IsPodReady(pod *v1.Pod) (bool, string) {
+	reason := string(pod.Status.Phase)
+	if pod.Status.Reason != "" {
+		reason = pod.Status.Reason
+	}
+
+	hasRunning := false
+	for i := len(pod.Status.ContainerStatuses) - 1; i >= 0; i-- {
+		container := pod.Status.ContainerStatuses[i]
+
+		if container.State.Waiting != nil && container.State.Waiting.Reason != "" {
+			reason = container.State.Waiting.Reason
+		} else if container.State.Terminated != nil && container.State.Terminated.Reason != "" {
+			reason = container.State.Terminated.Reason
+		} else if container.State.Terminated != nil && container.State.Terminated.Reason == "" {
+			if container.State.Terminated.Signal != 0 {
+				reason = fmt.Sprintf("Signal: %d", container.State.Terminated.Signal)
+			} else {
+				reason = fmt.Sprintf("ExitCode: %d", container.State.Terminated.ExitCode)
+			}
+		} else if container.Ready && container.State.Running != nil {
+			hasRunning = true
+		}
+	}
+
+	// change pod status back to "Running" if there is at least one container still reporting as "Running" status
+	if reason == "Completed" && hasRunning {
+		if hasPodReadyCondition(pod.Status.Conditions) {
+			reason = string(v1.PodRunning)
+		} else {
+			reason = "NotReady"
+		}
+	}
+
+	if pod.DeletionTimestamp != nil && pod.Status.Reason == "NodeLost" {
+		reason = string(v1.PodUnknown)
+	} else if pod.DeletionTimestamp != nil {
+		reason = "Terminating"
+	}
+
+	if len(reason) == 0 {
+		reason = string(v1.PodUnknown)
+	}
+
+	return hasRunning, reason
+}
+
+func hasPodReadyCondition(conditions []v1.PodCondition) bool {
+	for _, condition := range conditions {
+		if condition.Type == v1.PodReady && condition.Status == v1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// TranslateConsoleMode 转换类型
+func TranslateConsoleMode(confMode string) types.WebConsoleMode {
+	if confMode == config.ExternalMode {
+		return types.ClusterExternalMode
+	}
+	return types.ClusterInternalMode
+}
+
+// GetEnvByClusterId 获取集群所属环境, 目前通过集群ID前缀判断
+func GetEnvByClusterId(clusterId string) config.BCSClusterEnv {
+	if strings.HasPrefix(clusterId, "BCS-K8S-1") {
+		return config.UatCluster
+	}
+	if strings.HasPrefix(clusterId, "BCS-K8S-2") {
+		return config.DebugCLuster
+	}
+	if strings.HasPrefix(clusterId, "BCS-K8S-4") {
+		return config.ProdEnv
+	}
+	return config.ProdEnv
+}
+
+// GetBCSConfByClusterId 通过集群ID, 获取不同admin token 信息
+func GetBCSConfByClusterId(clusterId string) *config.BCSConf {
+	env := GetEnvByClusterId(clusterId)
+	conf, ok := config.G.BCSEnvMap[env]
+	if ok {
+		return conf
+	}
+	// 默认返回bcs配置
+	return config.G.BCS
 }

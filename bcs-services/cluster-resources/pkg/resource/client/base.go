@@ -16,15 +16,17 @@ package client
 
 import (
 	"context"
-	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic"
 
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/common/errcode"
 	res "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource"
-	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util/errorx"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util/mapx"
 )
 
 // NewDynamicClient ...
@@ -57,13 +59,13 @@ func (c *ResClient) Get(namespace, name string, opts metav1.GetOptions) (*unstru
 
 // Create 创建资源
 func (c *ResClient) Create(
-	manifest map[string]interface{}, isNamespaceScoped bool, opts metav1.CreateOptions,
+	manifest map[string]interface{}, isNSScoped bool, opts metav1.CreateOptions,
 ) (*unstructured.Unstructured, error) {
 	namespace := ""
-	if isNamespaceScoped {
-		namespace = util.GetWithDefault(manifest, "metadata.namespace", "").(string)
+	if isNSScoped {
+		namespace = mapx.Get(manifest, "metadata.namespace", "").(string)
 		if namespace == "" {
-			return nil, fmt.Errorf("创建 %s 需要指定 metadata.namespace", c.res.Resource)
+			return nil, errorx.New(errcode.ValidateErr, "创建 %s 需要指定 metadata.namespace", c.res.Resource)
 		}
 	}
 	return c.cli.Resource(c.res).Namespace(namespace).Create(
@@ -76,9 +78,9 @@ func (c *ResClient) Update(
 	namespace, name string, manifest map[string]interface{}, opts metav1.UpdateOptions,
 ) (*unstructured.Unstructured, error) {
 	// 检查 name 与 manifest.metadata.name 是否一致
-	manifestName, err := util.GetItems(manifest, "metadata.name")
+	manifestName, err := mapx.GetItems(manifest, "metadata.name")
 	if err != nil || name != manifestName {
-		return nil, fmt.Errorf("metadata.name 必须指定且与准备编辑的资源名保持一致")
+		return nil, errorx.New(errcode.ValidateErr, "metadata.name 必须指定且与准备编辑的资源名保持一致")
 	}
 	return c.cli.Resource(c.res).Namespace(namespace).Update(
 		context.TODO(), &unstructured.Unstructured{Object: manifest}, opts,
@@ -88,4 +90,9 @@ func (c *ResClient) Update(
 // Delete 删除单个资源
 func (c *ResClient) Delete(namespace, name string, opts metav1.DeleteOptions) error {
 	return c.cli.Resource(c.res).Namespace(namespace).Delete(context.TODO(), name, opts)
+}
+
+// Watch 获取某类资源 watcher
+func (c *ResClient) Watch(ctx context.Context, namespace string, opts metav1.ListOptions) (watch.Interface, error) {
+	return c.cli.Resource(c.res).Namespace(namespace).Watch(ctx, opts)
 }
