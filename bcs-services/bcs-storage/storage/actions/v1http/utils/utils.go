@@ -14,16 +14,17 @@
 package utils
 
 import (
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/tracing/utils"
+	"go.opentelemetry.io/otel/trace"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"github.com/emicklei/go-restful"
-	"github.com/opentracing/opentracing-go"
 )
 
 // SetHTTPSpanContextInfo set restful.Request context
-func SetHTTPSpanContextInfo(req *restful.Request, handler string) opentracing.Span {
-	span, ctx := utils.StartSpanFromContext(req.Request.Context(), handler)
-	utils.HTTPTagHandler.Set(span, handler)
+func SetHTTPSpanContextInfo(req *restful.Request, handler string) trace.Span {
+	ctx, span := utils.Tracer("").Start(req.Request.Context(), handler)
+	defer span.End()
+	//utils.HTTPHandlerKey.Set(span, handler)
 	req.Request = req.Request.WithContext(ctx)
 
 	return span

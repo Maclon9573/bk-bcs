@@ -16,18 +16,20 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+
 	"reflect"
 	"time"
 
 	mapset "github.com/deckarep/golang-set"
 	"github.com/google/uuid"
-	"github.com/opentracing/opentracing-go"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/odm/drivers"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/odm/operator"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/tracing/utils"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	storageErr "github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/errors"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/watchbus"
 )
@@ -120,8 +122,8 @@ func (a *Store) Get(ctx context.Context, resourceType string, opt *StoreGetOptio
 		OperationName   = "storage-Get"
 		OperationMethod = "Get"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 
 	projection := fieldsToProjection(opt.Fields)
@@ -153,7 +155,7 @@ func (a *Store) Get(ctx context.Context, resourceType string, opt *StoreGetOptio
 
 	if err := finder.All(ctx, &mList); err != nil {
 		blog.Errorf("failed to query, err %s", err.Error())
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return nil, fmt.Errorf("failed to query, err %s", err.Error())
 	}
 	retList := make([]operator.M, 0)
@@ -176,13 +178,13 @@ func (a *Store) GetIndex(ctx context.Context, resourceType string) (*drivers.Ind
 		OperationName   = "storage-GetIndex"
 		OperationMethod = "GetIndex"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 
 	err := a.ensureTable(ctx, resourceType, drivers.Index{})
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return nil, err
 	}
 	// check index cache
@@ -193,7 +195,7 @@ func (a *Store) GetIndex(ctx context.Context, resourceType string) (*drivers.Ind
 	// did not hit cache
 	indexes, err := a.mDriver.Table(resourceType).Indexes(ctx)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return nil, err
 	}
 	// build index
@@ -219,12 +221,12 @@ func (a *Store) CreateIndex(ctx context.Context, resourceType string, index driv
 		OperationName   = "storage-CreateIndex"
 		OperationMethod = "CreateIndex"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 	err := a.ensureTable(ctx, resourceType, index)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 
@@ -237,12 +239,12 @@ func (a *Store) DeleteIndex(ctx context.Context, resourceType string, indexName 
 		OperationName   = "storage-DeleteIndex"
 		OperationMethod = "DeleteIndex"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 	err := a.mDriver.Table(resourceType).DropIndex(ctx, indexName)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 	return nil
@@ -254,18 +256,18 @@ func (a *Store) Count(ctx context.Context, resourceType string, opt *StoreGetOpt
 		OperationName   = "storage-Count"
 		OperationMethod = "Count"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 
 	if opt == nil {
 		err := fmt.Errorf("StoreGetOption cannot be empty")
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return 0, err
 	}
 	if opt.Cond == nil {
 		err := fmt.Errorf("Cond in StoreGetOption cannot be empty")
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return 0, err
 	}
 	var countCond *operator.Condition
@@ -294,7 +296,7 @@ func (a *Store) Count(ctx context.Context, resourceType string, opt *StoreGetOpt
 	}
 	count, err := finder.Count(ctx)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("failed to query, err %s", err.Error())
 		return 0, fmt.Errorf("failed to query, err %s", err.Error())
 	}
@@ -362,13 +364,13 @@ func (a *Store) Put(ctx context.Context, resourceType string, data operator.M, o
 		OperationName   = "storage-Put"
 		OperationMethod = "Put"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 
 	if opt == nil {
 		err := fmt.Errorf("StorePutOption cannot be empty")
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 
@@ -384,7 +386,7 @@ func (a *Store) Put(ctx context.Context, resourceType string, data operator.M, o
 
 	// ensure table index
 	if err := a.ensureTable(ctx, resourceType, index); err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 
@@ -395,7 +397,7 @@ func (a *Store) Put(ctx context.Context, resourceType string, data operator.M, o
 		data[opt.CreateTimeKey] = timeNow
 		data[databaseFieldNameForDeletionFlag] = false
 		if _, err := a.mDriver.Table(resourceType).Insert(ctx, []interface{}{data}); err != nil {
-			utils.SetSpanLogTagError(span, err)
+			span.RecordError(err)
 			return err
 		}
 		return nil
@@ -411,7 +413,7 @@ func (a *Store) Put(ctx context.Context, resourceType string, data operator.M, o
 	}
 	counter, err := a.mDriver.Table(resourceType).Find(countCond).Count(ctx)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 	if counter == 0 && len(opt.CreateTimeKey) != 0 {
@@ -421,7 +423,7 @@ func (a *Store) Put(ctx context.Context, resourceType string, data operator.M, o
 		data[opt.UpdateTimeKey] = timeNow
 	}
 	if err := a.mDriver.Table(resourceType).Upsert(ctx, opt.Cond, operator.M{"$set": data}); err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 	return nil
@@ -433,19 +435,19 @@ func (a *Store) Remove(ctx context.Context, resourceType string, opt *StoreRemov
 		OperationName   = "storage-Remove"
 		OperationMethod = "Remove"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
-	defer span.Finish()
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
+	defer span.End()
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 
 	if opt == nil {
 		err := fmt.Errorf("StoreRemoveOption cannot be empty")
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 	if a.doSoftDelete {
 		err := a.doDeleteSoft(ctx, resourceType, opt)
 		if err != nil {
-			utils.SetSpanLogTagError(span, err)
+			span.RecordError(err)
 			return err
 		}
 		return nil
@@ -453,7 +455,7 @@ func (a *Store) Remove(ctx context.Context, resourceType string, opt *StoreRemov
 
 	err := a.doDelete(ctx, resourceType, opt)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return err
 	}
 	return nil
@@ -563,22 +565,22 @@ func (a *Store) Watch(ctx context.Context, resourceType string, opt *StoreWatchO
 		OperationName   = "storage-Watch"
 		OperationMethod = "Watch"
 	)
-	span, ctx := utils.StartSpanFromContext(ctx, OperationName)
+	ctx, span := utils.Tracer("").Start(ctx, OperationName)
 	setDBSpanTags(a, span, resourceType, OperationMethod)
 
 	id := uuid.New().String()
-	utils.SetSpanCommonTag(span, "uuid", id)
+	span.SetAttributes(attribute.Key("uuid").String(id))
 
 	dbEvent := make(chan *drivers.WatchEvent, 100)
 	err := a.eventBus.Subscribe(resourceType, id, dbEvent)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		return nil, err
 	}
 
 	retEvent := make(chan *Event, 100)
 	go func() {
-		defer span.Finish()
+		defer span.End()
 		defer a.eventBus.Unsubscribe(resourceType, id)
 		eventCounter := 0
 		for {
@@ -658,9 +660,9 @@ func (a *Store) Watch(ctx context.Context, resourceType string, opt *StoreWatchO
 	return retEvent, nil
 }
 
-func setDBSpanTags(s *Store, span opentracing.Span, table string, operation string) {
-	utils.SetSpanDBTag(span, utils.DBType, dbType)
-	utils.SetSpanDBTag(span, utils.DBDatabase, s.mDriver.DataBase())
-	utils.SetSpanDBTag(span, utils.DBTable, table)
-	utils.SetSpanDBTag(span, utils.DbOperation, operation)
+func setDBSpanTags(s *Store, span trace.Span, table string, operation string) {
+	utils.SetDBSpanTags(span, utils.DBSystemKey, dbType)
+	utils.SetDBSpanTags(span, utils.DBNameKey, s.mDriver.DataBase())
+	utils.SetDBSpanTags(span, utils.DBTableKey, table)
+	utils.SetDBSpanTags(span, utils.DBOperationKey, operation)
 }

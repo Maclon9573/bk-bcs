@@ -16,8 +16,8 @@ package options
 import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/conf"
 	"github.com/Tencent/bk-bcs/bcs-common/common/static"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/registry"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/tracing"
 )
 
 //CertConfig is configuration of Cert
@@ -42,7 +42,7 @@ type StorageOptions struct {
 
 	ServerCert *CertConfig
 	Etcd       registry.CMDOptions `json:"etcdRegistry"`
-	Tracing    tracing.Options     `json:"tracing"`
+	Tracing    trace.TracerProviderConfig     `json:"tracing"`
 
 	DBConfig     string `json:"database_config_file" value:"storage-database.conf" usage:"Config file for database."`
 	QueueConfig  string `json:"queue_config_file" value:"queue.conf" usage:"Config file for database."`
