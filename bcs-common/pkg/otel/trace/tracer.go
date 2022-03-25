@@ -77,7 +77,7 @@ type SamplerType struct {
 }
 
 // InitTracerProvider initialize an OTLP tracer provider with processors and exporters.
-func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*sdktrace.TracerProvider, error) {
+func InitTracerProvider(serviceName string, options ...TracerProviderOption) (context.Context, *sdktrace.TracerProvider, error) {
 	defaultOptions := &TracerProviderConfig{
 		TracingSwitch: defaultSwitchType,
 		TracingType:   defaultTracingType,
@@ -91,16 +91,17 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 	err := validateTracingOptions(defaultOptions)
 	if err != nil {
 		blog.Errorf("validateTracingOptions failed: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
+	ctx := context.Background()
 	if defaultOptions.TracingSwitch == "off" {
-		return &sdktrace.TracerProvider{}, nil
+		return ctx, &sdktrace.TracerProvider{}, err
 	}
 
-	resource, err := initResource(defaultOptions)
+	resource, err := initResource(ctx, defaultOptions)
 	if err != nil {
-		return &sdktrace.TracerProvider{}, err
+		return ctx, &sdktrace.TracerProvider{}, err
 	}
 	sampler := initSampler(defaultOptions)
 
@@ -130,11 +131,11 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 				jaegerExporter, err = jaeger.NewCollectorExporter(collectorOpts...)
 				if err != nil {
 					blog.Errorf("%s: %v", "failed to create jaeger exporter", err)
-					return &sdktrace.TracerProvider{}, err
+					return ctx, &sdktrace.TracerProvider{}, err
 				}
 			}
 			processors := initProcessors(jaegerExporter)
-			return newTracerProvider(processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler)
 		}
 		if defaultOptions.JaegerConfig.AgentEndpoint != nil {
 			if defaultOptions.JaegerConfig.AgentEndpoint.Host == "" {
@@ -148,10 +149,10 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 			jaegerExporter, err := jaeger.NewAgentExporter(opts...)
 			if err != nil {
 				blog.Errorf("%s: %v", "failed to create jaeger exporter", err)
-				return &sdktrace.TracerProvider{}, err
+				return ctx, &sdktrace.TracerProvider{}, err
 			}
 			processors := initProcessors(jaegerExporter)
-			return newTracerProvider(processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler)
 		}
 		if defaultOptions.JaegerConfig.CollectorEndpoint.Endpoint == "" {
 			defaultOptions.JaegerConfig.CollectorEndpoint.Endpoint = DefaultJaegerCollectorEndpoint
@@ -161,10 +162,10 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 		jaegerExporter, err := jaeger.NewCollectorExporter(opts...)
 		if err != nil {
 			blog.Errorf("%s: %v", "failed to create jaeger exporter", err)
-			return &sdktrace.TracerProvider{}, err
+			return ctx, &sdktrace.TracerProvider{}, err
 		}
 		processors := initProcessors(jaegerExporter)
-		return newTracerProvider(processors, resource, sampler)
+		return newTracerProvider(ctx, processors, resource, sampler)
 	case string(OTLP_GRPC):
 		blog.Info("Using otlpgrpc exporter...")
 		if defaultOptions.OTLPConfig == nil {
@@ -177,15 +178,15 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 			}
 			blog.Info("Using default OTLPGrpc endpoint: %s:%v", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
 			opts := initGRPCConfigOptions(defaultOptions)
-			ctx := context.Background()
+			//ctx := context.Background()
 			traceClient := otlpgrpctrace.NewClient(opts...)
 			grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
 			if err != nil {
 				blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
-				return &sdktrace.TracerProvider{}, err
+				return ctx, &sdktrace.TracerProvider{}, err
 			}
 			processors := initProcessors(grpcExporter)
-			return newTracerProvider(processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler)
 		}
 		if defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint == "" {
 			defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint =
@@ -195,16 +196,16 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 			defaultOptions.OTLPConfig.GRPCConfig.GRPCURLPath = DefaultOTLPColTracesPath
 		}
 		opts := append(initGRPCConfigOptions(defaultOptions), defaultOptions.OTLPConfig.GRPCConfig.GRPCOptions...)
-		ctx := context.Background()
+		//ctx := context.Background()
 		traceClient := otlpgrpctrace.NewClient(opts...)
 		grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
 		if err != nil {
 			blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
-			return &sdktrace.TracerProvider{}, err
+			return ctx, &sdktrace.TracerProvider{}, err
 		}
 
 		processors := initProcessors(grpcExporter)
-		return newTracerProvider(processors, resource, sampler)
+		return newTracerProvider(ctx, processors, resource, sampler)
 	case string(OTLP_HTTP):
 		blog.Info("Using otlphttp exporter...")
 		if defaultOptions.OTLPConfig == nil {
@@ -217,14 +218,14 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 			}
 			blog.Info("Using default OTLPHttp endpoint: %s:%v", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
 			opts := initHTTPConfigOptions(defaultOptions)
-			ctx := context.Background()
+			//ctx := context.Background()
 			grpcExporter, err := otlphttptrace.New(ctx, opts...)
 			if err != nil {
 				blog.Errorf("%s: %v", "failed to create otlphttp exporter", err)
-				return &sdktrace.TracerProvider{}, err
+				return ctx, &sdktrace.TracerProvider{}, err
 			}
 			processors := initProcessors(grpcExporter)
-			return newTracerProvider(processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler)
 		}
 		if defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint == "" {
 			defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint =
@@ -234,22 +235,22 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (*s
 			defaultOptions.OTLPConfig.HTTPConfig.HTTPURLPath = DefaultOTLPColTracesPath
 		}
 		opts := append(initHTTPConfigOptions(defaultOptions), defaultOptions.OTLPConfig.HTTPConfig.HTTPOptions...)
-		ctx := context.Background()
+		//ctx := context.Background()
 		httpExporter, err := otlphttptrace.New(ctx, opts...)
 		if err != nil {
 			blog.Errorf("%s: %v", "failed to create otlphttp exporter", err)
-			return &sdktrace.TracerProvider{}, err
+			return ctx, &sdktrace.TracerProvider{}, err
 		}
 
 		processors := initProcessors(httpExporter)
-		return newTracerProvider(processors, resource, sampler)
+		return newTracerProvider(ctx, processors, resource, sampler)
 	case string(Zipkin):
 	}
-	return &sdktrace.TracerProvider{}, nil
+	return ctx, &sdktrace.TracerProvider{}, nil
 }
 
-func newTracerProvider(processors []sdktrace.SpanProcessor,
-	resource *otelresource.Resource, sampler sdktrace.Sampler) (*sdktrace.TracerProvider, error) {
+func newTracerProvider(ctx context.Context, processors []sdktrace.SpanProcessor,
+	resource *otelresource.Resource, sampler sdktrace.Sampler) (context.Context, *sdktrace.TracerProvider, error) {
 	var tpos []sdktrace.TracerProviderOption
 	for i := 0; i < len(processors); i++ {
 		tpos = append(tpos, utils.WithSpanProcessor(processors[i]))
@@ -257,7 +258,7 @@ func newTracerProvider(processors []sdktrace.SpanProcessor,
 	tpos = append(tpos, utils.WithResource(resource), utils.WithSampler(sampler))
 	tp := utils.NewTracerProvider(tpos...)
 	utils.SetTracerProvider(tp)
-	return tp, nil
+	return ctx, tp, nil
 }
 
 // ValidateTracerProviderOption sets a slice of TracerProviderOption based on a tracer provider configuration.
@@ -368,8 +369,7 @@ func initSampler(tpc *TracerProviderConfig) sdktrace.Sampler {
 	return sdktrace.ParentBased(sdktrace.AlwaysSample())
 }
 
-func initResource(tpc *TracerProviderConfig) (*otelresource.Resource, error) {
-	ctx := context.Background()
+func initResource(ctx context.Context, tpc *TracerProviderConfig) (*otelresource.Resource, error) {
 	tpc.ResourceOptions = append(tpc.ResourceOptions,
 		otelresource.WithSchemaURL(semconv.SchemaURL),
 		otelresource.WithAttributes(resource.ServiceNameKey.String(tpc.ServiceName)))
