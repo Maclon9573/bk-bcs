@@ -50,12 +50,12 @@ func main() {
 	op := trace.ValidateTracerProviderOption(&opts)
 	op = append(op, trace.WithResourceOption(resource.WithFromEnv()))
 
-	tp, err := trace.InitTracerProvider(opts.ServiceName, op...)
+	ctx, tp, err := trace.InitTracerProvider(opts.ServiceName, op...)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cleanly shutdown and flush telemetry when the application exits.
@@ -70,10 +70,10 @@ func main() {
 
 	tr := tp.Tracer("component-main")
 
-	ctx, span := tr.Start(ctx, "foo")
+	ctx2, span := tr.Start(context.Background(), "foo")
 	span.SetAttributes(attribute.String("testkey", "testvalue"))
 	defer span.End()
-	bar(ctx)
+	bar(ctx2)
 }
 
 func bar(ctx context.Context) {
