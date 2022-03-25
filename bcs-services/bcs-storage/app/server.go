@@ -37,13 +37,13 @@ func Run(op *options.StorageOptions) error {
 
 	// init tracing
 	traceOpts := trace.ValidateTracerProviderOption(&op.Tracing)
-	tp, err := trace.InitTracerProvider(op.Tracing.ServiceName, traceOpts...)
+	ctx, tp, err := trace.InitTracerProvider(op.Tracing.ServiceName, traceOpts...)
 	if err != nil {
 		blog.Error("failed to create tracer provider. err:%s", err.Error())
 	}
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cleanly shutdown and flush telemetry when the application exits.
