@@ -15,14 +15,10 @@ package trace
 
 import (
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlphttptrace"
 	"net/http"
 
 	"go.opentelemetry.io/otel/attribute"
 	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	otelresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
@@ -179,101 +175,101 @@ func JaegerCollectorOptions(option oteljaeger.CollectorEndpointOption) TracerPro
 	}
 }
 
-// WithOTLPGRPCEndpoint sets OTLP GRPC endpoint
-func WithOTLPGRPCEndpoint(endpoint string) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-			}
-		}
-		o.OTLPConfig.GRPCConfig.GRPCEndpoint = endpoint
-	}
-}
+//// WithOTLPGRPCEndpoint sets OTLP GRPC endpoint
+//func WithOTLPGRPCEndpoint(endpoint string) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+//			}
+//		}
+//		o.OTLPConfig.GRPCConfig.GRPCEndpoint = endpoint
+//	}
+//}
+//
+//// WithOTLPGRPCURLPath sets OTLP GRPC endpoint
+//func WithOTLPGRPCURLPath(url string) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+//			}
+//		}
+//		o.OTLPConfig.GRPCConfig.GRPCURLPath = url
+//	}
+//}
+//
+//// WithOTLPGRPCInsecure sets OTLP GRPC endpoint
+//func WithOTLPGRPCInsecure() TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+//			}
+//		}
+//		o.OTLPConfig.GRPCConfig.GRPCInsecure = true
+//	}
+//}
+//
+//// WithGRPCOption imports otlptracegrpc.Option
+//func WithGRPCOption(option otlptracegrpc.Option) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
+//			}
+//		}
+//		o.OTLPConfig.GRPCConfig.GRPCOptions = append(o.OTLPConfig.GRPCConfig.GRPCOptions, option)
+//	}
+//}
 
-// WithOTLPGRPCURLPath sets OTLP GRPC endpoint
-func WithOTLPGRPCURLPath(url string) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-			}
-		}
-		o.OTLPConfig.GRPCConfig.GRPCURLPath = url
-	}
-}
-
-// WithOTLPGRPCInsecure sets OTLP GRPC endpoint
-func WithOTLPGRPCInsecure() TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-			}
-		}
-		o.OTLPConfig.GRPCConfig.GRPCInsecure = true
-	}
-}
-
-// WithGRPCOption imports otlptracegrpc.Option
-func WithGRPCOption(option otlptracegrpc.Option) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-			}
-		}
-		o.OTLPConfig.GRPCConfig.GRPCOptions = append(o.OTLPConfig.GRPCConfig.GRPCOptions, option)
-	}
-}
-
-// WithOTLPHTTPEndpoint sets OTLP HTTP endpoint
-func WithOTLPHTTPEndpoint(endpoint string) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				HTTPConfig: &otlphttptrace.HTTPConfig{},
-			}
-		}
-		o.OTLPConfig.HTTPConfig.HTTPEndpoint = endpoint
-	}
-}
-
-// WithOTLPHTTPURLPath sets OTLP GRPC endpoint
-func WithOTLPHTTPURLPath(url string) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				HTTPConfig: &otlphttptrace.HTTPConfig{},
-			}
-		}
-		o.OTLPConfig.HTTPConfig.HTTPURLPath = url
-	}
-}
-
-// WithOTLPHTTPInsecure sets OTLP HTTP endpoint
-func WithOTLPHTTPInsecure() TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				HTTPConfig: &otlphttptrace.HTTPConfig{},
-			}
-		}
-		o.OTLPConfig.HTTPConfig.HTTPInsecure = true
-	}
-}
-
-// WithHTTPOption imports otlptracegrpc.Option
-func WithHTTPOption(option otlptracehttp.Option) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.OTLPConfig == nil {
-			o.OTLPConfig = &OTLPConfig{
-				HTTPConfig: &otlphttptrace.HTTPConfig{},
-			}
-		}
-		o.OTLPConfig.HTTPConfig.HTTPOptions = append(o.OTLPConfig.HTTPConfig.HTTPOptions, option)
-	}
-}
+//// WithOTLPHTTPEndpoint sets OTLP HTTP endpoint
+//func WithOTLPHTTPEndpoint(endpoint string) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				HTTPConfig: &otlphttptrace.HTTPConfig{},
+//			}
+//		}
+//		o.OTLPConfig.HTTPConfig.HTTPEndpoint = endpoint
+//	}
+//}
+//
+//// WithOTLPHTTPURLPath sets OTLP GRPC endpoint
+//func WithOTLPHTTPURLPath(url string) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				HTTPConfig: &otlphttptrace.HTTPConfig{},
+//			}
+//		}
+//		o.OTLPConfig.HTTPConfig.HTTPURLPath = url
+//	}
+//}
+//
+//// WithOTLPHTTPInsecure sets OTLP HTTP endpoint
+//func WithOTLPHTTPInsecure() TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				HTTPConfig: &otlphttptrace.HTTPConfig{},
+//			}
+//		}
+//		o.OTLPConfig.HTTPConfig.HTTPInsecure = true
+//	}
+//}
+//
+//// WithHTTPOption imports otlptracegrpc.Option
+//func WithHTTPOption(option otlptracehttp.Option) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.OTLPConfig == nil {
+//			o.OTLPConfig = &OTLPConfig{
+//				HTTPConfig: &otlphttptrace.HTTPConfig{},
+//			}
+//		}
+//		o.OTLPConfig.HTTPConfig.HTTPOptions = append(o.OTLPConfig.HTTPConfig.HTTPOptions, option)
+//	}
+//}
 
 // WithResourceOption imports otelresource.Option
 func WithResourceOption(option otelresource.Option) TracerProviderOption {

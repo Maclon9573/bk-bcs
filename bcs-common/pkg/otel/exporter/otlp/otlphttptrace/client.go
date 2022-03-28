@@ -13,11 +13,11 @@
 
 package otlphttptrace
 
-import (
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-)
-
-func NewClient(opts ...otlptracehttp.Option) otlptrace.Client {
-	return otlptracehttp.NewClient(opts...)
-}
+//import (
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+//)
+//
+//func NewClient(opts ...otlptracehttp.Option) otlptrace.Client {
+//	return otlptracehttp.NewClient(opts...)
+//}

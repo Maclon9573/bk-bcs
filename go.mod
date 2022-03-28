@@ -10,7 +10,7 @@ replace (
 	github.com/mholt/caddy => github.com/caddyserver/caddy v0.11.1
 	github.com/micro/go-micro/v2 => github.com/OvertimeDog/go-micro/v2 v2.9.3
 	go.etcd.io/bbolt v1.3.4 => github.com/coreos/bbolt v1.3.4
-	google.golang.org/grpc => google.golang.org/grpc v1.35.0
+	google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )
 
 require (
@@ -41,7 +41,6 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/grpc-ecosystem/grpc-opentracing v0.0.0-20180507213350-8e809c8a8645 // indirect
 	github.com/haproxytech/client-native v0.0.0-00010101000000-000000000000
 	github.com/haproxytech/models v1.2.5-0.20191122125615-30d0235b81ec
@@ -57,7 +56,6 @@ require (
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
 	github.com/opencontainers/runc v1.0.0-rc6.0.20181203215513-96ec2177ae84 // indirect
-	github.com/opentracing/opentracing-go v1.2.0 // indirect
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pborman/uuid v1.2.0
 	github.com/prometheus/client_golang v1.11.0
@@ -72,7 +70,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.4.1
 	go4.org v0.0.0-20190313082347-94abd6928b1d
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63
-	google.golang.org/grpc v1.44.0
+	google.golang.org/grpc v1.45.0
 	k8s.io/api v0.23.1
 	k8s.io/apiextensions-apiserver v0.18.6
 	k8s.io/apimachinery v0.23.1
