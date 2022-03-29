@@ -13,12 +13,12 @@
 
 package otlpgrpctrace
 
-import (
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-)
-
-// NewClient creates a new gRPC trace client.
-func NewClient(opts ...otlptracegrpc.Option) otlptrace.Client {
-	return otlptracegrpc.NewClient(opts...)
-}
+//import (
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+//)
+//
+//// NewClient creates a new gRPC trace client.
+//func NewClient(opts ...otlptracegrpc.Option) otlptrace.Client {
+//	return otlptracegrpc.NewClient(opts...)
+//}

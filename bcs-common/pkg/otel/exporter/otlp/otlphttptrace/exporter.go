@@ -13,27 +13,27 @@
 
 package otlphttptrace
 
-import (
-	"context"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-)
-
-// HTTPConfig sets the OTLP collector HTTP endpoint
-type HTTPConfig struct {
-	HTTPEndpoint string                 `json:"HTTPEndpoint,omitempty" usage:"HTTPEndpoint sets HTTP client endpoint"`
-	HTTPURLPath  string                 `json:"HTTPURLPath,omitempty" usage:"HTTPURLPath sets HTTP client endpoint"`
-	HTTPInsecure bool                   `json:"HTTPInsecure,omitempty" usage:"HTTPEndpoint disables HTTP client transport security"`
-	HTTPOptions  []otlptracehttp.Option `json:"-"`
-}
-
-// New constructs a new Exporter and starts it.
-func New(ctx context.Context, opts ...otlptracehttp.Option) (*otlptrace.Exporter, error) {
-	return otlptracehttp.New(ctx, opts...)
-}
-
-// NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(client otlptrace.Client) *otlptrace.Exporter {
-	return otlptrace.NewUnstarted(client)
-}
+//import (
+//	"context"
+//
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+//)
+//
+//// HTTPConfig sets the OTLP collector HTTP endpoint
+//type HTTPConfig struct {
+//	HTTPEndpoint string                 `json:"HTTPEndpoint,omitempty" usage:"HTTPEndpoint sets HTTP client endpoint"`
+//	HTTPURLPath  string                 `json:"HTTPURLPath,omitempty" usage:"HTTPURLPath sets HTTP client endpoint"`
+//	HTTPInsecure bool                   `json:"HTTPInsecure,omitempty" usage:"HTTPEndpoint disables HTTP client transport security"`
+//	HTTPOptions  []otlptracehttp.Option `json:"-"`
+//}
+//
+//// New constructs a new Exporter and starts it.
+//func New(ctx context.Context, opts ...otlptracehttp.Option) (*otlptrace.Exporter, error) {
+//	return otlptracehttp.New(ctx, opts...)
+//}
+//
+//// NewUnstarted constructs a new Exporter and does not start it.
+//func NewUnstarted(client otlptrace.Client) *otlptrace.Exporter {
+//	return otlptrace.NewUnstarted(client)
+//}

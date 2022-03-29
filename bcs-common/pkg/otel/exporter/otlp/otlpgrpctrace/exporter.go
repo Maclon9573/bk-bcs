@@ -13,27 +13,28 @@
 
 package otlpgrpctrace
 
-import (
-	"context"
-
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-)
-
-// GRPCConfig sets the OTLP collector GRPC endpoint
-type GRPCConfig struct {
-	GRPCEndpoint string                 `json:"OTLPGRPCEndpoint,omitempty" usage:"OTLPGRPCEndpoint sets GRPC client endpoint"`
-	GRPCURLPath  string                 `json:"GRPCURLPath,omitempty" usage:"GRPCURLPath sets GRPC client endpoint"`
-	GRPCInsecure bool                   `json:"OTLPGRPCInsecure,omitempty" usage:"OTLPGRPCInsecure disables GRPC client transport security"`
-	GRPCOptions  []otlptracegrpc.Option `json:"-"`
-}
-
-// New constructs a new Exporter and starts it.
-func New(ctx context.Context, client otlptrace.Client) (*otlptrace.Exporter, error) {
-	return otlptrace.New(ctx, client)
-}
-
-// NewUnstarted constructs a new Exporter and does not start it.
-func NewUnstarted(client otlptrace.Client) *otlptrace.Exporter {
-	return otlptrace.NewUnstarted(client)
-}
+//
+//import (
+//	"context"
+//
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
+//	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+//)
+//
+//// GRPCConfig sets the OTLP collector GRPC endpoint
+//type GRPCConfig struct {
+//	GRPCEndpoint string                 `json:"OTLPGRPCEndpoint,omitempty" usage:"OTLPGRPCEndpoint sets GRPC client endpoint"`
+//	GRPCURLPath  string                 `json:"GRPCURLPath,omitempty" usage:"GRPCURLPath sets GRPC client endpoint"`
+//	GRPCInsecure bool                   `json:"OTLPGRPCInsecure,omitempty" usage:"OTLPGRPCInsecure disables GRPC client transport security"`
+//	GRPCOptions  []otlptracegrpc.Option `json:"-"`
+//}
+//
+//// New constructs a new Exporter and starts it.
+//func New(ctx context.Context, client otlptrace.Client) (*otlptrace.Exporter, error) {
+//	return otlptrace.New(ctx, client)
+//}
+//
+//// NewUnstarted constructs a new Exporter and does not start it.
+//func NewUnstarted(client otlptrace.Client) *otlptrace.Exporter {
+//	return otlptrace.NewUnstarted(client)
+//}

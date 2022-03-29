@@ -56,17 +56,17 @@ type TracerProviderConfig struct {
 	TracingType   string                 `json:"tracingType" value:"jaeger" usage:"tracing type(default jaeger)"`
 	ServiceName   string                 `json:"serviceName" value:"bcs-common/pkg/otel" usage:"tracing serviceName"`
 	JaegerConfig  *jaeger.EndpointConfig `json:"jaegerConfig,omitempty"`
-	OTLPConfig    *OTLPConfig            `json:"OTLPConfig,omitempty"`
+	//OTLPConfig    *OTLPConfig            `json:"OTLPConfig,omitempty"`
 	// Resource attributes
 	ResourceAttrs   []attribute.KeyValue  `json:"resourceAttrs,omitempty" usage:"attributes for the traced service"`
 	ResourceOptions []otelresource.Option `json:"-"`
 	Sampler         *SamplerType          `json:"sampler,omitempty"`
 }
 
-type OTLPConfig struct {
-	GRPCConfig *otlpgrpctrace.GRPCConfig `json:"GRPCConfig,omitempty"`
-	HTTPConfig *otlphttptrace.HTTPConfig `json:"HTTPConfig,omitempty"`
-}
+//type OTLPConfig struct {
+//	GRPCConfig *otlpgrpctrace.GRPCConfig `json:"GRPCConfig,omitempty"`
+//	HTTPConfig *otlphttptrace.HTTPConfig `json:"HTTPConfig,omitempty"`
+//}
 
 type SamplerType struct {
 	AlwaysOnSampler   bool    `json:"alwaysOnSampler,omitempty" value:"false" usage:"alwaysOnSampler will always sample"`
