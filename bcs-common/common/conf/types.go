@@ -208,6 +208,7 @@ func loadRawConfig(fs *pflag.FlagSet, config interface{}) {
 }
 
 func loadConfig(fs *pflag.FlagSet, configType reflect.Type, configValue reflect.Value) {
+
 	wrap2flag(fs, configType, configValue)
 }
 

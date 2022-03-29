@@ -16,8 +16,12 @@ package options
 import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/conf"
 	"github.com/Tencent/bk-bcs/bcs-common/common/static"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/registry"
+	"go.opentelemetry.io/otel/attribute"
+	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
+	otelresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
 //CertConfig is configuration of Cert
@@ -41,8 +45,8 @@ type StorageOptions struct {
 	conf.ProcessConfig
 
 	ServerCert *CertConfig
-	Etcd       registry.CMDOptions `json:"etcdRegistry"`
-	Tracing    trace.TracerProviderConfig     `json:"tracing"`
+	Etcd       registry.CMDOptions        `json:"etcdRegistry"`
+	Tracing    trace.TracerProviderConfig `json:"tracing"`
 
 	DBConfig     string `json:"database_config_file" value:"storage-database.conf" usage:"Config file for database."`
 	QueueConfig  string `json:"queue_config_file" value:"queue.conf" usage:"Config file for database."`
@@ -65,5 +69,18 @@ func NewStorageOptions() *StorageOptions {
 			IsSSL:   false,
 		},
 		Etcd: registry.CMDOptions{},
+		Tracing: trace.TracerProviderConfig{
+			JaegerConfig: &jaeger.EndpointConfig{
+				CollectorEndpoint: &jaeger.CollectorEndpoint{
+					CollectorOptions: []oteljaeger.CollectorEndpointOption{},
+				},
+				AgentEndpoint: &jaeger.AgentEndpoint{
+					AgentOptions: []oteljaeger.AgentEndpointOption{},
+				},
+			},
+			ResourceAttrs:   []attribute.KeyValue{},
+			ResourceOptions: []otelresource.Option{},
+			Sampler:         &trace.SamplerType{},
+		},
 	}
 }
