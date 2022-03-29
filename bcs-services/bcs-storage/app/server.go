@@ -41,7 +41,9 @@ func Run(op *options.StorageOptions) error {
 	if err != nil {
 		blog.Error("failed to create tracer provider. err:%s", err.Error())
 	}
-	otel.SetTextMapPropagator(propagation.TraceContext{})
+
+	prop := propagation.TraceContext{}
+	otel.SetTextMapPropagator(prop)
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

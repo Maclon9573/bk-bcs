@@ -96,7 +96,7 @@ func (s *StorageServer) initFilterFunctions() []restful.FilterFunction {
 		GroupedStatus: true,
 	})
 
-	//filterFunctions = append(filterFunctions, trestful.NewOTFilter(opentracing.GlobalTracer()))
+	//filterFunctions = append(filterFunctions, otelrestful.NewOTFilter())
 	filterFunctions = append(filterFunctions, middle.MetricsMiddleHandler(mdlw))
 
 	return filterFunctions
