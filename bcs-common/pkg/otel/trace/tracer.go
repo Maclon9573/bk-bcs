@@ -156,6 +156,8 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 		}
 		processors := initProcessors(jaegerExporter)
 		return newTracerProvider(ctx, processors, resource, sampler)
+	case string(OTLP_GRPC):
+	case string(OTLP_HTTP):
 	case string(Zipkin):
 	}
 	return ctx, &sdktrace.TracerProvider{}, nil
@@ -230,46 +232,46 @@ func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProvider
 }
 
 // initSampler return a defaultOffSampler by default
-func initSampler(tpc *TracerProviderConfig) sdktrace.Sampler {
-	if tpc.Sampler == nil {
-		tpc.Sampler = &SamplerType{
+func initSampler(config *TracerProviderConfig) sdktrace.Sampler {
+	if config.Sampler == nil {
+		config.Sampler = &SamplerType{
 			DefaultOnSampler: true,
 		}
 		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
-	if tpc.Sampler.AlwaysOnSampler {
+	if config.Sampler.AlwaysOnSampler {
 		return sdktrace.AlwaysSample()
 	}
-	if tpc.Sampler.AlwaysOffSampler {
+	if config.Sampler.AlwaysOffSampler {
 		return sdktrace.NeverSample()
 	}
-	if fmt.Sprint(tpc.Sampler.RatioBasedSampler) != "0" {
-		return sdktrace.TraceIDRatioBased(tpc.Sampler.RatioBasedSampler)
+	if fmt.Sprint(config.Sampler.RatioBasedSampler) != "0" {
+		return sdktrace.TraceIDRatioBased(config.Sampler.RatioBasedSampler)
 	}
-	if tpc.Sampler.DefaultOnSampler {
+	if config.Sampler.DefaultOnSampler {
 		return sdktrace.ParentBased(sdktrace.AlwaysSample())
 	}
-	if tpc.Sampler.DefaultOffSampler {
+	if config.Sampler.DefaultOffSampler {
 		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
 	return sdktrace.ParentBased(sdktrace.NeverSample())
 }
 
-func initResource(ctx context.Context, tpc *TracerProviderConfig) (*otelresource.Resource, error) {
-	tpc.ResourceOptions = append(tpc.ResourceOptions,
+func initResource(ctx context.Context, config *TracerProviderConfig) (*otelresource.Resource, error) {
+	config.ResourceOptions = append(config.ResourceOptions,
 		otelresource.WithSchemaURL(semconv.SchemaURL),
-		otelresource.WithAttributes(resource.ServiceNameKey.String(tpc.ServiceName)))
-	r, err := otelresource.New(ctx, tpc.ResourceOptions...)
+		otelresource.WithAttributes(resource.ServiceNameKey.String(config.ServiceName)))
+	r, err := otelresource.New(ctx, config.ResourceOptions...)
 	if err != nil {
 		blog.Errorf("%s: %v", "failed to create resource", err)
 		return &otelresource.Resource{}, err
 	}
-	if tpc.ResourceAttrs != nil {
-		for _, a := range tpc.ResourceAttrs {
+	if config.ResourceAttrs != nil {
+		for _, a := range config.ResourceAttrs {
 			r, _ = otelresource.Merge(r, otelresource.NewSchemaless(a))
 		}
 	}
-	tpc.ResourceAttrs = append([]attribute.KeyValue{resource.ServiceNameKey.String(tpc.ServiceName)}, tpc.ResourceAttrs...)
+	config.ResourceAttrs = append([]attribute.KeyValue{resource.ServiceNameKey.String(config.ServiceName)}, config.ResourceAttrs...)
 	return r, nil
 }
 
@@ -300,26 +302,24 @@ func initAgentEndpointOptions(config *TracerProviderConfig) []oteljaeger.AgentEn
 
 // initProcessors sets processors for OTEL.
 func initProcessors(exporter sdktrace.SpanExporter) (sps []sdktrace.SpanProcessor) {
-	// By default, no processors are enabled. Depending on the data source, it may be recommended
-	// that multiple processors be enabled. Processors must be enabled for every data source.
-	// Always be sure to batch in production.
+	// Processors must be enabled for every data source. Always be sure to batch in production.
 	sp := utils.NewBatchSpanProcessor(exporter)
 	sps = append(sps, sp)
 	return sps
 }
 
-func validateTracingOptions(opt *TracerProviderConfig) error {
-	err := validateTracingSwitch(opt.TracingSwitch)
+func validateTracingOptions(config *TracerProviderConfig) error {
+	err := validateTracingSwitch(config.TracingSwitch)
 	if err != nil {
 		return err
 	}
 
-	err = validateTracingType(opt.TracingType)
+	err = validateTracingType(config.TracingType)
 	if err != nil {
 		return err
 	}
 
-	err = validateServiceName(opt.ServiceName)
+	err = validateServiceName(config.ServiceName)
 	if err != nil {
 		return err
 	}
