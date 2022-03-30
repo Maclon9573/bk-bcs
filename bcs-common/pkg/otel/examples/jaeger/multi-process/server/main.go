@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
@@ -35,19 +36,24 @@ func welcomePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	opts := trace.Options{
+	opts := trace.TracerProviderConfig{
 		TracingSwitch: "on",
-		ExporterURL:   "http://localhost:14268/api/traces",
+		TracingType:   "jaeger",
+		JaegerConfig: &jaeger.EndpointConfig{
+			CollectorEndpoint: &jaeger.CollectorEndpoint{
+				Endpoint: "http://localhost:14268/api/traces",
+			},
+		},
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("EndPoint", "HttpServer"),
 		},
+		Sampler: &trace.SamplerType{
+			DefaultOnSampler: true,
+		},
 	}
-	op := []trace.Option{}
-	op = append(op, trace.TracerSwitch(opts.TracingSwitch))
-	op = append(op, trace.ResourceAttrs(opts.ResourceAttrs))
-	op = append(op, trace.ExporterURL(opts.ExporterURL))
+	op := trace.ValidateTracerProviderOption(&opts)
 
-	tp, err := trace.InitTracerProvider("http-server", op...)
+	ctx, tp, err := trace.InitTracerProvider("http-server", op...)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	if err != nil {
 		log.Fatal(err)

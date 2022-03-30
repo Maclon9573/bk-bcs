@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/metric"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
@@ -86,20 +87,25 @@ func main() {
 		log.Fatal(http.ListenAndServe(":30080", nil))
 	}()
 
-	traceOpts := trace.Options{
+	traceOpts := trace.TracerProviderConfig{
 		TracingSwitch: "on",
 		ServiceName:   serviceName,
-		ExporterURL:   "http://localhost:14268/api/traces",
+		JaegerConfig: &jaeger.EndpointConfig{
+			AgentEndpoint: &jaeger.AgentEndpoint{
+				Host: "localhost",
+				Port: "6831",
+			},
+		},
 		ResourceAttrs: []attribute.KeyValue{
 			attribute.String("endpoint", "http_client"),
 		},
+		Sampler: &trace.SamplerType{
+			DefaultOnSampler: true,
+		},
 	}
-	var traceOp []trace.Option
-	traceOp = append(traceOp, trace.TracerSwitch(traceOpts.TracingSwitch))
-	traceOp = append(traceOp, trace.ResourceAttrs(traceOpts.ResourceAttrs))
-	traceOp = append(traceOp, trace.ExporterURL(traceOpts.ExporterURL))
+	traceOp := trace.ValidateTracerProviderOption(&traceOpts)
 
-	tp, err := trace.InitTracerProvider(traceOpts.ServiceName, traceOp...)
+	ctx, tp, err := trace.InitTracerProvider(traceOpts.ServiceName, traceOp...)
 	tracer := tp.Tracer(tracerName)
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 	if err != nil {
