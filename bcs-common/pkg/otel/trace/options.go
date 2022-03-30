@@ -41,15 +41,6 @@ const (
 	DefaultJaegerAgentEndpointHost = "localhost"
 	// DefaultJaegerAgentEndpointPort sets default jaeger agent endpoint host
 	DefaultJaegerAgentEndpointPort = "6831"
-	// DefaultOTLPCollectorPort is the port the Exporter will attempt connect to
-	// if no collector port is provided.
-	DefaultOTLPCollectorPort uint16 = 4317
-	// DefaultOTLPCollectorHost is the host address the Exporter will attempt
-	// connect to if no collector address is provided.
-	DefaultOTLPCollectorHost string = "localhost"
-	// DefaultOTLPColTracesPath is a default URL path for endpoint that
-	// receives spans.
-	DefaultOTLPColTracesPath string = "/v1/traces"
 )
 
 // TracerProviderOption for init TracerProviderConfig
@@ -148,18 +139,6 @@ func JaegerCollectorPassword(password string) TracerProviderOption {
 	}
 }
 
-//// JaegerCollectorHttpClient sets the http client for tracing system
-//func JaegerCollectorHttpClient(client *http.Client) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.JaegerConfig == nil {
-//			o.JaegerConfig = &jaeger.EndpointConfig{
-//				CollectorEndpoint: &jaeger.CollectorEndpoint{},
-//			}
-//		}
-//		o.JaegerConfig.CollectorEndpoint.HttpClient = client
-//	}
-//}
-
 // JaegerCollectorOptions imports oteljaeger.CollectorEndpointOption
 func JaegerCollectorOptions(option oteljaeger.CollectorEndpointOption) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
@@ -172,102 +151,6 @@ func JaegerCollectorOptions(option oteljaeger.CollectorEndpointOption) TracerPro
 			append(o.JaegerConfig.CollectorEndpoint.CollectorOptions, option)
 	}
 }
-
-//// WithOTLPGRPCEndpoint sets OTLP GRPC endpoint
-//func WithOTLPGRPCEndpoint(endpoint string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-//			}
-//		}
-//		o.OTLPConfig.GRPCConfig.GRPCEndpoint = endpoint
-//	}
-//}
-//
-//// WithOTLPGRPCURLPath sets OTLP GRPC endpoint
-//func WithOTLPGRPCURLPath(url string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-//			}
-//		}
-//		o.OTLPConfig.GRPCConfig.GRPCURLPath = url
-//	}
-//}
-//
-//// WithOTLPGRPCInsecure sets OTLP GRPC endpoint
-//func WithOTLPGRPCInsecure() TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-//			}
-//		}
-//		o.OTLPConfig.GRPCConfig.GRPCInsecure = true
-//	}
-//}
-//
-//// WithGRPCOption imports otlptracegrpc.Option
-//func WithGRPCOption(option otlptracegrpc.Option) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				GRPCConfig: &otlpgrpctrace.GRPCConfig{},
-//			}
-//		}
-//		o.OTLPConfig.GRPCConfig.GRPCOptions = append(o.OTLPConfig.GRPCConfig.GRPCOptions, option)
-//	}
-//}
-//
-//// WithOTLPHTTPEndpoint sets OTLP HTTP endpoint
-//func WithOTLPHTTPEndpoint(endpoint string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				HTTPConfig: &otlphttptrace.HTTPConfig{},
-//			}
-//		}
-//		o.OTLPConfig.HTTPConfig.HTTPEndpoint = endpoint
-//	}
-//}
-//
-//// WithOTLPHTTPURLPath sets OTLP GRPC endpoint
-//func WithOTLPHTTPURLPath(url string) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				HTTPConfig: &otlphttptrace.HTTPConfig{},
-//			}
-//		}
-//		o.OTLPConfig.HTTPConfig.HTTPURLPath = url
-//	}
-//}
-//
-//// WithOTLPHTTPInsecure sets OTLP HTTP endpoint
-//func WithOTLPHTTPInsecure() TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				HTTPConfig: &otlphttptrace.HTTPConfig{},
-//			}
-//		}
-//		o.OTLPConfig.HTTPConfig.HTTPInsecure = true
-//	}
-//}
-//
-//// WithHTTPOption imports otlptracegrpc.Option
-//func WithHTTPOption(option otlptracehttp.Option) TracerProviderOption {
-//	return func(o *TracerProviderConfig) {
-//		if o.OTLPConfig == nil {
-//			o.OTLPConfig = &OTLPConfig{
-//				HTTPConfig: &otlphttptrace.HTTPConfig{},
-//			}
-//		}
-//		o.OTLPConfig.HTTPConfig.HTTPOptions = append(o.OTLPConfig.HTTPConfig.HTTPOptions, option)
-//	}
-//}
 
 // WithResourceOption imports otelresource.Option
 func WithResourceOption(option otelresource.Option) TracerProviderOption {

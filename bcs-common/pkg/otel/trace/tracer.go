@@ -20,8 +20,6 @@ import (
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
-	//"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
-	//"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlphttptrace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/resource"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
@@ -54,17 +52,11 @@ type TracerProviderConfig struct {
 	TracingType   string                 `json:"tracingType" value:"jaeger" usage:"tracing type(default jaeger)"`
 	ServiceName   string                 `json:"serviceName" value:"bcs-common/pkg/otel" usage:"tracing serviceName"`
 	JaegerConfig  *jaeger.EndpointConfig `json:"jaegerConfig,omitempty"`
-	//OTLPConfig    *OTLPConfig            `json:"OTLPConfig,omitempty"`
 	// Resource attributes
 	ResourceAttrs   []attribute.KeyValue  `json:"resourceAttrs,omitempty" usage:"attributes for the traced service"`
 	ResourceOptions []otelresource.Option `json:"-"`
 	Sampler         *SamplerType          `json:"sampler,omitempty"`
 }
-
-//type OTLPConfig struct {
-//	GRPCConfig *otlpgrpctrace.GRPCConfig `json:"GRPCConfig,omitempty"`
-//	HTTPConfig *otlphttptrace.HTTPConfig `json:"HTTPConfig,omitempty"`
-//}
 
 type SamplerType struct {
 	AlwaysOnSampler   bool    `json:"alwaysOnSampler,omitempty" value:"false" usage:"alwaysOnSampler will always sample"`
@@ -164,84 +156,6 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 		}
 		processors := initProcessors(jaegerExporter)
 		return newTracerProvider(ctx, processors, resource, sampler)
-	//case string(OTLP_GRPC):
-	//	blog.Info("Using otlpgrpc exporter...")
-	//	if defaultOptions.OTLPConfig == nil {
-	//		defaultOptions.OTLPConfig = &OTLPConfig{
-	//			GRPCConfig: &otlpgrpctrace.GRPCConfig{
-	//				GRPCEndpoint: fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort),
-	//				GRPCURLPath:  DefaultOTLPColTracesPath,
-	//				GRPCInsecure: true,
-	//			},
-	//		}
-	//		blog.Info("Using default OTLPGrpc endpoint: %s:%v", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
-	//		opts := initGRPCConfigOptions(defaultOptions)
-	//		//ctx := context.Background()
-	//		traceClient := otlpgrpctrace.NewClient(opts...)
-	//		grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
-	//		if err != nil {
-	//			blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
-	//			return ctx, &sdktrace.TracerProvider{}, err
-	//		}
-	//		processors := initProcessors(grpcExporter)
-	//		return newTracerProvider(ctx, processors, resource, sampler)
-	//	}
-	//	if defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint == "" {
-	//		defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint =
-	//			fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
-	//	}
-	//	if defaultOptions.OTLPConfig.GRPCConfig.GRPCURLPath == "" {
-	//		defaultOptions.OTLPConfig.GRPCConfig.GRPCURLPath = DefaultOTLPColTracesPath
-	//	}
-	//	opts := append(initGRPCConfigOptions(defaultOptions), defaultOptions.OTLPConfig.GRPCConfig.GRPCOptions...)
-	//	//ctx := context.Background()
-	//	traceClient := otlpgrpctrace.NewClient(opts...)
-	//	grpcExporter, err := otlpgrpctrace.New(ctx, traceClient)
-	//	if err != nil {
-	//		blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
-	//		return ctx, &sdktrace.TracerProvider{}, err
-	//	}
-	//
-	//	processors := initProcessors(grpcExporter)
-	//	return newTracerProvider(ctx, processors, resource, sampler)
-	//case string(OTLP_HTTP):
-	//	blog.Info("Using otlphttp exporter...")
-	//	if defaultOptions.OTLPConfig == nil {
-	//		defaultOptions.OTLPConfig = &OTLPConfig{
-	//			HTTPConfig: &otlphttptrace.HTTPConfig{
-	//				HTTPEndpoint: fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort),
-	//				HTTPURLPath:  DefaultOTLPColTracesPath,
-	//				HTTPInsecure: true,
-	//			},
-	//		}
-	//		blog.Info("Using default OTLPHttp endpoint: %s:%v", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
-	//		opts := initHTTPConfigOptions(defaultOptions)
-	//		//ctx := context.Background()
-	//		grpcExporter, err := otlphttptrace.New(ctx, opts...)
-	//		if err != nil {
-	//			blog.Errorf("%s: %v", "failed to create otlphttp exporter", err)
-	//			return ctx, &sdktrace.TracerProvider{}, err
-	//		}
-	//		processors := initProcessors(grpcExporter)
-	//		return newTracerProvider(ctx, processors, resource, sampler)
-	//	}
-	//	if defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint == "" {
-	//		defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint =
-	//			fmt.Sprintf("%s:%d", DefaultOTLPCollectorHost, DefaultOTLPCollectorPort)
-	//	}
-	//	if defaultOptions.OTLPConfig.HTTPConfig.HTTPURLPath == "" {
-	//		defaultOptions.OTLPConfig.HTTPConfig.HTTPURLPath = DefaultOTLPColTracesPath
-	//	}
-	//	opts := append(initHTTPConfigOptions(defaultOptions), defaultOptions.OTLPConfig.HTTPConfig.HTTPOptions...)
-	//	//ctx := context.Background()
-	//	httpExporter, err := otlphttptrace.New(ctx, opts...)
-	//	if err != nil {
-	//		blog.Errorf("%s: %v", "failed to create otlphttp exporter", err)
-	//		return ctx, &sdktrace.TracerProvider{}, err
-	//	}
-	//
-	//	processors := initProcessors(httpExporter)
-	//	return newTracerProvider(ctx, processors, resource, sampler)
 	case string(Zipkin):
 	}
 	return ctx, &sdktrace.TracerProvider{}, nil
@@ -282,9 +196,6 @@ func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProvider
 			if config.JaegerConfig.CollectorEndpoint.Password != "" {
 				tpos = append(tpos, JaegerCollectorPassword(config.JaegerConfig.CollectorEndpoint.Password))
 			}
-			//if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
-			//	tpos = append(tpos, JaegerCollectorHttpClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
-			//}
 		}
 		if config.JaegerConfig.AgentEndpoint != nil {
 			if config.JaegerConfig.AgentEndpoint.Host != "" {
@@ -295,30 +206,6 @@ func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProvider
 			}
 		}
 	}
-	//if config.OTLPConfig != nil {
-	//	if config.OTLPConfig.GRPCConfig != nil {
-	//		if config.OTLPConfig.GRPCConfig.GRPCEndpoint != "" {
-	//			tpos = append(tpos, WithOTLPGRPCEndpoint(config.OTLPConfig.GRPCConfig.GRPCEndpoint))
-	//		}
-	//		if config.OTLPConfig.GRPCConfig.GRPCURLPath != "" {
-	//			tpos = append(tpos, WithOTLPGRPCURLPath(config.OTLPConfig.GRPCConfig.GRPCURLPath))
-	//		}
-	//		if config.OTLPConfig.GRPCConfig.GRPCInsecure {
-	//			tpos = append(tpos, WithOTLPGRPCInsecure())
-	//		}
-	//	}
-	//	if config.OTLPConfig.HTTPConfig != nil {
-	//		if config.OTLPConfig.HTTPConfig.HTTPEndpoint != "" {
-	//			tpos = append(tpos, WithOTLPHTTPEndpoint(config.OTLPConfig.HTTPConfig.HTTPEndpoint))
-	//		}
-	//		if config.OTLPConfig.HTTPConfig.HTTPURLPath != "" {
-	//			tpos = append(tpos, WithOTLPHTTPURLPath(config.OTLPConfig.HTTPConfig.HTTPURLPath))
-	//		}
-	//		if config.OTLPConfig.HTTPConfig.HTTPInsecure {
-	//			tpos = append(tpos, WithOTLPHTTPInsecure())
-	//		}
-	//	}
-	//}
 	if config.ResourceAttrs != nil {
 		tpos = append(tpos, ResourceAttrs(config.ResourceAttrs))
 	}
@@ -342,12 +229,13 @@ func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProvider
 	return tpos
 }
 
+// initSampler return a defaultOffSampler by default
 func initSampler(tpc *TracerProviderConfig) sdktrace.Sampler {
 	if tpc.Sampler == nil {
 		tpc.Sampler = &SamplerType{
 			DefaultOnSampler: true,
 		}
-		return sdktrace.ParentBased(sdktrace.AlwaysSample())
+		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
 	if tpc.Sampler.AlwaysOnSampler {
 		return sdktrace.AlwaysSample()
@@ -364,7 +252,7 @@ func initSampler(tpc *TracerProviderConfig) sdktrace.Sampler {
 	if tpc.Sampler.DefaultOffSampler {
 		return sdktrace.ParentBased(sdktrace.NeverSample())
 	}
-	return sdktrace.ParentBased(sdktrace.AlwaysSample())
+	return sdktrace.ParentBased(sdktrace.NeverSample())
 }
 
 func initResource(ctx context.Context, tpc *TracerProviderConfig) (*otelresource.Resource, error) {
@@ -396,9 +284,6 @@ func initCollectorEndpointOptions(config *TracerProviderConfig) []oteljaeger.Col
 	if config.JaegerConfig.CollectorEndpoint.Password != "" {
 		op = append(op, oteljaeger.WithPassword(config.JaegerConfig.CollectorEndpoint.Password))
 	}
-	//if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
-	//	op = append(op, oteljaeger.WithHTTPClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
-	//}
 	return op
 }
 
@@ -412,31 +297,6 @@ func initAgentEndpointOptions(config *TracerProviderConfig) []oteljaeger.AgentEn
 	}
 	return op
 }
-
-//func initGRPCConfigOptions(config *TracerProviderConfig) []otlptracegrpc.Option {
-//	var op []otlptracegrpc.Option
-//	//if config.OTLPConfig.GRPCConfig.GRPCEndpoint != "" {
-//	//	op = append(op, otlptracegrpc.WithEndpoint(config.OTLPConfig.GRPCConfig.GRPCEndpoint))
-//	//}
-//	//if config.OTLPConfig.GRPCConfig.GRPCInsecure {
-//	//	op = append(op, otlptracegrpc.WithInsecure())
-//	//}
-//	return op
-//}
-
-//func initHTTPConfigOptions(config *TracerProviderConfig) []otlptracehttp.Option {
-//	var op []otlptracehttp.Option
-//	if config.OTLPConfig.HTTPConfig.HTTPEndpoint != "" {
-//		op = append(op, otlptracehttp.WithEndpoint(config.OTLPConfig.HTTPConfig.HTTPEndpoint))
-//	}
-//	if config.OTLPConfig.HTTPConfig.HTTPURLPath != "" {
-//		op = append(op, otlptracehttp.WithURLPath(config.OTLPConfig.HTTPConfig.HTTPURLPath))
-//	}
-//	if config.OTLPConfig.HTTPConfig.HTTPInsecure {
-//		op = append(op, otlptracehttp.WithInsecure())
-//	}
-//	return op
-//}
 
 // initProcessors sets processors for OTEL.
 func initProcessors(exporter sdktrace.SpanExporter) (sps []sdktrace.SpanProcessor) {
@@ -485,25 +345,4 @@ func validateServiceName(sn string) error {
 		return errServiceName
 	}
 	return nil
-}
-
-//
-//func validateJaegerAgent(ep *jaeger.AgentEndpoint) error {
-//	if ep.Host == "" || ep.Port == "" {
-//		return errors.New("empty host or port")
-//	}
-//	return nil
-//}
-
-//func validateJaegerCollector(ep *jaeger.CollectorEndpoint) error {
-//	if ep.Endpoint == "" {
-//		return errors.New("empty endpoint")
-//	}
-//	return nil
-//}
-
-func handleErr(err error, message string) {
-	if err != nil {
-		blog.Errorf("%s: %v", message, err)
-	}
 }

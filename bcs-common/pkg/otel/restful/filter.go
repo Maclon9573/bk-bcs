@@ -14,7 +14,6 @@
 package restful
 
 import (
-	"fmt"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"github.com/emicklei/go-restful"
 	"go.opentelemetry.io/otel/attribute"
@@ -71,11 +70,10 @@ func NewOTFilter(options ...FilterOption) restful.FilterFunction {
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(req.Request.Context(), "Processing Request")
-		fmt.Println("setting span name...")
-		span.SetName("Processing Request")
 		setHTTPSpanAttributes(span, req.Request)
 		//requestID := "requestID"
 		//hc := propagation.HeaderCarrier(req.Request.Header)
+		//
 		//hc.Set(requestID, "0000001")
 		//otel.GetTextMapPropagator().Inject(req.Request.Context(), propagation.HeaderCarrier(req.Request.Header))
 		//ctx = otel.GetTextMapPropagator().Extract(req.Request.Context(), propagation.HeaderCarrier(req.Request.Header))
@@ -117,9 +115,9 @@ func setHTTPSpanAttributes(span trace.Span, request *http.Request) {
 	request.URL.User = userinfo
 
 	if request.TLS != nil {
-		attrs = append(attrs, utils.HTTPSchemeKey.String("http"))
-	} else {
 		attrs = append(attrs, utils.HTTPSchemeKey.String("https"))
+	} else {
+		attrs = append(attrs, utils.HTTPSchemeKey.String("http"))
 	}
 
 	if request.Host != "" {
