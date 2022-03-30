@@ -19,7 +19,6 @@ import (
 
 	"github.com/Tencent/bk-bcs/bcs-common/common"
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/tracing/utils"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/lib"
 	v1http "github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/v1http/utils"
@@ -56,11 +55,11 @@ func GetMetric(req *restful.Request, resp *restful.Response) {
 		handler = "GetMetric"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	r, err := getMetric(req)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStorageGetResourceFailStr, err)
 		if err == storageErr.ResourceDoesNotExist {
 			lib.ReturnRest(&lib.RestResponse{
@@ -75,7 +74,7 @@ func GetMetric(req *restful.Request, resp *restful.Response) {
 	}
 	if len(r) == 0 {
 		err := fmt.Errorf("resource does not exist")
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		lib.ReturnRest(&lib.RestResponse{
 			Resp: resp, ErrCode: common.BcsErrStorageResourceNotExist,
 			Message: common.BcsErrStorageResourceNotExistStr})
@@ -90,10 +89,10 @@ func PutMetric(req *restful.Request, resp *restful.Response) {
 		handler = "PutMetric"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	if err := put(req); err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStoragePutResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{
 			Resp: resp, ErrCode: common.BcsErrStoragePutResourceFail,
@@ -109,10 +108,10 @@ func DeleteMetric(req *restful.Request, resp *restful.Response) {
 		handler = "DeleteMetric"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	if err := remove(req); err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStorageDeleteResourceFailStr, err)
 		if err == storageErr.ResourceDoesNotExist {
 			lib.ReturnRest(&lib.RestResponse{
@@ -134,11 +133,11 @@ func QueryMetric(req *restful.Request, resp *restful.Response) {
 		handler = "QueryMetric"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	r, err := queryMetric(req)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStorageListResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{
 			Resp: resp, Data: []string{}, ErrCode: common.BcsErrStorageListResourceFail,
@@ -154,11 +153,11 @@ func ListMetricTables(req *restful.Request, resp *restful.Response) {
 		handler = "ListMetricTables"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	r, err := tables(req)
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStorageDecodeListResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{
 			Resp: resp, Data: []string{}, ErrCode: common.BcsErrStorageDecodeListResourceFail,
