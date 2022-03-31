@@ -14,11 +14,13 @@
 package restful
 
 import (
+	"net/http"
+
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"github.com/emicklei/go-restful"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"net/http"
 )
 
 const (
@@ -71,14 +73,7 @@ func NewOTFilter(options ...FilterOption) restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(req.Request.Context(), "Processing Request")
 		setHTTPSpanAttributes(span, req.Request)
-		//requestID := "requestID"
-		//hc := propagation.HeaderCarrier(req.Request.Header)
-		//
-		//hc.Set(requestID, "0000001")
-		//otel.GetTextMapPropagator().Inject(req.Request.Context(), propagation.HeaderCarrier(req.Request.Header))
-		//ctx = otel.GetTextMapPropagator().Extract(req.Request.Context(), propagation.HeaderCarrier(req.Request.Header))
 		req.Request = req.Request.WithContext(utils.ContextWithSpan(ctx, span))
-		//span.SetAttributes(attribute.Key(requestID).StringSlice(req.Request.Header[requestID]))
 		span.SetAttributes(attribute.Key("component").String(opts.componentName))
 
 		defer func() {

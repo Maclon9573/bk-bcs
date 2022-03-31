@@ -15,6 +15,7 @@ package trace
 
 import (
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
+
 	"go.opentelemetry.io/otel/attribute"
 	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
 	otelresource "go.opentelemetry.io/otel/sdk/resource"

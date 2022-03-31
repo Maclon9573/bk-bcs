@@ -15,15 +15,15 @@ package main
 
 import (
 	"context"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"log"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 )
 
 const (
