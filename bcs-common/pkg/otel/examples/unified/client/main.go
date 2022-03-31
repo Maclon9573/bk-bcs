@@ -111,7 +111,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx2, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cleanly shutdown and flush telemetry when the application exits.
@@ -122,21 +122,21 @@ func main() {
 		if err := tp.Shutdown(ctx); err != nil {
 			log.Fatal(err)
 		}
-	}(ctx)
+	}(ctx2)
 
 	for {
 		startTime := time.Now()
-		ctx, span := tracer.Start(ctx, "Execute Request")
+		ctx3, span := tracer.Start(context.Background(), "Execute Request")
 		log.Printf("traceID:%v, spanID:%v",
 			span.SpanContext().TraceID().String(), span.SpanContext().SpanID().String())
 		commonLabels2 := append(commonLabels,
 			attribute.String("traceID", span.SpanContext().TraceID().String()))
-		makeRequest(ctx)
+		makeRequest(ctx3)
 		span.End()
 		latencyMs := float64(time.Since(startTime)) / 1e6
 
-		requestCount.Add(ctx, 1, commonLabels...)
-		requestLatency.Record(ctx, latencyMs, commonLabels2...)
+		requestCount.Add(ctx3, 1, commonLabels...)
+		requestLatency.Record(ctx3, latencyMs, commonLabels2...)
 
 		fmt.Printf("Latency: %.3fms\n", latencyMs)
 		time.Sleep(time.Duration(300) * time.Second)

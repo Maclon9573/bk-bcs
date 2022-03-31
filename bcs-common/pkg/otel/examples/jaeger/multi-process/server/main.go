@@ -58,7 +58,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx2, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cleanly shutdown and flush telemetry when the application exits.
@@ -69,7 +69,7 @@ func main() {
 		if err := tp.Shutdown(ctx); err != nil {
 			log.Fatal(err)
 		}
-	}(ctx)
+	}(ctx2)
 
 	wrappedHandler := otelhttp.NewHandler(http.HandlerFunc(welcomePage), "/")
 	http.Handle("/", wrappedHandler)

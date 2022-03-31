@@ -55,7 +55,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx2, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cleanly shutdown and flush telemetry when the application exits.
@@ -66,10 +66,10 @@ func main() {
 		if err := tp.Shutdown(ctx); err != nil {
 			log.Fatal(err)
 		}
-	}(ctx)
+	}(ctx2)
 
-	ctx, span := tp.Tracer("client").Start(ctx, "HTTP Request")
-	makeRequest(ctx)
+	ctx3, span := tp.Tracer("client").Start(context.Background(), "HTTP Request")
+	makeRequest(ctx3)
 	defer span.End()
 
 }

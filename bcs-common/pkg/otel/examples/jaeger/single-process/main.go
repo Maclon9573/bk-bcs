@@ -58,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(ctx)
+	ctx2, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	// Cleanly shutdown and flush telemetry when the application exits.
@@ -69,14 +69,14 @@ func main() {
 		if err := tp.Shutdown(ctx); err != nil {
 			log.Fatal(err)
 		}
-	}(ctx)
+	}(ctx2)
 
 	tr := tp.Tracer("component-main")
 
-	ctx2, span := tr.Start(context.Background(), "foo")
+	ctx3, span := tr.Start(context.Background(), "foo")
 	span.SetAttributes(attribute.String("testkey", "testvalue"))
 	defer span.End()
-	bar(ctx2)
+	bar(ctx3)
 }
 
 func bar(ctx context.Context) {
