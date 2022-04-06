@@ -28,8 +28,8 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/lib"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/utils/metrics"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/apiserver"
+	"github.com/asim/go-micro/v3/broker"
 	"github.com/emicklei/go-restful"
-	"github.com/micro/go-micro/v2/broker"
 )
 
 func getExtra(req *restful.Request) operator.M {

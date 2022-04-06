@@ -22,8 +22,10 @@ import (
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/google/uuid"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/registry/etcd"
+	//"github.com/micro/go-micro/v2/registry"
+	"go-micro.dev/v4/registry"
+	//"github.com/micro/go-micro/v2/registry/etcd"
+	etcdv4 "github.com/asim/go-micro/plugins/registry/etcd/v4"
 	"github.com/micro/go-micro/v2/util/backoff"
 )
 
@@ -37,7 +39,7 @@ func NewEtcdRegistry(option *Options) Registry {
 		option.Interval = time.Duration(time.Second * 30)
 	}
 	//create etcd registry
-	r := etcd.NewRegistry(
+	r := etcdv4.NewRegistry(
 		registry.Addrs(option.RegistryAddr...),
 		registry.TLSConfig(option.Config),
 	)

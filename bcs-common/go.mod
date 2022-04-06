@@ -12,8 +12,11 @@ replace (
 )
 
 require (
-	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
 	github.com/TencentBlueKing/iam-go-sdk v0.0.8
+	github.com/asim/go-micro/plugins/broker/rabbitmq/v3 v3.7.0
+	github.com/asim/go-micro/plugins/broker/stan/v3 v3.7.0
+	github.com/asim/go-micro/plugins/registry/etcd/v4 v4.0.0-20220404185419-6dedee5d8c2c
+	github.com/asim/go-micro/v3 v3.7.1
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/coreos/bbolt v1.3.4 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible
@@ -22,23 +25,20 @@ require (
 	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/envoyproxy/protoc-gen-validate v0.1.0
 	github.com/ghodss/yaml v1.0.0
-	github.com/go-sql-driver/mysql v1.5.0
+	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.0.0
-	github.com/google/uuid v1.1.4
+	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
-	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/juju/ratelimit v1.0.1
 	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/micro/go-micro/v2 v2.9.1
-	github.com/micro/go-plugins/broker/rabbitmq/v2 v2.9.1
-	github.com/micro/go-plugins/broker/stan/v2 v2.9.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/nats-io/stan.go v0.8.2
+	github.com/nats-io/stan.go v0.9.0
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
@@ -52,6 +52,7 @@ require (
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible
 	github.com/ugorji/go/codec v1.2.3
+	go-micro.dev/v4 v4.6.0
 	go.mongodb.org/mongo-driver v1.5.3
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.28.0
 	go.opentelemetry.io/otel v1.4.1
@@ -68,9 +69,8 @@ require (
 	go.opentelemetry.io/proto/otlp v0.12.0 // indirect
 	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63
-	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1
+	google.golang.org/genproto v0.0.0-20210602131652-f16073e35f0c
 	google.golang.org/grpc v1.45.0
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	k8s.io/api v0.23.1
 	k8s.io/apimachinery v0.23.1
 	k8s.io/client-go v0.23.1
