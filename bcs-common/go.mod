@@ -3,6 +3,7 @@ module github.com/Tencent/bk-bcs/bcs-common
 go 1.14
 
 replace (
+	//github.com/asim/go-micro v1.18.0 => github.com/micro/go-micro v1.18.0
 	github.com/coreos/bbolt v1.3.4 => go.etcd.io/bbolt v1.3.4
 	github.com/micro/go-micro/v2 => github.com/OvertimeDog/go-micro/v2 v2.9.3
 	go.etcd.io/bbolt v1.3.4 => github.com/coreos/bbolt v1.3.4
@@ -12,11 +13,12 @@ replace (
 )
 
 require (
+	github.com/HdrHistogram/hdrhistogram-go v1.1.2 // indirect
 	github.com/TencentBlueKing/iam-go-sdk v0.0.8
 	github.com/asim/go-micro/plugins/broker/rabbitmq/v3 v3.7.0
 	github.com/asim/go-micro/plugins/broker/stan/v3 v3.7.0
-	github.com/asim/go-micro/plugins/registry/etcd/v4 v4.0.0-20220404185419-6dedee5d8c2c
-	github.com/asim/go-micro/v3 v3.7.1
+	github.com/asim/go-micro/plugins/registry/etcd/v3 v3.7.0
+	github.com/asim/go-micro/v3 v3.5.2-0.20210630062103-c13bb07171bc
 	github.com/bitly/go-simplejson v0.5.0
 	github.com/coreos/bbolt v1.3.4 // indirect
 	github.com/coreos/etcd v3.3.18+incompatible
@@ -52,7 +54,7 @@ require (
 	github.com/uber/jaeger-client-go v2.29.1+incompatible
 	github.com/uber/jaeger-lib v2.4.1+incompatible
 	github.com/ugorji/go/codec v1.2.3
-	go-micro.dev/v4 v4.6.0
+	go-micro.dev/v4 v4.2.1
 	go.mongodb.org/mongo-driver v1.5.3
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.28.0
 	go.opentelemetry.io/otel v1.4.1

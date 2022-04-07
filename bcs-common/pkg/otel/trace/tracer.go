@@ -284,9 +284,9 @@ func ValidateTracerProviderOption(config *TracerProviderConfig) []TracerProvider
 			if config.JaegerConfig.CollectorEndpoint.Password != "" {
 				tpos = append(tpos, JaegerCollectorPassword(config.JaegerConfig.CollectorEndpoint.Password))
 			}
-			if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
-				tpos = append(tpos, JaegerCollectorHttpClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
-			}
+			//if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
+			//	tpos = append(tpos, JaegerCollectorHttpClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
+			//}
 		}
 		if config.JaegerConfig.AgentEndpoint != nil {
 			if config.JaegerConfig.AgentEndpoint.Host != "" {
@@ -398,9 +398,9 @@ func initCollectorEndpointOptions(config *TracerProviderConfig) []oteljaeger.Col
 	if config.JaegerConfig.CollectorEndpoint.Password != "" {
 		op = append(op, oteljaeger.WithPassword(config.JaegerConfig.CollectorEndpoint.Password))
 	}
-	if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
-		op = append(op, oteljaeger.WithHTTPClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
-	}
+	//if config.JaegerConfig.CollectorEndpoint.HttpClient != nil {
+	//	op = append(op, oteljaeger.WithHTTPClient(config.JaegerConfig.CollectorEndpoint.HttpClient))
+	//}
 	return op
 }
 

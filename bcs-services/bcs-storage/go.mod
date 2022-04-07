@@ -3,11 +3,15 @@ module github.com/Tencent/bk-bcs/bcs-services/bcs-storage
 go 1.14
 
 replace (
-	github.com/Tencent/bk-bcs/bcs-common v0.0.0-00010101000000-000000000000 => ../../bcs-common
-	github.com/Tencent/bk-bcs/bcs-common v0.0.0-20220325081326-54930fbf5bb7 => ../../bcs-common
-	github.com/Tencent/bk-bcs/bcs-mesos/kubebkbcsv2 v0.0.0-00010101000000-000000000000 => github.com/Tencent/bk-bcs/bcs-mesos/kubebkbcsv2 v0.0.0-20210927020148-09d631e874bc
+	github.com/Tencent/bk-bcs/bcs-common => ../../bcs-common
+	//github.com/asim/go-micro v1.18.0 => github.com/micro/go-micro v1.18.0
+	//go-micro.dev/v4/broker/plugins/broker/rabbitmq v1.18.0 => github.com/micro/go-micro v1.18.0
+	//go-micro.dev/v4/broker/plugins/broker/stan v1.18.0 => github.com/micro/go-micro v1.18.0
+	//github.com/Tencent/bk-bcs/bcs-common v0.0.0-00010101000000-000000000000 => ../../bcs-common
+	//github.com/Tencent/bk-bcs/bcs-common v0.0.0-20220325081326-54930fbf5bb7 => ../../bcs-common
+	//github.com/Tencent/bk-bcs/bcs-mesos/kubebkbcsv2 v0.0.0-00010101000000-000000000000 => github.com/Tencent/bk-bcs/bcs-mesos/kubebkbcsv2 v0.0.0-20210927020148-09d631e874bc
 	github.com/coreos/bbolt v1.3.4 => go.etcd.io/bbolt v1.3.4
-	github.com/haproxytech/client-native v0.0.0-00010101000000-000000000000 => github.com/haproxytech/client-native v1.2.7
+	//github.com/haproxytech/client-native v0.0.0-00010101000000-000000000000 => github.com/haproxytech/client-native v1.2.7
 	go.etcd.io/bbolt v1.3.4 => github.com/coreos/bbolt v1.3.4
 	google.golang.org/grpc => google.golang.org/grpc v1.36.0
 )

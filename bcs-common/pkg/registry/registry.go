@@ -17,7 +17,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	microRegistry "go-micro.dev/v4/registry"
+	microRegistry "github.com/asim/go-micro/v3/registry"
 )
 
 //Options registry options

@@ -17,8 +17,6 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlphttptrace"
-	"net/http"
-
 	"go.opentelemetry.io/otel/attribute"
 	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -154,17 +152,17 @@ func JaegerCollectorPassword(password string) TracerProviderOption {
 	}
 }
 
-// JaegerCollectorHttpClient sets the http client for tracing system
-func JaegerCollectorHttpClient(client *http.Client) TracerProviderOption {
-	return func(o *TracerProviderConfig) {
-		if o.JaegerConfig == nil {
-			o.JaegerConfig = &jaeger.EndpointConfig{
-				CollectorEndpoint: &jaeger.CollectorEndpoint{},
-			}
-		}
-		o.JaegerConfig.CollectorEndpoint.HttpClient = client
-	}
-}
+//// JaegerCollectorHttpClient sets the http client for tracing system
+//func JaegerCollectorHttpClient(client *http.Client) TracerProviderOption {
+//	return func(o *TracerProviderConfig) {
+//		if o.JaegerConfig == nil {
+//			o.JaegerConfig = &jaeger.EndpointConfig{
+//				CollectorEndpoint: &jaeger.CollectorEndpoint{},
+//			}
+//		}
+//		o.JaegerConfig.CollectorEndpoint.HttpClient = client
+//	}
+//}
 
 // JaegerCollectorOptions imports oteljaeger.CollectorEndpointOption
 func JaegerCollectorOptions(option oteljaeger.CollectorEndpointOption) TracerProviderOption {
