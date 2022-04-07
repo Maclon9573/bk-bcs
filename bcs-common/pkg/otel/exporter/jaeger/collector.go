@@ -21,7 +21,7 @@ import (
 
 // CollectorEndpoint configs jaeger agent endpoint
 type CollectorEndpoint struct {
-	Endpoint string `json:"endpoint,omitempty" value:"http://localhost:14268/api/traces" usage:"endpoint for sending spans directly to a collector"`
+	Endpoint string `json:"endpoint,omitempty" value:"" usage:"endpoint for sending spans directly to a collector"`
 	Username string `json:"username,omitempty" usage:"username to be used for authentication with the collector collectorEndpoint"`
 	Password string `json:"password,omitempty" usage:"password to be used for authentication with the collector collectorEndpoint"`
 	//HttpClient       *http.Client                     `json:"httpClient,omitempty" usage:"httpClient to be used to make requests to the collector collectorEndpoint"`

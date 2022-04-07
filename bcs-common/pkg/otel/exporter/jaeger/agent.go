@@ -22,8 +22,8 @@ import (
 
 // AgentEndpoint configs jaeger agent endpoint
 type AgentEndpoint struct {
-	Host         string                       `json:"jaegerAgentHost,omitempty" value:"localhost" usage:"host to be used in the agent client endpoint"`
-	Port         string                       `json:"JaegerAgentPort,omitempty" value:"6831" usage:"port to be used in the agent client endpoint"`
+	Host         string                       `json:"jaegerAgentHost,omitempty" value:"" usage:"host to be used in the agent client endpoint"`
+	Port         string                       `json:"JaegerAgentPort,omitempty" value:"" usage:"port to be used in the agent client endpoint"`
 	AgentOptions []jaeger.AgentEndpointOption `json:"-"`
 }
 
