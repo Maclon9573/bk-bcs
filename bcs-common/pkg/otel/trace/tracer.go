@@ -61,6 +61,7 @@ type TracerProviderConfig struct {
 	ResourceAttrs   []attribute.KeyValue  `json:"resourceAttrs,omitempty" usage:"attributes for the traced service"`
 	ResourceOptions []otelresource.Option `json:"-"`
 	Sampler         *SamplerType          `json:"sampler,omitempty"`
+	IDGenerator     sdktrace.IDGenerator  `json:"IDGenerator,omitempty"`
 }
 
 type OTLPConfig struct {
@@ -135,7 +136,7 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 				}
 			}
 			processors := initProcessors(jaegerExporter)
-			return newTracerProvider(ctx, processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 		}
 		if defaultOptions.JaegerConfig.AgentEndpoint != nil {
 			if defaultOptions.JaegerConfig.AgentEndpoint.Host == "" {
@@ -152,7 +153,7 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 				return ctx, &sdktrace.TracerProvider{}, err
 			}
 			processors := initProcessors(jaegerExporter)
-			return newTracerProvider(ctx, processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 		}
 		if defaultOptions.JaegerConfig.CollectorEndpoint.Endpoint == "" {
 			defaultOptions.JaegerConfig.CollectorEndpoint.Endpoint = DefaultJaegerCollectorEndpoint
@@ -165,7 +166,7 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 			return ctx, &sdktrace.TracerProvider{}, err
 		}
 		processors := initProcessors(jaegerExporter)
-		return newTracerProvider(ctx, processors, resource, sampler)
+		return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 	case string(OTLP_GRPC):
 		blog.Info("Using otlpgrpc exporter...")
 		if defaultOptions.OTLPConfig == nil {
@@ -186,7 +187,7 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 				return ctx, &sdktrace.TracerProvider{}, err
 			}
 			processors := initProcessors(grpcExporter)
-			return newTracerProvider(ctx, processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 		}
 		if defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint == "" {
 			defaultOptions.OTLPConfig.GRPCConfig.GRPCEndpoint =
@@ -205,7 +206,7 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 		}
 
 		processors := initProcessors(grpcExporter)
-		return newTracerProvider(ctx, processors, resource, sampler)
+		return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 	case string(OTLP_HTTP):
 		blog.Info("Using otlphttp exporter...")
 		if defaultOptions.OTLPConfig == nil {
@@ -225,7 +226,7 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 				return ctx, &sdktrace.TracerProvider{}, err
 			}
 			processors := initProcessors(grpcExporter)
-			return newTracerProvider(ctx, processors, resource, sampler)
+			return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 		}
 		if defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint == "" {
 			defaultOptions.OTLPConfig.HTTPConfig.HTTPEndpoint =
@@ -243,19 +244,23 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 		}
 
 		processors := initProcessors(httpExporter)
-		return newTracerProvider(ctx, processors, resource, sampler)
+		return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 	case string(Zipkin):
 	}
 	return ctx, &sdktrace.TracerProvider{}, nil
 }
 
 func newTracerProvider(ctx context.Context, processors []sdktrace.SpanProcessor,
-	resource *otelresource.Resource, sampler sdktrace.Sampler) (context.Context, *sdktrace.TracerProvider, error) {
+	resource *otelresource.Resource, sampler sdktrace.Sampler, gen sdktrace.IDGenerator) (
+	context.Context, *sdktrace.TracerProvider, error) {
 	var tpos []sdktrace.TracerProviderOption
 	for i := 0; i < len(processors); i++ {
 		tpos = append(tpos, utils.WithSpanProcessor(processors[i]))
 	}
 	tpos = append(tpos, utils.WithResource(resource), utils.WithSampler(sampler))
+	if gen != nil {
+		tpos = append(tpos, utils.WithIDGenerator(gen))
+	}
 	tp := utils.NewTracerProvider(tpos...)
 	utils.SetTracerProvider(tp)
 	return ctx, tp, nil

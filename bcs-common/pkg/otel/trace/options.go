@@ -14,6 +14,7 @@
 package trace
 
 import (
+	"fmt"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlphttptrace"
@@ -22,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	otelresource "go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 // TraceType tracing type
@@ -322,5 +324,12 @@ func WithDefaultOffSampler() TracerProviderOption {
 			o.Sampler = &SamplerType{}
 		}
 		o.Sampler.DefaultOffSampler = true
+	}
+}
+
+func WithIDGenerator(gen sdktrace.IDGenerator) TracerProviderOption {
+	return func(o *TracerProviderConfig) {
+		fmt.Println("with id generator...")
+		o.IDGenerator = gen
 	}
 }

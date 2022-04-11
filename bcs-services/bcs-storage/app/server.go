@@ -37,6 +37,7 @@ func Run(op *options.StorageOptions) error {
 
 	// init tracing
 	traceOpts := trace.ValidateTracerProviderOption(&op.Tracing)
+	traceOpts = append(traceOpts, trace.WithIDGenerator(trace.NewCustomIDGenerator()))
 	ctx, tp, err := trace.InitTracerProvider(op.Tracing.ServiceName, traceOpts...)
 	if err != nil {
 		blog.Error("failed to create tracer provider. err:%s", err.Error())
