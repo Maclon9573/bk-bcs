@@ -662,8 +662,8 @@ func (a *Store) Watch(ctx context.Context, resourceType string, opt *StoreWatchO
 }
 
 func setDBSpanAttributes(s *Store, span trace.Span, table string, operation string) {
-	utils.SetDBSpanTags(span, utils.DBSystemKey, dbType)
-	utils.SetDBSpanTags(span, utils.DBNameKey, s.mDriver.DataBase())
-	utils.SetDBSpanTags(span, utils.DBTableKey, table)
-	utils.SetDBSpanTags(span, utils.DBOperationKey, operation)
+	utils.SetDBSpanAttributes(span, utils.DBSystemKey, dbType)
+	utils.SetDBSpanAttributes(span, utils.DBNameKey, s.mDriver.DataBase())
+	utils.SetDBSpanAttributes(span, utils.DBTableKey, table)
+	utils.SetDBSpanAttributes(span, utils.DBOperationKey, operation)
 }
