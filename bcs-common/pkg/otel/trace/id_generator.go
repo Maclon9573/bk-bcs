@@ -15,7 +15,10 @@ package trace
 
 import (
 	"context"
+	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"math/rand"
+	"net/http"
+	"reflect"
 	"sync"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -24,6 +27,7 @@ import (
 
 type CustomIDGenerator struct {
 	sync.Mutex
+	requestID  string
 	RandSource *rand.Rand
 }
 
@@ -44,12 +48,31 @@ func (gen *CustomIDGenerator) NewIDs(ctx context.Context) (trace.TraceID, trace.
 	gen.Lock()
 	defer gen.Unlock()
 	tid := trace.TraceID{}
-	gen.RandSource.Read(tid[:])
+	if gen.requestID != "" {
+		var err error
+		tid, err = trace.TraceIDFromHex(gen.requestID)
+		if err != nil {
+			blog.Error("failed to create trace id from request id. err:", err.Error())
+		}
+	} else {
+		gen.RandSource.Read(tid[:])
+	}
 	sid := trace.SpanID{}
 	gen.RandSource.Read(sid[:])
 	return tid, sid
 }
 
-func NewCustomIDGenerator() sdktrace.IDGenerator {
-	return &CustomIDGenerator{}
+func NewCustomIDGenerator(req http.Request) (sdktrace.IDGenerator, error) {
+	gen := &CustomIDGenerator{}
+	requestID := "request_id"
+	traceID := reflect.ValueOf(req.Context().Value(requestID)).String()
+	if traceID != "" {
+		if _, err := trace.TraceIDFromHex(traceID); err == nil {
+			gen.requestID = requestID
+			return gen, nil
+		} else {
+			return gen, err
+		}
+	}
+	return gen, nil
 }
