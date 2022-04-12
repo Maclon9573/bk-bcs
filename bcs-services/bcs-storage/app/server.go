@@ -27,10 +27,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-const (
-	serviceName = "bcs-storage"
-)
-
 // Run the bcs-storage
 func Run(op *options.StorageOptions) error {
 	setConfig(op)

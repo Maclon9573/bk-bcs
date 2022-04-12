@@ -20,6 +20,10 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/registry"
 )
 
+const (
+	serviceName = "bcs-storage"
+)
+
 //CertConfig is configuration of Cert
 type CertConfig struct {
 	CAFile   string
@@ -66,7 +70,7 @@ func NewStorageOptions() *StorageOptions {
 		},
 		Etcd: registry.CMDOptions{},
 		Tracing: trace.TracerProviderConfig{
-			ServiceName: "bcs-storage",
+			ServiceName: serviceName,
 		},
 	}
 }
