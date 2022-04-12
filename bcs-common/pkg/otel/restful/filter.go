@@ -66,7 +66,7 @@ func ComponentName(componentName string) FilterOption {
 }
 
 // NewOTFilter returns a go-restful filter which add OpenTracing instrument
-func NewOTFilter(config *ttrace.TracerProviderConfig, options ...FilterOption) restful.FilterFunction {
+func NewOTFilter(options ...FilterOption) restful.FilterFunction {
 	opts := filterOptions{
 		operationNameFunc: DefaultOperationNameFunc,
 		componentName:     DefaultComponentName,
