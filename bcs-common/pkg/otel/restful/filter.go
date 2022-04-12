@@ -15,16 +15,11 @@ package restful
 
 import (
 	"context"
-	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-	ttrace "github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"github.com/emicklei/go-restful"
-	"math/rand"
-	"net/http"
-	"reflect"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"net/http"
 )
 
 const (
@@ -65,7 +60,7 @@ func ComponentName(componentName string) FilterOption {
 }
 
 // NewOTFilter returns a go-restful filter which add OpenTracing instrument
-func NewOTFilter(config ttrace.TracerProviderConfig, options ...FilterOption) restful.FilterFunction {
+func NewOTFilter(options ...FilterOption) restful.FilterFunction {
 	opts := filterOptions{
 		operationNameFunc: DefaultOperationNameFunc,
 		componentName:     DefaultComponentName,
@@ -75,12 +70,10 @@ func NewOTFilter(config ttrace.TracerProviderConfig, options ...FilterOption) re
 	}
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		sc, err := extract(config, req.Request)
-		var ctx context.Context
-		if err == nil && sc.IsValid() {
-			ctx = trace.ContextWithRemoteSpanContext(req.Request.Context(), sc)
-		}
-		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(ctx, "Processing Request")
+		ctx := req.Request.Context()
+		req.Request = req.Request.WithContext(context.WithValue(ctx, "X-Request-Id", "e9d75e1cabd1f421ae273ec8b7e99c91"))
+
+		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(req.Request.Context(), "Processing Request")
 		setHTTPSpanAttributes(span, req.Request)
 		req.Request = req.Request.WithContext(utils.ContextWithSpan(ctx, span))
 		span.SetAttributes(attribute.Key("component").String(opts.componentName))
@@ -97,29 +90,6 @@ func NewOTFilter(config ttrace.TracerProviderConfig, options ...FilterOption) re
 		}()
 		chain.ProcessFilter(req, resp)
 	}
-}
-
-func extract(config ttrace.TracerProviderConfig, req *http.Request) (trace.SpanContext, error) {
-	var (
-		err        error
-		randSource *rand.Rand
-	)
-	requestIDHeader := "request_id"
-	requestID := reflect.ValueOf(req.Context().Value(requestIDHeader)).String()
-	scc := trace.SpanContextConfig{}
-	scc.TraceID, err = trace.TraceIDFromHex(requestID)
-	if err != nil {
-		blog.Error("failed to create trace id from request id. err:", err.Error())
-		return trace.SpanContext{}, err
-	}
-	randSource.Read(scc.SpanID[:])
-	if config.Sampler != nil {
-		if config.Sampler.DefaultOnSampler || config.Sampler.AlwaysOnSampler {
-			scc.TraceFlags = trace.FlagsSampled
-		}
-	}
-	return trace.NewSpanContext(scc), nil
-
 }
 
 func setHTTPSpanAttributes(span trace.Span, request *http.Request) {

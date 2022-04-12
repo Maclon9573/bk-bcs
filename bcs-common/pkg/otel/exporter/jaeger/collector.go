@@ -21,9 +21,9 @@ import (
 
 // CollectorEndpoint configs jaeger agent endpoint
 type CollectorEndpoint struct {
-	Endpoint         string                           `json:"endpoint,omitempty" value:"" usage:"endpoint for sending spans directly to a collector"`
-	Username         string                           `json:"username,omitempty" usage:"username to be used for authentication with the collector collectorEndpoint"`
-	Password         string                           `json:"password,omitempty" usage:"password to be used for authentication with the collector collectorEndpoint"`
+	Endpoint         string                           `json:"endpoint,omitempty" usage:"endpoint for sending spans directly to a collector"`
+	Username         string                           `json:"username,omitempty" usage:"username to be used for authentication with the collector endpoint"`
+	Password         string                           `json:"password,omitempty" usage:"password to be used for authentication with the collector endpoint"`
 	CollectorOptions []jaeger.CollectorEndpointOption `json:"-"`
 }
 

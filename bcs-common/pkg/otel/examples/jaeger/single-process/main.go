@@ -37,8 +37,8 @@ func main() {
 		TracingSwitch: "on",
 		TracingType:   "jaeger",
 		ServiceName:   service,
-		JaegerConfig: &jaeger.EndpointConfig{
-			CollectorEndpoint: &jaeger.CollectorEndpoint{
+		JaegerConfig: trace.JaegerConfig{
+			CollectorEndpoint: jaeger.CollectorEndpoint{
 				Endpoint: "http://localhost:14268/api/traces",
 			},
 		},
@@ -46,7 +46,7 @@ func main() {
 			attribute.String("environment", environment),
 			attribute.Int64("ID", id),
 		},
-		Sampler: &trace.SamplerType{
+		Sampler: trace.SamplerType{
 			DefaultOnSampler: true,
 		},
 	}

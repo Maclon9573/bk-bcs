@@ -22,9 +22,9 @@ import (
 
 // HTTPConfig sets the OTLP collector HTTP endpoint
 type HTTPConfig struct {
-	HTTPEndpoint string                 `json:"HTTPEndpoint,omitempty" usage:"HTTPEndpoint sets HTTP client endpoint"`
-	HTTPURLPath  string                 `json:"HTTPURLPath,omitempty" usage:"HTTPURLPath sets HTTP client endpoint"`
-	HTTPInsecure bool                   `json:"HTTPInsecure,omitempty" usage:"HTTPEndpoint disables HTTP client transport security"`
+	HTTPEndpoint string                 `json:"httpEndpoint,omitempty" usage:"httpEndpoint sets HTTP client endpoint"`
+	HTTPURLPath  string                 `json:"httpURLPath,omitempty" usage:"httpURLPath sets HTTP client endpoint"`
+	HTTPInsecure bool                   `json:"httpInsecure,omitempty" usage:"httpInsecure disables HTTP client transport security"`
 	HTTPOptions  []otlptracehttp.Option `json:"-"`
 }
 

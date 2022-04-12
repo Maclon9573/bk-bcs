@@ -22,9 +22,9 @@ import (
 
 // GRPCConfig sets the OTLP collector GRPC endpoint
 type GRPCConfig struct {
-	GRPCEndpoint string                 `json:"OTLPGRPCEndpoint,omitempty" usage:"OTLPGRPCEndpoint sets GRPC client endpoint"`
-	GRPCURLPath  string                 `json:"GRPCURLPath,omitempty" usage:"GRPCURLPath sets GRPC client endpoint"`
-	GRPCInsecure bool                   `json:"OTLPGRPCInsecure,omitempty" usage:"OTLPGRPCInsecure disables GRPC client transport security"`
+	GRPCEndpoint string                 `json:"grpcEndpoint,omitempty" usage:"grpcEndpoint sets GRPC client endpoint"`
+	GRPCURLPath  string                 `json:"grpcURLPath,omitempty" usage:"grpcURLPath sets GRPC client endpoint"`
+	GRPCInsecure bool                   `json:"grpcInsecure,omitempty" usage:"grpcInsecure disables GRPC client transport security"`
 	GRPCOptions  []otlptracegrpc.Option `json:"-"`
 }
 
