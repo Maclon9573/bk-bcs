@@ -16,16 +16,8 @@ package options
 import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/conf"
 	"github.com/Tencent/bk-bcs/bcs-common/common/static"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/jaeger"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlpgrpctrace"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/exporter/otlp/otlphttptrace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/registry"
-	"go.opentelemetry.io/otel/attribute"
-	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
-	otelresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
 //CertConfig is configuration of Cert
@@ -74,25 +66,7 @@ func NewStorageOptions() *StorageOptions {
 		},
 		Etcd: registry.CMDOptions{},
 		Tracing: trace.TracerProviderConfig{
-			JaegerConfig: &jaeger.EndpointConfig{
-				CollectorEndpoint: &jaeger.CollectorEndpoint{
-					CollectorOptions: []oteljaeger.CollectorEndpointOption{},
-				},
-				AgentEndpoint: &jaeger.AgentEndpoint{
-					AgentOptions: []oteljaeger.AgentEndpointOption{},
-				},
-			},
-			OTLPConfig: &trace.OTLPConfig{
-				GRPCConfig: &otlpgrpctrace.GRPCConfig{
-					GRPCOptions: []otlptracegrpc.Option{},
-				},
-				HTTPConfig: &otlphttptrace.HTTPConfig{
-					HTTPOptions: []otlptracehttp.Option{},
-				},
-			},
-			ResourceAttrs:   []attribute.KeyValue{},
-			ResourceOptions: []otelresource.Option{},
-			Sampler:         &trace.SamplerType{},
+			ServiceName: "bcs-storage",
 		},
 	}
 }

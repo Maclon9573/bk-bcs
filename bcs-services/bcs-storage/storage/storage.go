@@ -97,7 +97,7 @@ func (s *StorageServer) initFilterFunctions() []restful.FilterFunction {
 		GroupedStatus: true,
 	})
 
-	filterFunctions = append(filterFunctions, trestful.NewOTFilter(&s.conf.Tracing))
+	filterFunctions = append(filterFunctions, trestful.NewOTFilter())
 	filterFunctions = append(filterFunctions, middle.MetricsMiddleHandler(mdlw))
 
 	return filterFunctions
