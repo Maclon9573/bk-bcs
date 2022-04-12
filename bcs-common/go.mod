@@ -8,7 +8,6 @@ replace (
 	go.etcd.io/bbolt v1.3.4 => github.com/coreos/bbolt v1.3.4
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 => golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1 => google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
-	google.golang.org/grpc v1.41.0 => google.golang.org/grpc v1.27.0
 )
 
 require (

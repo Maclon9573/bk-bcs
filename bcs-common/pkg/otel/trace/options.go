@@ -14,7 +14,6 @@
 package trace
 
 import (
-	"fmt"
 	"go.opentelemetry.io/otel/attribute"
 	oteljaeger "go.opentelemetry.io/otel/exporters/jaeger"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -236,7 +235,6 @@ func WithDefaultOffSampler() TracerProviderOption {
 
 func WithIDGenerator(gen sdktrace.IDGenerator) TracerProviderOption {
 	return func(o *TracerProviderConfig) {
-		fmt.Println("with id generator...")
 		o.IDGenerator = gen
 	}
 }
