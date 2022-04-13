@@ -70,13 +70,14 @@ func NewOTFilter(options ...FilterOption) restful.FilterFunction {
 	}
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		ctx := req.Request.Context()
-		req.Request = req.Request.WithContext(context.WithValue(ctx, "X-Request-Id", "e9d75e1cabd1f421ae273ec8b7e99c91"))
+		ri := req.Request.Header.Get("X-Request-Id")
+		ctx := context.WithValue(req.Request.Context(), "X-Request-Id", ri)
 
-		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(req.Request.Context(), "Processing Request")
+		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(ctx, "Processing Request")
 		setHTTPSpanAttributes(span, req.Request)
-		req.Request = req.Request.WithContext(utils.ContextWithSpan(ctx, span))
 		span.SetAttributes(attribute.Key("component").String(opts.componentName))
+
+		req.Request = req.Request.WithContext(utils.ContextWithSpan(ctx, span))
 
 		defer func() {
 			// record HTTP status code

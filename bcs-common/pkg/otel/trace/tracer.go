@@ -169,7 +169,6 @@ func InitTracerProvider(serviceName string, options ...TracerProviderOption) (co
 				blog.Errorf("%s: %v", "failed to create otelgrpc exporter", err)
 				return ctx, &sdktrace.TracerProvider{}, err
 			}
-
 			processors := initProcessors(grpcExporter)
 			return newTracerProvider(ctx, processors, resource, sampler, defaultOptions.IDGenerator)
 		}
@@ -394,9 +393,7 @@ func initHTTPConfigOptions(config *TracerProviderConfig) []otlptracehttp.Option 
 
 // initProcessors sets processors for OTEL.
 func initProcessors(exporter sdktrace.SpanExporter) (sps []sdktrace.SpanProcessor) {
-	// By default, no processors are enabled. Depending on the data source, it may be recommended
-	// that multiple processors be enabled. Processors must be enabled for every data source.
-	// Always be sure to batch in production.
+	// Processors must be enabled for every data source. Always be sure to batch in production.
 	sp := utils.NewBatchSpanProcessor(exporter)
 	sps = append(sps, sp)
 	return sps
@@ -439,25 +436,4 @@ func validateServiceName(sn string) error {
 		return errServiceName
 	}
 	return nil
-}
-
-//
-//func validateJaegerAgent(ep *jaeger.AgentEndpoint) error {
-//	if ep.Host == "" || ep.Port == "" {
-//		return errors.New("empty host or port")
-//	}
-//	return nil
-//}
-
-//func validateJaegerCollector(ep *jaeger.CollectorEndpoint) error {
-//	if ep.Endpoint == "" {
-//		return errors.New("empty endpoint")
-//	}
-//	return nil
-//}
-
-func handleErr(err error, message string) {
-	if err != nil {
-		blog.Errorf("%s: %v", message, err)
-	}
 }
