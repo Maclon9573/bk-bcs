@@ -14,22 +14,28 @@
 package config
 
 import (
+	"sync"
+
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
 
 // Configurations : manage all configurations
 type Configurations struct {
-	Base       *BaseConf                  `yaml:"base_conf"`
-	Auth       *AuthConf                  `yaml:"auth_conf"`
-	BkLogin    *BKLoginConf               `yaml:"bklogin_conf"`
-	Logging    *LogConf                   `yaml:"logging"`
-	BCS        *BCSConf                   `yaml:"bcs_conf"`
-	BCSEnvConf []*BCSConf                 `yaml:"bcs_env_conf"`
-	BCSEnvMap  map[BCSClusterEnv]*BCSConf `yaml:"-"`
-	Redis      *RedisConf                 `yaml:"redis"`
-	WebConsole *WebConsoleConf            `yaml:"webconsole"`
-	Web        *WebConf                   `yaml:"web"`
+	mtx         sync.Mutex
+	Base        *BaseConf                  `yaml:"base_conf"`
+	Auth        *AuthConf                  `yaml:"auth_conf"`
+	BkLogin     *BKLoginConf               `yaml:"bklogin_conf"`
+	Logging     *LogConf                   `yaml:"logging"`
+	BKAPIGW     *BKAPIGWConf               `yaml:"bkapigw_conf"`
+	BCS         *BCSConf                   `yaml:"bcs_conf"`
+	BCSCC       *BCSCCConf                 `yaml:"bcs_cc_conf"`
+	BCSEnvConf  []*BCSConf                 `yaml:"bcs_env_conf"`
+	Credentials []*Credential              `yaml:"credentials"`
+	BCSEnvMap   map[BCSClusterEnv]*BCSConf `yaml:"-"`
+	Redis       *RedisConf                 `yaml:"redis"`
+	WebConsole  *WebConsoleConf            `yaml:"webconsole"`
+	Web         *WebConf                   `yaml:"web"`
 }
 
 // ReadFrom : read from file
@@ -45,6 +51,9 @@ func (c *Configurations) Init() error {
 	c.BkLogin = &BKLoginConf{}
 	c.BkLogin.Init()
 
+	c.BKAPIGW = &BKAPIGWConf{}
+	c.BKAPIGW.Init()
+
 	// logging
 	c.Logging = &LogConf{}
 	c.Logging.Init()
@@ -52,6 +61,10 @@ func (c *Configurations) Init() error {
 	// BCS Config
 	c.BCS = &BCSConf{}
 	c.BCS.Init()
+
+	// BCS-CC Config
+	c.BCSCC = &BCSCCConf{}
+	c.BCSCC.Init()
 
 	c.BCSEnvConf = []*BCSConf{}
 	c.BCSEnvMap = map[BCSClusterEnv]*BCSConf{}
@@ -81,8 +94,38 @@ func init() {
 	G.Init()
 }
 
+func (c *Configurations) ReadCred(content []byte) error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
+	cred := []*Credential{}
+	err := yaml.Unmarshal(content, &cred)
+	if err != nil {
+		return err
+	}
+	c.Credentials = cred
+	for _, v := range c.Credentials {
+		if err := v.InitMatcher(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *Configurations) ValidateCred(appCode, projectCode string) bool {
+	for _, cred := range c.Credentials {
+		if cred.Matches(appCode, projectCode) {
+			return true
+		}
+	}
+	return false
+}
+
 // ReadFrom : read from file
 func (c *Configurations) ReadFrom(content []byte) error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+
 	if len(content) == 0 {
 		return errors.New("conf content is empty, will use default values")
 	}
@@ -104,6 +147,10 @@ func (c *Configurations) ReadFrom(content []byte) error {
 	}
 
 	if err := c.BCS.InitJWTPubKey(); err != nil {
+		return err
+	}
+
+	if err := c.BKAPIGW.InitJWTPubKey(); err != nil {
 		return err
 	}
 

@@ -19,6 +19,8 @@ import (
 	"net/url"
 	"path"
 
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/metrics"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/podmanager"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/route"
 
 	"github.com/gin-gonic/gin"
@@ -40,20 +42,22 @@ func (s service) RegisterRoute(router gin.IRoutes) {
 	web.GET("/user/perm_request/", route.APIAuthRequired(), s.UserPermRequestRedirect)
 
 	// html 页面
-	web.GET("/", s.SessionPageHandler)
 	web.GET("/projects/:projectId/clusters/:clusterId/", s.IndexPageHandler)
 	web.GET("/projects/:projectId/mgr/", s.MgrPageHandler)
+	web.GET("/portal/container/", s.ContainerGatePageHandler)
+	web.GET("/portal/cluster/", s.ClusterGatePageHandler)
 
-	// 公共接口, 如metrics, healthy, ready, pprof, metrics 等
+	// 公共接口, 如 metrics, healthy, ready, pprof 等
 	web.GET("/-/healthy", s.HealthyHandler)
 	web.GET("/-/ready", s.HealthyHandler)
+	web.GET("/metrics", metrics.HandlerFunc())
 }
 
 func (s *service) IndexPageHandler(c *gin.Context) {
 	projectId := c.Param("projectId")
 	clusterId := c.Param("clusterId")
-	containerId := c.Query("container_id")
-	lang := c.Query("lang")
+	consoleQuery := new(podmanager.ConsoleQuery)
+	c.BindQuery(consoleQuery)
 
 	// 登入Url
 	loginUrl := path.Join(s.opts.RoutePrefix, "/user/login") + "/"
@@ -67,15 +71,9 @@ func (s *service) IndexPageHandler(c *gin.Context) {
 	// webconsole Url
 	sessionUrl := path.Join(s.opts.RoutePrefix, fmt.Sprintf("/api/projects/%s/clusters/%s/session", projectId, clusterId)) + "/"
 
-	query := url.Values{}
-	if lang != "" {
-		query.Set("lang", lang)
-	}
-	if containerId != "" {
-		query.Set("container_id", containerId)
-	}
-	if len(query) != 0 {
-		sessionUrl = fmt.Sprintf("%s?%s", sessionUrl, query.Encode())
+	encodedQuery := consoleQuery.MakeEncodedQuery()
+	if encodedQuery != "" {
+		sessionUrl = fmt.Sprintf("%s?%s", sessionUrl, encodedQuery)
 	}
 
 	settings := map[string]string{
@@ -117,21 +115,16 @@ func (s *service) MgrPageHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "mgr.html", data)
 }
 
-// SessionPageHandler 开放的页面WebConsole页面
-func (s *service) SessionPageHandler(c *gin.Context) {
+// ContainerGatePageHandler 开放的页面WebConsole页面
+func (s *service) ContainerGatePageHandler(c *gin.Context) {
 	sessionId := c.Query("session_id")
 	containerName := c.Query("container_name")
 
-	query := url.Values{}
-
-	if containerName != "" {
+	if containerName == "" {
 		containerName = "--"
 	}
 
-	query.Set("session_id", sessionId)
-
-	sessionUrl := path.Join(s.opts.RoutePrefix, "/api/open_session/") + "/"
-	sessionUrl = fmt.Sprintf("%s?%s", sessionUrl, query.Encode())
+	sessionUrl := path.Join(s.opts.RoutePrefix, fmt.Sprintf("/api/portal/sessions/%s/", sessionId)) + "/"
 
 	settings := map[string]string{
 		"SITE_STATIC_URL":      s.opts.RoutePrefix,
@@ -145,6 +138,11 @@ func (s *service) SessionPageHandler(c *gin.Context) {
 	}
 
 	c.HTML(http.StatusOK, "index.html", data)
+}
+
+// ClusterGatePageHandler 开放的页面WebConsole页面
+func (s *service) ClusterGatePageHandler(c *gin.Context) {
+
 }
 
 func (s *service) HealthyHandler(c *gin.Context) {
