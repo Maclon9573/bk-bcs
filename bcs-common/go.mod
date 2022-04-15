@@ -3,15 +3,18 @@ module github.com/Tencent/bk-bcs/bcs-common
 go 1.14
 
 replace (
+	github.com/Tencent/bk-bcs/bcs-common => ../bcs-common
 	github.com/coreos/bbolt v1.3.4 => go.etcd.io/bbolt v1.3.4
 	github.com/micro/go-micro/v2 => github.com/OvertimeDog/go-micro/v2 v2.9.3
 	go.etcd.io/bbolt v1.3.4 => github.com/coreos/bbolt v1.3.4
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63 => golang.org/x/net v0.0.0-20201224014010-6772e930b67b
 	google.golang.org/genproto v0.0.0-20210402141018-6c239bbf2bb1 => google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
+	google.golang.org/grpc v1.41.0 => google.golang.org/grpc v1.27.0
 )
 
 require (
-	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
+	github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/kubernetes/common v0.0.0-20220330120237-0bbed74dcf6d
+	github.com/Tencent/bk-bcs/bcs-runtime/bcs-mesos/kubebkbcsv2 v0.0.0-20220330120237-0bbed74dcf6d
 	github.com/TencentBlueKing/iam-go-sdk v0.0.8
 	github.com/asim/go-micro/plugins/broker/rabbitmq/v3 v3.7.0
 	github.com/asim/go-micro/plugins/broker/stan/v3 v3.7.0
@@ -21,24 +24,21 @@ require (
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/docker/engine-api v0.4.0
 	github.com/emicklei/go-restful v2.15.0+incompatible
+	github.com/emicklei/go-restful-openapi v1.4.1
 	github.com/envoyproxy/protoc-gen-validate v0.1.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.5.2
-	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/mux v1.8.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/juju/ratelimit v1.0.1
-	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/micro/go-micro/v2 v2.9.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/nats-io/stan.go v0.9.0
-	github.com/onsi/ginkgo v1.16.5 // indirect
-	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
 	github.com/parnurzeal/gorequest v0.2.16
 	github.com/pkg/errors v0.9.1
@@ -64,7 +64,6 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.26.0
 	go.opentelemetry.io/otel/sdk/metric v0.26.0
 	go.opentelemetry.io/otel/trace v1.6.3
-	golang.org/x/crypto v0.0.0-20210920023735-84f357641f63 // indirect
 	golang.org/x/net v0.0.0-20211209124913-491a49abca63
 	google.golang.org/genproto v0.0.0-20211118181313-81c1377c94b1
 	google.golang.org/grpc v1.45.0
