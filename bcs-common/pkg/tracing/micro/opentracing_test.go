@@ -28,7 +28,6 @@ import (
 	micro "github.com/asim/go-micro/v3"
 	client "github.com/asim/go-micro/v3/client"
 	"github.com/asim/go-micro/v3/registry"
-	//grpcsvc "github.com/micro/go-micro/v2/service/grpc"
 	"github.com/opentracing/opentracing-go"
 )
 
