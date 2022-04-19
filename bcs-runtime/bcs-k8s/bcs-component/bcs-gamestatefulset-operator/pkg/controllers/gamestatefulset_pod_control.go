@@ -156,6 +156,9 @@ func (spc *realGameStatefulSetPodControl) UpdateGameStatefulSetPod(set *stsplus.
 // DeleteGameStatefulSetPod delete pod according to GameStatefulSet
 func (spc *realGameStatefulSetPodControl) DeleteGameStatefulSetPod(set *stsplus.GameStatefulSet, pod *v1.Pod) error {
 	startTime := time.Now()
+	fmt.Println("DeleteGameStatefulSetPod: ", pod.Name)
+	fmt.Println("DeleteGameStatefulSetPod: ", pod.Name)
+	fmt.Println("DeleteGameStatefulSetPod: ", pod.Name)
 	err := spc.client.CoreV1().Pods(set.Namespace).Delete(context.TODO(), pod.Name, metav1.DeleteOptions{})
 	if err == nil {
 		spc.metrics.collectPodDeleteDurations(set.Namespace, set.Name, "success", time.Since(startTime))
