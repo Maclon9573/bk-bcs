@@ -11,11 +11,11 @@
  *
  */
 
-package restful
+package blog
 
 import (
 	"context"
-	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+	"fmt"
 	"github.com/emicklei/go-restful"
 	"net/http"
 	"strings"
@@ -23,12 +23,8 @@ import (
 
 const (
 	// DefaultComponentName show default component
-	DefaultComponentName     = "go-restful"
-	tracerLogHandlerID   key = 32702 // random key
-	realIPValueID        key = 16221
+	DefaultComponentName = "go-restful"
 )
-
-type key int
 
 var (
 	// DefaultOperationNameFunc get default operation name
@@ -54,14 +50,6 @@ func OperationNameFunc(f func(r *restful.Request) string) FilterOption {
 	}
 }
 
-// ComponentName returns a FilterOption that sets the component name
-// name for the server-side span.
-func ComponentName(componentName string) FilterOption {
-	return func(options *filterOptions) {
-		options.componentName = componentName
-	}
-}
-
 // NewLTFilter returns a go-restful filter which add OpenTracing instrument
 func NewLTFilter(options ...FilterOption) restful.FilterFunction {
 	opts := filterOptions{
@@ -72,15 +60,17 @@ func NewLTFilter(options ...FilterOption) restful.FilterFunction {
 	}
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		var ctx context.Context
-		var logTracer blog.Trace
+		ctx := req.Request.Context()
+		var logTracer Trace
 		ri := req.Request.Header.Get("X-Request-Id")
 
 		if len(ri) > 0 {
-			logTracer = blog.WithID(opts.operationNameFunc(req), ri)
+			logTracer = WithID("request-in", ri)
 		} else {
-			logTracer = blog.New(opts.operationNameFunc(req))
+			logTracer = New("request-in")
 		}
+
+		req.Request.Header.Set("X-Request-Id", logTracer.ID())
 
 		lastRoute, ip := func(r *http.Request) (string, string) {
 			lastRoute := strings.Split(r.RemoteAddr, ":")[0]
@@ -93,14 +83,13 @@ func NewLTFilter(options ...FilterOption) restful.FilterFunction {
 			return lastRoute, lastRoute
 		}(req.Request)
 
-		logTracer.Infof("traceID=[%s] event=[request-in] remote=[%s] route=[%s] method=[%s] url=[%s]",
-			logTracer.ID(), ip, lastRoute, req.Request.Method, req.Request.URL.String())
-		defer logTracer.Info("traceID=[%s] event=[request-out]", logTracer.ID())
+		logTracer.Infof("remote=[%s] route=[%s] method=[%s] url=[%s]", ip, lastRoute, req.Request.Method, req.Request.URL.String())
+		defer logTracer.Infof("event=[request-out]")
 
 		ctx = context.WithValue(ctx, tracerLogHandlerID, logTracer)
 		ctx = context.WithValue(ctx, realIPValueID, ip)
-
 		req.Request = req.Request.WithContext(ctx)
+		fmt.Println("logtracer", req.Request.Context().Value(tracerLogHandlerID))
 
 		chain.ProcessFilter(req, resp)
 	}
