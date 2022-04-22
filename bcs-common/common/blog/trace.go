@@ -20,8 +20,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Tencent/bk-bcs/bcs-common/common/blog/glog"
-
 	"github.com/nu7hatch/gouuid"
 )
 
@@ -157,6 +155,7 @@ func (t *trace) Name() string {
 
 func (t *trace) SetName(name string) {
 	t.name = name
+	//t.head = t.packHeader()
 }
 
 func (t *trace) ID() string {
@@ -219,25 +218,25 @@ func (t *trace) logf(out func(depth int, args ...interface{}), format string, ar
 }
 
 func (t *trace) Info(args ...interface{}) {
-	t.log(glog.InfoDepth, args...)
+	t.log(InfoDepth, args...)
 }
 
 func (t *trace) Infof(format string, args ...interface{}) {
-	t.logf(glog.InfoDepth, format, args...)
+	t.logf(InfoDepth, format, args...)
 }
 
 func (t *trace) Warn(args ...interface{}) {
-	t.log(glog.WarningDepth, args...)
+	t.log(WarnDepth, args...)
 }
 
 func (t *trace) Warnf(format string, args ...interface{}) {
-	t.logf(glog.WarningDepth, format, args...)
+	t.logf(WarnDepth, format, args...)
 }
 
 func (t *trace) Error(args ...interface{}) {
-	t.log(glog.ErrorDepth, args...)
+	t.log(ErrorDepth, args...)
 }
 
 func (t *trace) Errorf(format string, args ...interface{}) {
-	t.logf(glog.ErrorDepth, format, args...)
+	t.logf(ErrorDepth, format, args...)
 }

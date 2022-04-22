@@ -16,7 +16,6 @@ package dynamicquery
 import (
 	"github.com/Tencent/bk-bcs/bcs-common/common"
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/tracing/utils"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/lib"
 	v1http "github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/v1http/utils"
@@ -46,10 +45,13 @@ var needTimeFormatList = [...]string{updateTimeTag, createTimeTag}
 const dbConfig = "mongodb/dynamic"
 
 func doQuery(req *restful.Request, resp *restful.Response, filter qFilter, name string) error {
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), "doQuery")
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	request := newReqDynamic(req, filter, name)
 	r, err := request.queryDynamic()
 	if err != nil {
-		blog.Errorf("%s | err: %v", common.BcsErrStorageListResourceFailStr, err)
+		blog.Errorf("url=[%s], %s | err: %v", req.Request.URL.String(), common.BcsErrStorageListResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{Resp: resp, Data: []string{}, ErrCode: common.BcsErrStorageListResourceFail, Message: common.BcsErrStorageListResourceFailStr})
 		return err
 	}
@@ -126,11 +128,11 @@ func GetTaskGroup(req *restful.Request, resp *restful.Response) {
 		handler = "GetTaskGroup"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &TaskGroupFilter{}, "taskgroup")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -140,11 +142,11 @@ func GetApplication(req *restful.Request, resp *restful.Response) {
 		handler = "GetApplication"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ApplicationFilter{Kind: ",application"}, "application")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -154,11 +156,11 @@ func GetProcess(req *restful.Request, resp *restful.Response) {
 		handler = "GetProcess"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ProcessFilter{Kind: "process"}, "application")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -168,11 +170,11 @@ func GetDeployment(req *restful.Request, resp *restful.Response) {
 		handler = "GetDeployment"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &DeploymentFilter{}, "deployment")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -182,11 +184,11 @@ func GetService(req *restful.Request, resp *restful.Response) {
 		handler = "GetService"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ServiceFilter{}, "service")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -196,11 +198,11 @@ func GetConfigMap(req *restful.Request, resp *restful.Response) {
 		handler = "GetConfigMap"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ConfigMapFilter{}, "configmap")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -210,11 +212,11 @@ func GetSecret(req *restful.Request, resp *restful.Response) {
 		handler = "GetSecret"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &SecretFilter{}, "secret")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -224,11 +226,11 @@ func GetEndpoints(req *restful.Request, resp *restful.Response) {
 		handler = "GetEndpoints"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &EndpointsFilter{}, "endpoint")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -238,11 +240,11 @@ func GetExportService(req *restful.Request, resp *restful.Response) {
 		handler = "GetExportService"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ExportServiceFilter{}, "exportservice")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -340,17 +342,25 @@ func GetNameSpaceK8sUsed(req *restful.Request, resp *restful.Response) error {
 	return nil
 }
 
+type key int
+const tracerLogHandlerID key = 32702
+
 // GetPod get pod
 func GetPod(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetPod"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &PodFilter{}, "Pod")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
+		logTracer.Errorf("url=[%s] err:%v", req.Request.URL.String(), err)
 	}
 }
 
@@ -359,12 +369,16 @@ func GetReplicaSet(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetReplicaSet"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ReplicaSetFilter{}, "ReplicaSet")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -373,12 +387,16 @@ func GetDeploymentK8s(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetDeploymentK8s"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &DeploymentK8sFilter{}, "Deployment")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -387,12 +405,16 @@ func GetServiceK8s(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetServiceK8s"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ServiceK8sFilter{}, "Service")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -401,12 +423,16 @@ func GetConfigMapK8s(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetConfigMapK8s"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &ConfigMapK8sFilter{}, "ConfigMap")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -415,12 +441,16 @@ func GetSecretK8s(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetSecretK8s"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &SecretK8sFilter{}, "Secret")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -429,12 +459,16 @@ func GetEndpointsK8s(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetEndpointsK8s"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &EndpointsK8sFilter{}, "EndPoints")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -443,12 +477,16 @@ func GetIngress(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetIngress"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &IngressFilter{}, "Ingress")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -457,19 +495,23 @@ func GetNameSpaceK8s(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetNameSpaceK8s"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	if req.QueryParameter(usedTag) == "1" {
 		err := GetNameSpaceK8sUsed(req, resp)
 		if err != nil {
-			utils.SetSpanLogTagError(span, err)
+			span.RecordError(err)
 		}
 		return
 	}
 	err := doQuery(req, resp, &NameSpaceFilter{}, "Namespace")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -478,12 +520,16 @@ func GetNode(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetNode"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &NodeFilter{}, "Node")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -492,12 +538,16 @@ func GetDaemonSet(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetDaemonSet"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &DaemonSetFilter{}, "DaemonSet")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -506,12 +556,16 @@ func GetJob(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetJob"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &JobFilter{}, "Job")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -520,12 +574,16 @@ func GetStatefulSet(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetStatefulSet"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &StatefulSetFilter{}, "StatefulSet")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -534,12 +592,16 @@ func GetIPPoolStatic(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetIPPoolStatic"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &IPPoolStaticFilter{}, "IPPoolStatic")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 
@@ -548,12 +610,16 @@ func GetIPPoolStaticDetail(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetIPPoolStaticDetail"
 	)
+
+	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	err := doQuery(req, resp, &IPPoolStaticDetailFilter{}, "IPPoolStaticDetail")
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 	}
 }
 

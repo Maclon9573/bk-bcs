@@ -23,8 +23,8 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/Tencent/bk-bcs/bcs-common/common/http/httpserver"
 	"github.com/Tencent/bk-bcs/bcs-common/common/version"
+	trestful "github.com/Tencent/bk-bcs/bcs-common/pkg/otel/restful"
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/registry"
-	trestful "github.com/Tencent/bk-bcs/bcs-common/pkg/tracing/restful"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/app/options"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/utils/metrics"
@@ -32,7 +32,6 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/apiserver"
 
 	restful "github.com/emicklei/go-restful"
-	"github.com/opentracing/opentracing-go"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -98,7 +97,8 @@ func (s *StorageServer) initFilterFunctions() []restful.FilterFunction {
 		GroupedStatus: true,
 	})
 
-	filterFunctions = append(filterFunctions, trestful.NewOTFilter(opentracing.GlobalTracer()))
+	filterFunctions = append(filterFunctions, trestful.NewOTFilter())
+	filterFunctions = append(filterFunctions, blog.NewLTFilter())
 	filterFunctions = append(filterFunctions, middle.MetricsMiddleHandler(mdlw))
 
 	return filterFunctions

@@ -15,14 +15,12 @@ package events
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/emicklei/go-restful"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common"
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/tracing/utils"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/lib"
 	v1http "github.com/Tencent/bk-bcs/bcs-services/bcs-storage/storage/actions/v1http/utils"
@@ -31,7 +29,6 @@ import (
 )
 
 const (
-	tablePrefix   = "event_"
 	tableName     = "event"
 	dataTag       = "data"
 	extraTag      = "extra"
@@ -78,10 +75,10 @@ func PutEvent(req *restful.Request, resp *restful.Response) {
 		handler = "PutEvent"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	if err := insert(req); err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStoragePutResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{
 			Resp:    resp,
@@ -98,12 +95,12 @@ func ListEvent(req *restful.Request, resp *restful.Response) {
 		handler = "ListEvent"
 	)
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
-	defer span.Finish()
+	defer span.End()
 
 	r, total, err := listEvent(req)
 	extra := map[string]interface{}{"total": total}
 	if err != nil {
-		utils.SetSpanLogTagError(span, err)
+		span.RecordError(err)
 		blog.Errorf("%s | err: %v", common.BcsErrStorageListResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{
 			Resp: resp, Data: []string{},
@@ -123,20 +120,10 @@ func WatchEvent(req *restful.Request, resp *restful.Response) {
 func CleanEvents() {
 	maxCap := apiserver.GetAPIResource().Conf.EventMaxCap
 	maxTime := apiserver.GetAPIResource().Conf.EventMaxTime
-	eventDBClient := apiserver.GetAPIResource().GetDBClient(dbConfig)
-	tables, err := eventDBClient.ListTableNames(context.TODO())
-	if err != nil {
-		blog.Errorf("list table name failed, err: %v", err)
-		return
-	}
-	for _, table := range tables {
-		if strings.HasPrefix(table, tableName) {
-			cleaner := clean.NewDBCleaner(eventDBClient, table, time.Hour)
-			cleaner.WithMaxEntryNum(maxCap)
-			cleaner.WithMaxDuration(time.Duration(maxTime*24)*time.Hour, createTimeTag)
-			cleaner.Run(context.TODO())
-		}
-	}
+	cleaner := clean.NewDBCleaner(apiserver.GetAPIResource().GetDBClient(dbConfig), tableName, time.Hour)
+	cleaner.WithMaxEntryNum(maxCap)
+	cleaner.WithMaxDuration(time.Duration(maxTime*24)*time.Hour, createTimeTag)
+	cleaner.Run(context.TODO())
 }
 
 func init() {

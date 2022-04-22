@@ -18,8 +18,8 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/asim/go-micro/v3/broker"
 	"github.com/emicklei/go-restful"
-	"github.com/micro/go-micro/v2/broker"
 	"go.mongodb.org/mongo-driver/bson"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
