@@ -14,17 +14,21 @@
 package utils
 
 import (
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
+	"context"
 	"net/http"
 
 	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
 	"github.com/emicklei/go-restful"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // SetHTTPSpanContextInfo set restful.Request context
 func SetHTTPSpanContextInfo(req *restful.Request, handler string) trace.Span {
-	ctx, span := utils.Tracer(handler).Start(req.Request.Context(), handler)
+	ri := req.Request.Header.Get("X-Request-Id")
+	ctx := context.WithValue(req.Request.Context(), "X-Request-Id", ri)
+	ctx, span := utils.Tracer(handler).Start(ctx, handler)
 	defer span.End()
 	setHTTPSpanAttributes(span, req.Request, handler)
 	req.Request = req.Request.WithContext(ctx)
