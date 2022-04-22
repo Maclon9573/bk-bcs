@@ -45,10 +45,21 @@ var needTimeFormatList = [...]string{updateTimeTag, createTimeTag}
 const dbConfig = "mongodb/dynamic"
 
 func doQuery(req *restful.Request, resp *restful.Response, filter qFilter, name string) error {
+	//logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), "doQuery")
+	logTracer := blog.WithID("GetPod", req.Request.Header.Get("X-Request-Id"))
+
+	//fmt.Printf("%#v\n",req.Request.Context())
+	//logTracer, ok := req.Request.Context().Value(tracerLogHandlerID).(blog.Trace)
+	//fmt.Println(logTracer)
+	//if ok {
+	//	//fmt.Println(logTracer)
+	//}
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
 	request := newReqDynamic(req, filter, name)
 	r, err := request.queryDynamic()
 	if err != nil {
-		blog.Errorf("%s | err: %v", common.BcsErrStorageListResourceFailStr, err)
+		blog.Errorf("url=[%s], %s | err: %v", req.Request.URL.String(), common.BcsErrStorageListResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{Resp: resp, Data: []string{}, ErrCode: common.BcsErrStorageListResourceFail, Message: common.BcsErrStorageListResourceFailStr})
 		return err
 	}
@@ -339,17 +350,28 @@ func GetNameSpaceK8sUsed(req *restful.Request, resp *restful.Response) error {
 	return nil
 }
 
+var tracerLogHandlerID = "32702"
+
 // GetPod get pod
 func GetPod(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetPod"
 	)
+
+	//logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), "GetPod")
+	logTracer := blog.WithID("GetPod", req.Request.Header.Get("X-Request-Id"))
+	logTracer.Infof("url=[%s]", req.Request.URL.String())
+
+	//ctx := context.WithValue(context.Background(), tracerLogHandlerID, logTracer)
+	//req.Request = req.Request.WithContext(ctx)
+
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
 
 	err := doQuery(req, resp, &PodFilter{}, "Pod")
 	if err != nil {
 		span.RecordError(err)
+		logTracer.Errorf("url=[%s] err:%v", req.Request.URL.String(), err)
 	}
 }
 

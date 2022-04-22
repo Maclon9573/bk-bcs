@@ -15,6 +15,7 @@ require (
 	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/google/uuid v1.3.0
 	github.com/mitchellh/mapstructure v1.4.3
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/prometheus/client_golang v1.12.1
 	go.mongodb.org/mongo-driver v1.9.0
 	go.opentelemetry.io/otel v1.6.3

@@ -15,17 +15,21 @@ package restful
 
 import (
 	"context"
-	"github.com/Tencent/bk-bcs/bcs-common/pkg/otel/trace/utils"
+	"fmt"
+	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/emicklei/go-restful"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"net/http"
+	"strings"
 )
 
 const (
 	// DefaultComponentName show default component
-	DefaultComponentName = "go-restful"
+	DefaultComponentName        = "go-restful"
+	tracerLogHandlerID   string = "32702" // random key
+	realIPValueID        string = "16221"
 )
+
+type key int
 
 var (
 	// DefaultOperationNameFunc get default operation name
@@ -59,70 +63,50 @@ func ComponentName(componentName string) FilterOption {
 	}
 }
 
-// NewOTFilter returns a go-restful filter which add OpenTracing instrument
-func NewOTFilter(options ...FilterOption) restful.FilterFunction {
+// NewLTFilter returns a go-restful filter which add OpenTracing instrument
+func NewLTFilter(options ...FilterOption) restful.FilterFunction {
 	opts := filterOptions{
 		operationNameFunc: DefaultOperationNameFunc,
-		componentName:     DefaultComponentName,
 	}
 	for _, opt := range options {
 		opt(&opts)
 	}
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+		ctx := context.Background()
+		var logTracer blog.Trace
 		ri := req.Request.Header.Get("X-Request-Id")
-		ctx := context.WithValue(req.Request.Context(), "X-Request-Id", ri)
 
-		ctx, span := utils.Tracer(opts.operationNameFunc(req)).Start(ctx, "Processing Request")
-		req.Request.Header.Set("X-Request-Id", span.SpanContext().TraceID().String())
+		if len(ri) > 0 {
+			logTracer = blog.WithID("request-in", ri)
+		} else {
+			logTracer = blog.New("request-in")
+		}
 
-		setHTTPSpanAttributes(span, req.Request)
-		span.SetAttributes(attribute.Key("component").String(opts.componentName))
+		req.Request.Header.Set("X-Request-Id", logTracer.ID())
 
-		req.Request = req.Request.WithContext(utils.ContextWithSpan(ctx, span))
-
-		defer func() {
-			// record HTTP status code
-			span.SetAttributes(utils.HTTPStatusCodeKey.Int(resp.StatusCode()))
-
-			span.SetAttributes(utils.HTTPResponseContentLengthKey.Int(resp.ContentLength()))
-			if resp.Error() != nil {
-				span.RecordError(resp.Error())
+		lastRoute, ip := func(r *http.Request) (string, string) {
+			lastRoute := strings.Split(r.RemoteAddr, ":")[0]
+			if ip, exists := r.Header["X-Real-IP"]; exists && len(ip) > 0 {
+				return lastRoute, ip[0]
 			}
-			span.End()
-		}()
+			if ips, exists := r.Header["X-Forwarded-For"]; exists && len(ips) > 0 {
+				return lastRoute, ips[0]
+			}
+			return lastRoute, lastRoute
+		}(req.Request)
+
+		logTracer.Infof("remote=[%s] route=[%s] method=[%s] url=[%s]",
+			ip, lastRoute, req.Request.Method, req.Request.URL.String())
+		logTracer.Infof("")
+		defer logTracer.Infof("event=[request-out]")
+
+		ctx = context.WithValue(ctx, tracerLogHandlerID, logTracer)
+		ctx = context.WithValue(ctx, realIPValueID, ip)
+
+		req.Request = req.Request.WithContext(ctx)
+		fmt.Println(req.Request.Context().Value(tracerLogHandlerID))
+
 		chain.ProcessFilter(req, resp)
 	}
-}
-
-func setHTTPSpanAttributes(span trace.Span, request *http.Request) {
-	attrs := []attribute.KeyValue{}
-
-	if request.Method != "" {
-		attrs = append(attrs, utils.HTTPMethodKey.String(request.Method))
-	} else {
-		attrs = append(attrs, utils.HTTPMethodKey.String(http.MethodGet))
-	}
-
-	// remove any username/password info that may be in the URL
-	// before adding it to the attributes
-	userinfo := request.URL.User
-	request.URL.User = nil
-
-	attrs = append(attrs, utils.HTTPURLKey.String(request.URL.String()))
-
-	// restore any username/password info that was removed
-	request.URL.User = userinfo
-
-	if request.TLS != nil {
-		attrs = append(attrs, utils.HTTPSchemeKey.String("https"))
-	} else {
-		attrs = append(attrs, utils.HTTPSchemeKey.String("http"))
-	}
-
-	if request.Host != "" {
-		attrs = append(attrs, utils.HTTPHostKey.String(request.Host))
-	}
-
-	span.SetAttributes(attrs...)
 }

@@ -15,6 +15,7 @@ package bcsstorage
 
 import (
 	"fmt"
+	blogrestful "github.com/Tencent/bk-bcs/bcs-common/common/blog/restful"
 	"net/http"
 	"net/http/pprof"
 	"strconv"
@@ -98,6 +99,7 @@ func (s *StorageServer) initFilterFunctions() []restful.FilterFunction {
 	})
 
 	filterFunctions = append(filterFunctions, trestful.NewOTFilter())
+	filterFunctions = append(filterFunctions, blogrestful.NewLTFilter())
 	filterFunctions = append(filterFunctions, middle.MetricsMiddleHandler(mdlw))
 
 	return filterFunctions

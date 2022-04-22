@@ -37,6 +37,7 @@ require (
 	github.com/micro/go-micro/v2 v2.9.1
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/nats-io/stan.go v0.9.0
+	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/onsi/gomega v1.16.0 // indirect
 	github.com/opentracing/opentracing-go v1.2.0
@@ -44,6 +45,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/samuel/go-zookeeper v0.0.0-20201211165307-7117e9ea2414
+	github.com/satori/go.uuid v1.2.0
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
