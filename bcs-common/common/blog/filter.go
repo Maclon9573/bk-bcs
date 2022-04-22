@@ -15,7 +15,6 @@ package blog
 
 import (
 	"context"
-	"fmt"
 	"github.com/emicklei/go-restful"
 	"net/http"
 	"strings"
@@ -89,7 +88,6 @@ func NewLTFilter(options ...FilterOption) restful.FilterFunction {
 		ctx = context.WithValue(ctx, tracerLogHandlerID, logTracer)
 		ctx = context.WithValue(ctx, realIPValueID, ip)
 		req.Request = req.Request.WithContext(ctx)
-		fmt.Println("logtracer", req.Request.Context().Value(tracerLogHandlerID))
 
 		chain.ProcessFilter(req, resp)
 	}
