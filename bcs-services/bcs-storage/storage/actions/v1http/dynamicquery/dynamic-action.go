@@ -342,15 +342,11 @@ func GetNameSpaceK8sUsed(req *restful.Request, resp *restful.Response) error {
 	return nil
 }
 
-type key int
-const tracerLogHandlerID key = 32702
-
 // GetPod get pod
 func GetPod(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetPod"
 	)
-
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
 	logTracer.Infof("url=[%s]", req.Request.URL.String())
 
