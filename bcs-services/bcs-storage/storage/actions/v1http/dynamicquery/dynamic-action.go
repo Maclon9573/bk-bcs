@@ -45,13 +45,12 @@ var needTimeFormatList = [...]string{updateTimeTag, createTimeTag}
 const dbConfig = "mongodb/dynamic"
 
 func doQuery(req *restful.Request, resp *restful.Response, filter qFilter, name string) error {
-	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), "doQuery")
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	logTracer := blog.WithID("doQuery", blog.GetTraceFromRequest(req.Request).ID())
 
 	request := newReqDynamic(req, filter, name)
 	r, err := request.queryDynamic()
 	if err != nil {
-		blog.Errorf("url=[%s], %s | err: %v", req.Request.URL.String(), common.BcsErrStorageListResourceFailStr, err)
+		logTracer.Errorf("%s | err: %v", common.BcsErrStorageListResourceFailStr, err)
 		lib.ReturnRest(&lib.RestResponse{Resp: resp, Data: []string{}, ErrCode: common.BcsErrStorageListResourceFail, Message: common.BcsErrStorageListResourceFailStr})
 		return err
 	}
@@ -347,8 +346,7 @@ func GetPod(req *restful.Request, resp *restful.Response) {
 	const (
 		handler = "GetPod"
 	)
-	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	logTracer := blog.WithID(handler, blog.GetTraceFromRequest(req.Request).ID())
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -356,7 +354,7 @@ func GetPod(req *restful.Request, resp *restful.Response) {
 	err := doQuery(req, resp, &PodFilter{}, "Pod")
 	if err != nil {
 		span.RecordError(err)
-		logTracer.Errorf("url=[%s] err:%v", req.Request.URL.String(), err)
+		logTracer.Errorf("failed to get pod, err: %v", err)
 	}
 }
 
@@ -367,7 +365,7 @@ func GetReplicaSet(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -385,7 +383,7 @@ func GetDeploymentK8s(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -403,7 +401,7 @@ func GetServiceK8s(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -421,7 +419,7 @@ func GetConfigMapK8s(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -439,7 +437,7 @@ func GetSecretK8s(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -457,7 +455,7 @@ func GetEndpointsK8s(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -475,7 +473,7 @@ func GetIngress(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -493,7 +491,7 @@ func GetNameSpaceK8s(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -518,7 +516,7 @@ func GetNode(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -536,7 +534,7 @@ func GetDaemonSet(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -554,7 +552,7 @@ func GetJob(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -572,7 +570,7 @@ func GetStatefulSet(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -590,7 +588,7 @@ func GetIPPoolStatic(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
@@ -608,7 +606,7 @@ func GetIPPoolStaticDetail(req *restful.Request, resp *restful.Response) {
 	)
 
 	logTracer := blog.WithParent(blog.GetTraceFromRequest(req.Request), handler)
-	logTracer.Infof("url=[%s]", req.Request.URL.String())
+	defer logTracer.Info()
 
 	span := v1http.SetHTTPSpanContextInfo(req, handler)
 	defer span.End()
