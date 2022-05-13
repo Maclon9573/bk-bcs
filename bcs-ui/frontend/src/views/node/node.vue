@@ -6,11 +6,12 @@
         >
             <div slot="title">
                 {{$t('集群就绪后，您可以创建命名空间、推送项目镜像到仓库，然后通过服务配置模板集部署服务 ')}}
-                <i18n path="当前集群已添加节点数（含Master） {nodes}，还可添加节点数 {remainNodes}"
-                    v-if="remainNodesCount > 0"
+                <i18n path="当前集群已添加节点数（含Master） {nodes}，还可添加节点数 {realRemainNodesCount}，当容器网络资源超额使用时，会触发容器网络自动扩容，扩容后最多可以添加 {maxRemainNodesCount} 个节点"
+                    v-if="maxRemainNodesCount > 0"
                 >
                     <span place="nodes" class="num">{{nodesCount}}</span>
-                    <span place="remainNodes" class="num">{{remainNodesCount}}</span>
+                    <span place="realRemainNodesCount" class="num">{{realRemainNodesCount}}</span>
+                    <span place="maxRemainNodesCount" class="num">{{maxRemainNodesCount}}</span>
                 </i18n>
             </div>
         </bcs-alert>
@@ -18,22 +19,28 @@
         <div class="cluster-node-operate">
             <div class="left">
                 <template v-if="!nodeMenu">
-                    <bcs-button theme="primary"
-                        icon="plus"
-                        class="add-node mr10"
-                        v-authority="{
-                            clickable: webAnnotations.perms[localClusterId]
-                                && webAnnotations.perms[localClusterId].cluster_manage,
-                            actionId: 'cluster_manage',
-                            resourceName: curSelectedCluster.clusterName,
-                            disablePerms: true,
-                            permCtx: {
-                                project_id: curProject.project_id,
-                                cluster_id: localClusterId
-                            }
-                        }"
-                        @click="handleAddNode"
-                    >{{$t('添加节点')}}</bcs-button>
+                    <span v-bk-tooltips="{
+                        disabled: !isImportCluster,
+                        content: $t('kubeconfig导入集群，节点管理功能不可用')
+                    }">
+                        <bcs-button theme="primary"
+                            icon="plus"
+                            class="add-node mr10"
+                            v-authority="{
+                                clickable: webAnnotations.perms[localClusterId]
+                                    && webAnnotations.perms[localClusterId].cluster_manage,
+                                actionId: 'cluster_manage',
+                                resourceName: curSelectedCluster.clusterName,
+                                disablePerms: true,
+                                permCtx: {
+                                    project_id: curProject.project_id,
+                                    cluster_id: localClusterId
+                                }
+                            }"
+                            :disabled="isImportCluster"
+                            @click="handleAddNode"
+                        >{{$t('添加节点')}}</bcs-button>
+                    </span>
                     <template v-if="$INTERNAL && curSelectedCluster.providerType === 'tke'">
                         <apply-host class="mr10"
                             theme="primary"
@@ -61,12 +68,22 @@
                     <ul class="bk-dropdown-list" slot="dropdown-content">
                         <li @click="handleBatchEnableNodes">{{$t('允许调度')}}</li>
                         <li @click="handleBatchStopNodes">{{$t('停止调度')}}</li>
-                        <li @click="handleBatchReAddNodes">{{$t('重新添加')}}</li>
-                        <div style="width: 100px; height:32px;" v-bk-tooltips="{ content: $t('注：IP状态为停止调度才能做POD迁移操作'), disabled: !podDisabled, placement: 'top' }">
-                            <li :disabled="podDisabled" @click="handleBatchPodScheduler">{{$t('Pod迁移')}}</li>
+                        <li :disabled="isImportCluster"
+                            v-bk-tooltips="{
+                                disabled: !isImportCluster,
+                                content: $t('kubeconfig导入集群，节点管理功能不可用')
+                            }"
+                            @click="handleBatchReAddNodes">{{$t('重新添加')}}</li>
+                        <div style="height:32px;" v-bk-tooltips="{ content: $t('注：IP状态为停止调度才能做POD迁移操作'), disabled: !podDisabled, placement: 'top' }">
+                            <li :disabled="podDisabled" @click="handleBatchPodScheduler">{{$t('pod迁移')}}</li>
                         </div>
                         <li @click="handleBatchSetLabels">{{$t('设置标签')}}</li>
-                        <li @click="handleBatchDeleteNodes">{{$t('删除')}}</li>
+                        <li :disabled="isImportCluster"
+                            v-bk-tooltips="{
+                                disabled: !isImportCluster,
+                                content: $t('kubeconfig导入集群，节点管理功能不可用')
+                            }"
+                            @click="handleBatchDeleteNodes">{{$t('删除')}}</li>
                         <!-- <li>{{$t('导出')}}</li> -->
                     </ul>
                 </bcs-dropdown-menu>
@@ -185,13 +202,13 @@
                         <LoadingIcon
                             v-if="['INITIALIZATION', 'DELETING'].includes(row.status)"
                         >
-                            {{ nodeStatusMap[row.status.toLowerCase()] }}
+                            <span class="bcs-ellipsis">{{ nodeStatusMap[row.status.toLowerCase()] }}</span>
                         </LoadingIcon>
                         <StatusIcon :status="row.status"
                             :status-color-map="nodeStatusColorMap"
                             v-else
                         >
-                            {{ nodeStatusMap[row.status.toLowerCase()] }}
+                            <span class="bcs-ellipsis">{{ nodeStatusMap[row.status.toLowerCase()] }}</span>
                         </StatusIcon>
                     </template>
                 </bcs-table-column>
@@ -368,12 +385,18 @@
                                     {{ $t('pod迁移') }}
                                 </bk-button>
                             </template>
-                            <bk-button text class="mr10"
-                                v-if="['REMOVE-FAILURE', 'ADD-FAILURE', 'REMOVABLE', 'NOTREADY'].includes(row.status)"
-                                @click="handleDeleteNode(row)"
-                            >
-                                {{ $t('删除') }}
-                            </bk-button>
+                            <span v-bk-tooltips="{
+                                disabled: !isImportCluster,
+                                content: $t('kubeconfig导入集群，节点管理功能不可用')
+                            }">
+                                <bk-button text class="mr10"
+                                    v-if="['REMOVE-FAILURE', 'ADD-FAILURE', 'REMOVABLE', 'NOTREADY'].includes(row.status)"
+                                    :disabled="isImportCluster"
+                                    @click="handleDeleteNode(row)"
+                                >
+                                    {{ $t('删除') }}
+                                </bk-button>
+                            </span>
                             <bk-button text
                                 v-if="['REMOVE-FAILURE', 'ADD-FAILURE'].includes(row.status)"
                                 @click="handleRetry(row)"
@@ -686,7 +709,10 @@
             const curSelectedCluster = computed(() => {
                 return clusterList.value.find(item => item.clusterID === localClusterId.value) || {}
             })
-           
+            // 导入集群
+            const isImportCluster = computed(() => {
+                return curSelectedCluster.value.clusterCategory === 'importer'
+            })
             // 全量表格数据
             const tableData = ref<any[]>([])
             
@@ -694,17 +720,19 @@
                 const searchValues: { id: string; value: Set<any> }[] = []
                 searchSelectValue.value.forEach(item => {
                     let tmp: string[] = []
-                    if (item.id === 'inner_ip') {
-                        item.values.forEach(v => {
-                            tmp.push(...v.id.replace(/\s+/g, "").split('|'))
+                    if (Array.isArray(item.values)) {
+                        if (item.id === 'inner_ip') {
+                            item.values.forEach(v => {
+                                tmp.push(...v.id.replace(/\s+/g, "").split('|'))
+                            })
+                        } else {
+                            tmp = item.values.map(v => v.id)
+                        }
+                        searchValues.push({
+                            id: item.id,
+                            value: new Set(tmp)
                         })
-                    } else {
-                        tmp = item.values.map(v => v.id)
                     }
-                    searchValues.push({
-                        id: item.id,
-                        value: new Set(tmp)
-                    })
                 })
                 return searchValues
             })
@@ -1044,11 +1072,15 @@
                 removeNodeDialog.value.isConfirming = false
             }
             const addClusterNode = async (clusterId: string, nodeIps: string[]) => {
+                stop()
                 const result = await addNode({
                     clusterId,
                     nodeIps
                 })
-                result && handleGetNodeData()
+                result && await handleGetNodeData()
+                if (tableData.value.length) {
+                    start()
+                }
             }
             // 节点重试
             const handleRetry = (row) => {
@@ -1114,7 +1146,7 @@
             }
             // 重新添加节点
             const handleBatchReAddNodes = () => {
-                if (!selections.value.length) return
+                if (!selections.value.length || isImportCluster.value) return
 
                 bkComfirmInfo({
                     title: $i18n.t('确认重新添加节点'),
@@ -1134,6 +1166,7 @@
             }
             // 批量删除节点
             const handleBatchDeleteNodes = () => {
+                if (isImportCluster.value) return
                 bkComfirmInfo({
                     title: $i18n.t('确认删除节点'),
                     subTitle: $i18n.t('确认是否删除 {ip} 等 {num} 个节点', {
@@ -1304,7 +1337,17 @@
                 }
                 return Math.pow(2, 32 - mask)
             }
-            const remainNodesCount = computed(() => {
+            // 当前CIDR可添加节点数
+            const realRemainNodesCount = computed(() => {
+                const { maxNodePodNum, maxServiceNum, clusterIPv4CIDR, multiClusterCIDR = [] } = curSelectedCluster.value?.networkSettings || {}
+                const totalCidrStep = [clusterIPv4CIDR, ...multiClusterCIDR].reduce((pre, cidr) => {
+                    pre += getCidrIpNum(cidr)
+                    return pre
+                }, 0)
+                return Math.floor((totalCidrStep - maxServiceNum - maxNodePodNum * nodesCount.value) / maxNodePodNum)
+            })
+            // 扩容后最大节点数量
+            const maxRemainNodesCount = computed(() => {
                 const { cidrStep, maxNodePodNum, maxServiceNum, clusterIPv4CIDR, multiClusterCIDR = [] } = curSelectedCluster.value?.networkSettings || {}
                 let totalCidrStep = 0
                 if (multiClusterCIDR.length < 3) {
@@ -1329,7 +1372,8 @@
             })
             return {
                 nodesCount,
-                remainNodesCount,
+                realRemainNodesCount,
+                maxRemainNodesCount,
                 isSingleCluster,
                 curSelectedCluster,
                 taskStatusTextMap,
@@ -1399,7 +1443,8 @@
                 handleBatchPodScheduler,
                 podDisabled,
                 webAnnotations,
-                curProject
+                curProject,
+                isImportCluster
             }
         }
     })
@@ -1460,6 +1505,7 @@
         color: #63656e;
         font-size: 14px;
         cursor: pointer;
+        white-space: nowrap;
         &:hover {
             background-color: #eaf3ff;
             color: #3a84ff;

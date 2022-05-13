@@ -199,6 +199,10 @@ func (da *DeleteAction) cleanLocalInformation() error {
 		return err
 	}
 
+	// delete cluster dependency info
+	deleteClusterExtraOperation(da.cluster)
+	deleteClusterCredentialInfo(da.model, da.cluster.ClusterID)
+
 	// finally clean cluster
 	da.cluster.Status = common.StatusDeleted
 	if err := da.model.UpdateCluster(da.ctx, da.cluster); err != nil {
@@ -462,7 +466,7 @@ func (da *DeleteAction) Handle(ctx context.Context, req *cmproto.DeleteClusterRe
 }
 
 func (da *DeleteAction) isImporterCluster() bool {
-	return da.cluster.ClusterCategory == Importer
+	return da.cluster.ClusterCategory == Importer && da.cluster.ImportCategory == KubeConfig
 }
 
 func (da *DeleteAction) createDeleteClusterTask(req *cmproto.DeleteClusterReq) error {

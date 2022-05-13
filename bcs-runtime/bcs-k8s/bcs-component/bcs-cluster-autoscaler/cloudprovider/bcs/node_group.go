@@ -54,6 +54,12 @@ type NodeGroup struct {
 	client    clustermanager.NodePoolClientInterface
 }
 
+// TimeRange defines crontab regular
+type TimeRange struct {
+	Schedule   string
+	Zone       string
+	DesiredNum int
+}
 type nodeTemplate struct {
 	InstanceType string
 	Region       string
@@ -129,9 +135,10 @@ func (group *NodeGroup) IsSoldOut() bool {
 // It is assumed that cloud provider will not delete the existing nodes if the size
 // when there is an option to just decrease the target.
 func (group *NodeGroup) DecreaseTargetSize(delta int) error {
-	if delta >= 0 {
-		return fmt.Errorf("size decrease size must be negative")
-	}
+	// delta canbe positive, cause that scale down may failed.
+	// if delta >= 0 {
+	// 	return fmt.Errorf("size decrease size must be negative")
+	// }
 	size, err := group.TargetSize()
 	if err != nil {
 		return err
@@ -395,4 +402,21 @@ func getIP(node *apiv1.Node) string {
 		return address.Address
 	}
 	return ""
+}
+
+// TimeRanges returns the crontab regulars of the node group
+func (group *NodeGroup) TimeRanges() ([]*TimeRange, error) {
+	result := make([]*TimeRange, 0)
+	pc, err := group.client.GetPoolConfig(group.nodeGroupID)
+	if err != nil {
+		return result, err
+	}
+	for _, t := range pc.TimeRanges {
+		result = append(result, &TimeRange{
+			Schedule:   t.Schedule,
+			Zone:       t.Zone,
+			DesiredNum: int(t.DesiredNum),
+		})
+	}
+	return result, err
 }

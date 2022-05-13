@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/remote/user"
 	"io/ioutil"
 	"net/http"
 	"net/http/pprof"
@@ -128,6 +129,7 @@ type ClusterManager struct {
 // NewClusterManager create cluster manager
 func NewClusterManager(opt *options.ClusterManagerOptions) *ClusterManager {
 	ctx, cancel := context.WithCancel(context.Background())
+	options.SetGlobalCMOptions(opt)
 	return &ClusterManager{
 		opt:           opt,
 		ctx:           ctx,
@@ -281,6 +283,16 @@ func (cm *ClusterManager) initRemoteClient() error {
 		return err
 	}
 
+	// init user-manager config
+	user.SetUserManagerClient(&user.Options{
+		Enable:          cm.opt.UserManager.Enable,
+		GateWay:         cm.opt.UserManager.GateWay,
+		IsVerifyTLS:     cm.opt.UserManager.IsVerifyTLS,
+		Token:           cm.opt.UserManager.Token,
+		EtcdRegistry:    cm.microRegistry,
+		ClientTLSConfig: cm.clientTLSConfig,
+	})
+
 	return nil
 }
 
@@ -392,6 +404,15 @@ func (cm *ClusterManager) updateCloudConfig(cloud *cmproto.Cloud) error {
 	}
 	if len(cloud.Description) > 0 {
 		destCloud.Description = cloud.Description
+	}
+	if cloud.NetworkInfo != nil {
+		destCloud.NetworkInfo = cloud.NetworkInfo
+	}
+	if cloud.ConfInfo != nil {
+		destCloud.ConfInfo = cloud.ConfInfo
+	}
+	if cloud.PlatformInfo != nil {
+		destCloud.PlatformInfo = cloud.PlatformInfo
 	}
 
 	err = cm.model.UpdateCloud(cm.ctx, destCloud)

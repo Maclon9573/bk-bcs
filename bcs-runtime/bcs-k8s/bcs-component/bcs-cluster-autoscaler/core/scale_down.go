@@ -17,6 +17,8 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -53,13 +55,15 @@ const (
 	// DelayDeletionAnnotationPrefix is the prefix of annotation marking node as it needs to wait
 	// for other K8s components before deleting node.
 	DelayDeletionAnnotationPrefix = "delay-deletion.cluster-autoscaler.kubernetes.io/"
+	// NodeDeletionCost is the cost of node's deletion
+	NodeDeletionCost = "io.tencent.bcs.dev/node-deletion-cost"
 )
 
 const (
 	// MaxKubernetesEmptyNodeDeletionTime is the maximum time needed by Kubernetes to delete an empty node.
 	MaxKubernetesEmptyNodeDeletionTime = 3 * time.Minute
 	// MaxCloudProviderNodeDeletionTime is the maximum time needed by cloud provider to delete a node.
-	MaxCloudProviderNodeDeletionTime = 5 * time.Minute
+	MaxCloudProviderNodeDeletionTime = 10 * time.Minute
 	// MaxPodEvictionTime is the maximum time CA tries to evict a pod before giving up.
 	MaxPodEvictionTime = 2 * time.Minute
 	// EvictionRetryTime is the time after CA retries failed pod eviction.
@@ -864,6 +868,9 @@ func (sd *ScaleDown) TryToScaleDown(allNodes []*apiv1.Node, pods []*apiv1.Pod,
 		scaleDownStatus.Result = status.ScaleDownNoNodeDeleted
 		return scaleDownStatus, nil
 	}
+	// TODO: add sort based on NodeDeletionCost
+	nodesToRemove = sortNodesByDeletionCost(nodesToRemove)
+
 	toRemove := nodesToRemove[0]
 	utilization := sd.nodeUtilizationMap[toRemove.Node.Name]
 	podNames := make([]string, 0, len(toRemove.PodsToReschedule))
@@ -1345,14 +1352,14 @@ func filterOutMasters(nodes []*apiv1.Node, pods []*apiv1.Pod) []*apiv1.Node {
 	return others
 }
 
-func checkNotSystem(pods []*apiv1.Pod) error {
-	for _, pod := range pods {
-		if pod.Namespace != metav1.NamespaceSystem {
-			return fmt.Errorf("at least one pod(not in kube-system) %v/%v exist", pod.Namespace, pod.Name)
-		}
-	}
-	return nil
-}
+// func checkNotSystem(pods []*apiv1.Pod) error {
+// 	for _, pod := range pods {
+// 		if pod.Namespace != metav1.NamespaceSystem {
+// 			return fmt.Errorf("at least one pod(not in kube-system) %v/%v exist", pod.Namespace, pod.Name)
+// 		}
+// 	}
+// 	return nil
+// }
 
 func hasGameServer(pods []*apiv1.Pod) bool {
 	for _, pod := range pods {
@@ -1372,4 +1379,25 @@ func hasGameServer(pods []*apiv1.Pod) bool {
 		}
 	}
 	return false
+}
+
+func sortNodesByDeletionCost(nodes []simulator.NodeToBeRemoved) []simulator.NodeToBeRemoved {
+	sort.Slice(nodes, func(i, j int) bool {
+		costi := getCostFromNode(nodes[i].Node)
+		costj := getCostFromNode(nodes[j].Node)
+		return costi < costj
+	})
+	return nodes
+}
+
+func getCostFromNode(node *apiv1.Node) float64 {
+	costAnnotation := node.Annotations[NodeDeletionCost]
+	if len(costAnnotation) == 0 {
+		return 0
+	}
+	cost, err := strconv.ParseFloat(costAnnotation, 64)
+	if err != nil {
+		return 0
+	}
+	return cost
 }

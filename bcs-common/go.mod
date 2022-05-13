@@ -14,7 +14,6 @@ replace (
 
 require (
 	github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/kubernetes/common v0.0.0-20220330120237-0bbed74dcf6d
-	github.com/Tencent/bk-bcs/bcs-runtime/bcs-mesos/kubebkbcsv2 v0.0.0-20220330120237-0bbed74dcf6d
 	github.com/TencentBlueKing/iam-go-sdk v0.0.8
 	github.com/asim/go-micro/plugins/broker/rabbitmq/v3 v3.7.0
 	github.com/asim/go-micro/plugins/broker/stan/v3 v3.7.0

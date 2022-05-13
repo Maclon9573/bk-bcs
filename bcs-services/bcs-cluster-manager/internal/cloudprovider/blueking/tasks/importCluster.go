@@ -18,8 +18,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/Tencent/bk-bcs/bcs-common/common/modules"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/types"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -29,6 +27,7 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/blueking/api"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/clusterops"
 	icommon "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/common"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/types"
 
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -84,9 +83,9 @@ func ImportClusterNodesTask(taskID string, stepName string) error {
 		return retErr
 	}
 
-	// update cluster status
-	cloudprovider.UpdateClusterStatus(clusterID, icommon.StatusRunning)
-	// import cluster clustercreential
+	// update cluster info
+	cloudprovider.GetStorageModel().UpdateCluster(context.Background(), basicInfo.Cluster)
+	// import cluster clusterCredential
 	err = importClusterCredential(basicInfo)
 	if err != nil {
 		blog.Errorf("ImportClusterNodesTask[%s]: importClusterCredential failed: %v", taskID, err)
@@ -112,38 +111,7 @@ func importClusterCredential(data *cloudprovider.CloudDependBasicInfo) error {
 	if err != nil {
 		return err
 	}
-
-	// first import cluster need to auto generate clusterCredential info, subsequently kube-agent report to update
-	// currently, bcs only support token auth, kubeConfigList length greater 0, get zeroth kubeConfig
-	var (
-		server = ""
-		caCertData = ""
-		token = ""
-	)
-	if len(config.Clusters) > 0 {
-		server = config.Clusters[0].Cluster.Server
-		caCertData = string(config.Clusters[0].Cluster.CertificateAuthorityData)
-	}
-	if len(config.AuthInfos) > 0 {
-		token = config.AuthInfos[0].AuthInfo.Token
-	}
-
-	if server == "" || caCertData == "" || token == "" {
-		return fmt.Errorf("importClusterCredential parse kubeConfig failed: %v", "[server|caCertData|token] null")
-	}
-
-	now := time.Now().Format(time.RFC3339)
-	err = cloudprovider.GetStorageModel().PutClusterCredential(context.Background(), &proto.ClusterCredential{
-		ServerKey:            data.Cluster.ClusterID,
-		ClusterID:            data.Cluster.ClusterID,
-		ClientModule:         modules.BCSModuleKubeagent,
-		ServerAddress:        server,
-		CaCertData:           caCertData,
-		UserToken:            token,
-		ConnectMode:          modules.BCSConnectModeDirect,
-		CreateTime:           now,
-		UpdateTime:           now,
-	})
+	err = cloudprovider.UpdateClusterCredentialByConfig(data.Cluster.ClusterID, config)
 	if err != nil {
 		return err
 	}
@@ -157,7 +125,7 @@ func importClusterInstances(data *cloudprovider.CloudDependBasicInfo) error {
 		return err
 	}
 
-	// import cluster
+	// import cluster and update cluster status
 	masterNodes := make(map[string]*proto.Node)
 	nodes, err := transInstanceIPToNodes(masterIPs, &cloudprovider.ListNodesOption{
 		Common: data.CmOption,
@@ -170,6 +138,7 @@ func importClusterInstances(data *cloudprovider.CloudDependBasicInfo) error {
 		masterNodes[node.InnerIP] = node
 	}
 	data.Cluster.Master = masterNodes
+	data.Cluster.Status = icommon.StatusRunning
 
 	err = importClusterNodesToCM(context.Background(), nodeIPs, &cloudprovider.ListNodesOption{
 		Common:       data.CmOption,
@@ -203,7 +172,7 @@ func importClusterNodesToCM(ctx context.Context, ipList []string, opt *cloudprov
 		if node == nil {
 			n.ClusterID = opt.ClusterID
 			n.Status = icommon.StatusRunning
-			err := cloudprovider.GetStorageModel().CreateNode(ctx, n)
+			err = cloudprovider.GetStorageModel().CreateNode(ctx, n)
 			if err != nil {
 				blog.Errorf("importClusterNodes CreateNode[%s] failed: %v", n.InnerIP, err)
 			}
