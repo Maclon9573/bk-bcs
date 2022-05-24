@@ -44,21 +44,13 @@
                                                 </bkbcs-input>
                                             </td>
                                             <td>
-                                                <bk-selector
-                                                    :placeholder="$t('选择一个证书')"
+                                                <bkbcs-input
+                                                    type="text"
+                                                    :placeholder="$t('请输入证书')"
                                                     style="width: 350px;"
-                                                    :setting-key="'certId'"
-                                                    :display-key="'certName'"
-                                                    :selected.sync="computer.certId"
-                                                    :list="certList"
-                                                    allow-clear
-                                                    @item-selected="handlerSelectCert(computer, ...arguments)"
+                                                    :value.sync="computer.secretName"
                                                 >
-                                                    <div class="bk-selector-create-item" slot="newItem" @click="goCertList" v-if="certListUrl">
-                                                        <i class="bcs-icon bcs-icon-apps"></i>
-                                                        <i class="text">{{$t('证书列表')}}</i>
-                                                    </div>
-                                                </bk-selector>
+                                                </bkbcs-input>
                                             </td>
                                             <td>
                                                 <bk-button class="action-btn ml5" @click.stop.prevent="addTls">
@@ -103,8 +95,8 @@
                         </bk-button>
                         <span class="bcs-icon bcs-icon-close-circle" @click.stop="removeRule(index)" v-if="curIngress.config.spec.rules.length > 1"></span>
                     </div>
-                    <bcs-popover ref="containerTooltip" :content="curIngress.config.spec.rules.length >= 5 ? $t('最多添加5个') : $t('添加Rule')" placement="top">
-                        <bk-button type="button" class="bk-button bk-default is-outline is-icon" :disabled="curIngress.config.spec.rules.length >= 5 " @click.stop.prevent="addLocalRule">
+                    <bcs-popover ref="containerTooltip" :content="$t('添加Rule')" placement="top">
+                        <bk-button type="button" class="bk-button bk-default is-outline is-icon" @click.stop.prevent="addLocalRule">
                             <i class="bcs-icon bcs-icon-plus"></i>
                         </bk-button>
                     </bcs-popover>
@@ -245,12 +237,6 @@
                 })
                 return list
             },
-            certListUrl () {
-                return this.$store.state.k8sTemplate.certListUrl
-            },
-            certList () {
-                return this.$store.state.k8sTemplate.certList
-            },
             curLabelList () {
                 const list = []
                 // 如果有缓存直接使用
@@ -303,15 +289,10 @@
             handlerSelectCert (computer, index, data) {
                 computer.certType = data.certType
             },
-            goCertList () {
-                if (this.certListUrl) {
-                    window.open(this.certListUrl)
-                }
-            },
             addTls () {
                 this.curIngress.config.spec.tls.push({
                     hosts: '',
-                    certId: ''
+                    secretName: ''
                 })
             },
             removeTls (index, curTls) {

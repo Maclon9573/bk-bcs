@@ -16,39 +16,99 @@ package cloudprovider
 import (
 	"context"
 	"fmt"
-	"math/rand"
 	"time"
 
+	"github.com/Tencent/bk-bcs/bcs-common/common/modules"
 	proto "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/api/clustermanager"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/actions"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/types"
 )
 
-const (
+var (
 	// BKSOPTask bk-sops common job
 	BKSOPTask = "bksopsjob"
+	// TaskID inject taskID into ctx
+	TaskID = "taskID"
 )
 
-// GetCredential get specified credential information according Project configuration, if Project conf is nil, try Cloud.
-// @return CommonOption: option can be nil if no credential conf in project and cloud or when cloudprovider don't support authentication
-func GetCredential(project *proto.Project, cloud *proto.Cloud) (*CommonOption, error) {
-	if project == nil {
-		return nil, fmt.Errorf("lost Project information")
+// GetTaskIDFromContext
+func GetTaskIDFromContext(ctx context.Context) string {
+	if id, ok := ctx.Value(TaskID).(string); ok {
+		return id
 	}
-	if cloud == nil {
-		return nil, fmt.Errorf("lost cloud information")
+
+	return ""
+}
+
+// WithTaskIDForContext will return a new context wrapped taskID flag around the original ctx
+func WithTaskIDForContext(ctx context.Context, taskID string) context.Context {
+	return context.WithValue(ctx, TaskID, taskID)
+}
+
+// CredentialData dependency data
+type CredentialData struct {
+	// Cloud cloud
+	Cloud *proto.Cloud
+	// Cluster cluster
+	AccountID string
+}
+
+// GetCredential get specified credential information according Cloud configuration, if Cloud conf is nil, try Cluster Account.
+// @return CommonOption: option can be nil if no credential conf in cloud or cluster account or when cloudprovider don't support authentication
+// GetCredential get cloud credential by cloud or cluster
+func GetCredential(data *CredentialData) (*CommonOption, error) {
+	if data.Cloud == nil && data.AccountID == "" {
+		return nil, fmt.Errorf("lost cloud/account information")
 	}
+
 	option := &CommonOption{}
-	if len(project.Credentials) != 0 {
-		if cred, ok := project.Credentials[cloud.CloudID]; ok {
-			option.Key = cred.Key
-			option.Secret = cred.Secret
+	// get credential from cloud
+	if data.Cloud.CloudCredential != nil {
+		option.Key = data.Cloud.CloudCredential.Key
+		option.Secret = data.Cloud.CloudCredential.Secret
+	}
+
+	// if credential not exist cloud, get from cluster account
+	if len(option.Key) == 0 && data.AccountID != "" {
+		// try to get credential in cluster
+		account, err := GetStorageModel().GetCloudAccount(context.Background(), data.Cloud.CloudID, data.AccountID)
+		if err != nil {
+			return nil, fmt.Errorf("GetCloudAccount failed: %v", err)
 		}
+		option.Key = account.Account.SecretID
+		option.Secret = account.Account.SecretKey
 	}
-	if len(option.Key) == 0 && cloud.CloudCredential != nil {
-		// try to get credential in cloud
-		option.Key = cloud.CloudCredential.Key
-		option.Secret = cloud.CloudCredential.Secret
+
+	// set cloud basic confInfo
+	option.CommonConf = CloudConf{
+		CloudInternalEnable: data.Cloud.ConfInfo.CloudInternalEnable,
+		CloudDomain:         data.Cloud.ConfInfo.CloudDomain,
+		MachineDomain:       data.Cloud.ConfInfo.MachineDomain,
 	}
+
+	// check cloud credential info
+	err := checkCloudCredentialValidate(data.Cloud, option)
+	if err != nil {
+		return nil, fmt.Errorf("checkCloudCredentialValidate %s failed: %v", data.Cloud.CloudProvider, err)
+	}
+
 	return option, nil
+}
+
+func checkCloudCredentialValidate(cloud *proto.Cloud, option *CommonOption) error {
+	validate, err := GetCloudValidateMgr(cloud.CloudProvider)
+	if err != nil {
+		return err
+	}
+	err = validate.ImportCloudAccountValidate(&proto.Account{
+		SecretID:  option.Key,
+		SecretKey: option.Secret,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GetCredentialByCloudID get credentialInfo by cloudID
@@ -65,68 +125,6 @@ func GetCredentialByCloudID(cloudID string) (*CommonOption, error) {
 	return option, nil
 }
 
-const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-const (
-	letterIdxBits = 6                    // 6 bits to represent a letter index
-	letterIdxMask = 1<<letterIdxBits - 1 // All 1-bits, as many as letterIdxBits
-	letterIdxMax  = 63 / letterIdxBits   // # of letter indices fitting in 63 bits
-)
-
-var src = rand.NewSource(time.Now().UnixNano())
-
-// RandomString get n length random string.
-// implementation comes from
-// https://stackoverflow.com/questions/22892120/how-to-generate-a-random-string-of-a-fixed-length-in-go .
-func RandomString(n int) string {
-	b := make([]byte, n)
-	for i, cache, remain := n-1, src.Int63(), letterIdxMax; i >= 0; {
-		if remain == 0 {
-			cache, remain = src.Int63(), letterIdxMax
-		}
-		if idx := int(cache & letterIdxMask); idx < len(letters) {
-			b[i] = letters[idx]
-			i--
-		}
-		cache >>= letterIdxBits
-		remain--
-	}
-	return string(b)
-}
-
-var (
-	nums        = "0123456789"
-	lower       = "abcdefghijklmnopqrstuvwxyz"
-	upper       = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-	specialChar = "@#+_-[]{}"
-)
-
-func getLenRandomString(str string, length int) string {
-	bytes := []byte(str)
-
-	result := []byte{}
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-	for i := 0; i < length; i++ {
-		result = append(result, bytes[r.Intn(len(str))])
-	}
-	return string(result)
-}
-
-// BuildInstancePwd build instance init passwd
-func BuildInstancePwd() string {
-	randomStr := []string{lower, upper, nums, specialChar}
-
-	totalRandomList := ""
-	for i := range randomStr {
-		totalRandomList += getLenRandomString(randomStr[i], 3)
-	}
-
-	byteRandom := []byte(totalRandomList)
-	rand.Seed(time.Now().Unix())
-	rand.Shuffle(len(byteRandom), func(i, j int) { byteRandom[i], byteRandom[j] = byteRandom[j], byteRandom[i] })
-
-	return "Bcs#" + string(byteRandom)
-}
-
 // TaskType taskType
 type TaskType string
 
@@ -138,6 +136,8 @@ func (tt TaskType) String() string {
 var (
 	// CreateCluster task
 	CreateCluster TaskType = "CreateCluster"
+	// ImportCluster task
+	ImportCluster TaskType = "ImportCluster"
 	// DeleteCluster task
 	DeleteCluster TaskType = "DeleteCluster"
 	// AddNodesToCluster task
@@ -149,4 +149,110 @@ var (
 // GetTaskType getTaskType by cloud
 func GetTaskType(cloud string, taskName TaskType) string {
 	return fmt.Sprintf("%s-%s", cloud, taskName.String())
+}
+
+// CloudDependBasicInfo cloud depend cluster info
+type CloudDependBasicInfo struct {
+	// Cluster info
+	Cluster *proto.Cluster
+	// Cloud info
+	Cloud *proto.Cloud
+	// CmOption option
+	CmOption *CommonOption
+}
+
+// GetClusterDependBasicInfo get cluster and cloud depend info
+func GetClusterDependBasicInfo(clusterID string, cloudID string) (*CloudDependBasicInfo, error) {
+	cluster, err := GetStorageModel().GetCluster(context.Background(), clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	cloud, err := actions.GetCloudByCloudID(GetStorageModel(), cloudID)
+	if err != nil {
+		return nil, err
+	}
+
+	cmOption, err := GetCredential(&CredentialData{
+		Cloud:     cloud,
+		AccountID: cluster.CloudAccountID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	cmOption.Region = cluster.Region
+
+	return &CloudDependBasicInfo{cluster, cloud, cmOption}, nil
+}
+
+// UpdateClusterStatus set cluster status
+func UpdateClusterStatus(clusterID string, status string) error {
+	cluster, err := GetStorageModel().GetCluster(context.Background(), clusterID)
+	if err != nil {
+		return err
+	}
+
+	cluster.Status = status
+	err = GetStorageModel().UpdateCluster(context.Background(), cluster)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateClusterStatus set cluster status
+func UpdateCluster(cluster *proto.Cluster) error {
+	err := GetStorageModel().UpdateCluster(context.Background(), cluster)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdateClusterCredentialByConfig update clusterCredential by kubeConfig
+func UpdateClusterCredentialByConfig(clusterID string, config *types.Config) error {
+	// first import cluster need to auto generate clusterCredential info, subsequently kube-agent report to update
+	// currently, bcs only support token auth, kubeConfigList length greater 0, get zeroth kubeConfig
+	var (
+		server     = ""
+		caCertData = ""
+		token      = ""
+		clientCert = ""
+		clientKey  = ""
+	)
+	if len(config.Clusters) > 0 {
+		server = config.Clusters[0].Cluster.Server
+		caCertData = string(config.Clusters[0].Cluster.CertificateAuthorityData)
+	}
+	if len(config.AuthInfos) > 0 {
+		token = config.AuthInfos[0].AuthInfo.Token
+		clientCert = string(config.AuthInfos[0].AuthInfo.ClientCertificateData)
+		clientKey = string(config.AuthInfos[0].AuthInfo.ClientKeyData)
+	}
+
+	if server == "" || caCertData == "" || (token == "" && (clientCert == "" || clientKey == "")) {
+		return fmt.Errorf("importClusterCredential parse kubeConfig failed: %v", "[server|caCertData|token] null")
+	}
+
+	now := time.Now().Format(time.RFC3339)
+	err := GetStorageModel().PutClusterCredential(context.Background(), &proto.ClusterCredential{
+		ServerKey:     clusterID,
+		ClusterID:     clusterID,
+		ClientModule:  modules.BCSModuleKubeagent,
+		ServerAddress: server,
+		CaCertData:    caCertData,
+		UserToken:     token,
+		ConnectMode:   modules.BCSConnectModeDirect,
+		CreateTime:    now,
+		UpdateTime:    now,
+		ClientKey:     clientKey,
+		ClientCert:    clientCert,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

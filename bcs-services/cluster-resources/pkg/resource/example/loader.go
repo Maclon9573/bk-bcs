@@ -23,7 +23,8 @@ import (
 
 	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/common/envs"
 	res "github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/resource"
-	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util/mapx"
+	"github.com/Tencent/bk-bcs/bcs-services/cluster-resources/pkg/util/stringx"
 )
 
 var (
@@ -74,7 +75,7 @@ func LoadResRefs(kind string) (string, error) {
 }
 
 // LoadDemoManifest 加载指定资源类型的 Demo 配置信息
-func LoadDemoManifest(path string) (map[string]interface{}, error) {
+func LoadDemoManifest(path, namespace string) (map[string]interface{}, error) {
 	filepath := fmt.Sprintf("%s/%s.yaml", ResDemoManifestDIR, path)
 	manifest := map[string]interface{}{}
 
@@ -88,8 +89,15 @@ func LoadDemoManifest(path string) (map[string]interface{}, error) {
 	}
 
 	// 避免名称重复，每次默认添加随机后缀
-	randSuffix := util.GenRandStr(RandomSuffixLength, SuffixCharset)
-	rawName := util.GetWithDefault(manifest, "metadata.name", "")
-	err = util.SetItems(manifest, "metadata.name", fmt.Sprintf("%s-%s", rawName, randSuffix))
+	randSuffix := stringx.Rand(RandomSuffixLength, SuffixCharset)
+	rawName := mapx.Get(manifest, "metadata.name", "")
+	if err = mapx.SetItems(manifest, "metadata.name", fmt.Sprintf("%s-%s", rawName, randSuffix)); err != nil {
+		return manifest, err
+	}
+
+	// 若指定命名空间，且原示例配置中有命名空间的，则覆盖命名空间
+	if _, err = mapx.GetItems(manifest, "metadata.namespace"); err == nil && namespace != "" {
+		_ = mapx.SetItems(manifest, "metadata.namespace", namespace)
+	}
 	return manifest, err
 }

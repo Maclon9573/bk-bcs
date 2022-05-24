@@ -20,14 +20,18 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/store"
 )
 
-var clusterMgrs map[string]ClusterManager
-var nodeGroupMgrs map[string]NodeGroupManager
-var nodeMgrs map[string]NodeManager
-var taskMgrs map[string]TaskManager
-var storage store.ClusterManagerModel
+var (
+	lock sync.RWMutex
+	once sync.Once
 
-var lock sync.RWMutex
-var once sync.Once
+	clusterMgrs       map[string]ClusterManager
+	cloudInfoMgrs     map[string]CloudInfoManager
+	cloudValidateMgrs map[string]CloudValidateManager
+	nodeGroupMgrs     map[string]NodeGroupManager
+	nodeMgrs          map[string]NodeManager
+	taskMgrs          map[string]TaskManager
+	storage           store.ClusterManagerModel
+)
 
 func init() {
 	once.Do(func() {
@@ -35,6 +39,9 @@ func init() {
 		nodeGroupMgrs = make(map[string]NodeGroupManager)
 		nodeMgrs = make(map[string]NodeManager)
 		taskMgrs = make(map[string]TaskManager)
+
+		cloudInfoMgrs = make(map[string]CloudInfoManager)
+		cloudValidateMgrs = make(map[string]CloudValidateManager)
 	})
 }
 
@@ -100,6 +107,20 @@ func InitNodeManager(provider string, nodeMgr NodeManager) {
 	nodeMgrs[provider] = nodeMgr
 }
 
+// InitCloudInfoManager for cloudInfo manager initialization
+func InitCloudInfoManager(provider string, cloudInfoMgr CloudInfoManager) {
+	lock.Lock()
+	defer lock.Unlock()
+	cloudInfoMgrs[provider] = cloudInfoMgr
+}
+
+// InitCloudValidateManager for cloud validate manager check
+func InitCloudValidateManager(provider string, cloudValidateMgr CloudValidateManager) {
+	lock.Lock()
+	defer lock.Unlock()
+	cloudValidateMgrs[provider] = cloudValidateMgr
+}
+
 // GetClusterMgr get cluster manager implementation according cloud provider
 func GetClusterMgr(provider string) (ClusterManager, error) {
 	lock.RLock()
@@ -133,18 +154,36 @@ func GetNodeMgr(provider string) (NodeManager, error) {
 	return nodeMgr, nil
 }
 
+// GetCloudInfoMgr get cloudInfo according cloud provider
+func GetCloudInfoMgr(provider string) (CloudInfoManager, error) {
+	lock.RLock()
+	defer lock.RUnlock()
+	cloudInfo, ok := cloudInfoMgrs[provider]
+	if !ok {
+		return nil, ErrCloudNoProvider
+	}
+	return cloudInfo, nil
+}
+
+// GetCloudValidateMgr get cloudValidate according cloud provider
+func GetCloudValidateMgr(provider string) (CloudValidateManager, error) {
+	lock.RLock()
+	defer lock.RUnlock()
+
+	cloudValidate, ok := cloudValidateMgrs[provider]
+	if !ok {
+		return nil, ErrCloudNoProvider
+	}
+
+	return cloudValidate, nil
+}
+
 // CloudInfoManager cloud interface for basic config info(region or no region)
 type CloudInfoManager interface {
-	// GetRegionsInfo get regions info by cloud(no region)
-	GetRegionsInfo(opt *CommonOption) (map[string]string, error)
-	// GetRegionZonesInfo get zones info by region
-	GetRegionZonesInfo(opt *CommonOption) ([]*proto.ZoneInfo, error)
-	// GetClusterK8sVersionInfo get k8s version info
-	GetClusterK8sVersionInfo(opt *CommonOption) ([]string, error)
-	// GetClusterImages get cluster images by region
-	GetClusterImages(opt *CommonOption) ([]*proto.ImageInfo, error)
-	// GetImageIDByImageName get image by image name
-	GetImageIDByImageName(name string, opt *CommonOption) (string, error)
+	// InitCloudClusterDefaultInfo init cloud cluster default configInfo
+	InitCloudClusterDefaultInfo(cls *proto.Cluster, opt *InitClusterConfigOption) error
+	// SyncClusterCloudInfo sync cluster metadata
+	SyncClusterCloudInfo(cls *proto.Cluster, opt *SyncClusterCloudInfoOption)  error
 }
 
 // NodeManager cloud interface for cvm management
@@ -153,18 +192,34 @@ type NodeManager interface {
 	GetNodeByIP(ip string, opt *GetNodeOption) (*proto.Node, error)
 	// ListNodesByIP list node by IP set
 	ListNodesByIP(ips []string, opt *ListNodesOption) ([]*proto.Node, error)
-	// GetCVMImageIDByImageName
+	// GetCVMImageIDByImageName get imageID by imageName
 	GetCVMImageIDByImageName(imageName string, opt *CommonOption) (string, error)
+	// GetCloudRegions get cloud regions
+	GetCloudRegions(opt *CommonOption) ([]*proto.RegionInfo, error)
+	// GetZoneList get zoneList by region
+	GetZoneList(opt *CommonOption) ([]*proto.ZoneInfo, error)
+}
+
+// CloudValidateManager validate interface for check cloud resourceInfo
+type CloudValidateManager interface {
+	// ImportClusterValidate import cluster validate
+	ImportClusterValidate(req *proto.ImportClusterReq, opt *CommonOption) error
+	// ImportCloudAccountValidate import cloud account validate
+	ImportCloudAccountValidate(req *proto.Account) error
 }
 
 // ClusterManager cloud interface for kubernetes cluster management
 type ClusterManager interface {
 	// CreateCluster create kubernetes cluster according cloudprovider
 	CreateCluster(cls *proto.Cluster, opt *CreateClusterOption) (*proto.Task, error)
+	// ImportCluster import different cluster by provider
+	ImportCluster(cls *proto.Cluster, opt *ImportClusterOption) (*proto.Task, error)
 	// DeleteCluster delete kubernetes cluster according cloudprovider
 	DeleteCluster(cls *proto.Cluster, opt *DeleteClusterOption) (*proto.Task, error)
 	// GetCluster get kubernetes cluster detail information according cloudprovider
 	GetCluster(cloudID string, opt *GetClusterOption) (*proto.Cluster, error)
+	// ListCluster get cloud cluster list by region
+	ListCluster(opt *ListClusterOption) ([]*proto.CloudClusterInfo, error)
 	// CheckClusterCidrAvailable check cluster cidr if meet to add nodes
 	CheckClusterCidrAvailable(cls *proto.Cluster, opt *CheckClusterCIDROption) (bool, error)
 	// GetNodesInCluster get all nodes belong to cluster according cloudprovider
@@ -229,6 +284,8 @@ type TaskManager interface {
 
 	// ClusterManager taskList
 
+	// BuildCreateClusterTask create cluster by different cloud provider
+	BuildImportClusterTask(cls *proto.Cluster, opt *ImportClusterOption) (*proto.Task, error)
 	// BuildCreateClusterTask create cluster by different cloud provider
 	BuildCreateClusterTask(cls *proto.Cluster, opt *CreateClusterOption) (*proto.Task, error)
 	// BuildDeleteClusterTask delete cluster by different cloud provider

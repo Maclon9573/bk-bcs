@@ -12,7 +12,7 @@ const publicImage = window.i18n.t('公共镜像')
 const projectImage = window.i18n.t('项目镜像')
 const operateAudit = window.i18n.t('操作审计')
 const eventQuery = window.i18n.t('事件查询')
-const monitor = window.i18n.t('监控中心')
+const monitor = window.i18n.t('容器监控')
 const release = window.i18n.t('Release列表')
 const chart = window.i18n.t('Chart仓库')
 const crdcontroller = window.i18n.t('组件库')
@@ -22,6 +22,7 @@ const overview = window.i18n.t('概览')
 const workload = window.i18n.t('工作负载')
 const dashboardNamespace = window.i18n.t('命名空间')
 const customResource = window.i18n.t('自定义资源')
+const cloudToken = window.i18n.t('云凭证管理')
 
 export interface IMenuItem {
     name: string; // 菜单中文名称
@@ -303,17 +304,17 @@ const menu: IMenu = {
             icon: 'bcs-icon-wl-network',
             children: [
                 {
-                    name: 'Service',
+                    name: 'Services',
                     routeName: 'service',
                     id: 'service'
                 },
                 {
-                    name: 'Ingress',
+                    name: 'Ingresses',
                     routeName: 'resourceIngress',
                     id: 'resourceIngress'
                 },
                 {
-                    name: 'LoadBalancer',
+                    name: 'LoadBalancers',
                     routeName: 'loadBalance',
                     id: 'loadBalance'
                 }
@@ -408,6 +409,19 @@ const menu: IMenu = {
             icon: 'bcs-icon-event-query',
             id: 'EVENT',
             routeName: 'eventQuery'
+        },
+        { type: 'line' },
+        {
+            name: cloudToken,
+            icon: 'bcs-icon-yunpingzhengguanli',
+            children: [
+                {
+                    name: 'Tencent Cloud',
+                    routeName: 'tencentCloud',
+                    id: 'tencentCloud'
+                }
+            ],
+            id: 'CLOUDTOKEN'
         },
         { type: 'line' },
         {

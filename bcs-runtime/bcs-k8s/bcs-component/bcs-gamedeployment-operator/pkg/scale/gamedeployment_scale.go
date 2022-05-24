@@ -45,7 +45,7 @@ const (
 	initialBatchSize = 1
 
 	// PodDeletionCost is the cost of pod's deletion
-	PodDeletionCost = "io.tencent.bcs.dev/pod-deletion-cost"
+	PodDeletionCost = "controller.kubernetes.io/pod-deletion-cost"
 	// NodeDeletionCost is the cost of node's deletion
 	NodeDeletionCost = "io.tencent.bcs.dev/node-deletion-cost"
 
@@ -213,12 +213,12 @@ func (r *realControl) createOnePod(deploy *gdv1alpha1.GameDeployment, pod *v1.Po
 	startTime := time.Now()
 	if _, err := r.kubeClient.CoreV1().Pods(deploy.Namespace).Create(context.TODO(), pod, metav1.CreateOptions{}); err != nil {
 		r.recorder.Eventf(deploy, v1.EventTypeWarning, "FailedCreate", "failed to create pod: %v, pod: %v", err, util.DumpJSON(pod))
-		r.metrics.CollectPodCreateDurations(util.GetControllerKey(deploy), "failure", time.Since(startTime))
+		r.metrics.CollectPodCreateDurations(util.GetControllerKey(deploy), gdmetrics.FailureStatus, time.Since(startTime))
 		return err
 	}
 
 	r.recorder.Eventf(deploy, v1.EventTypeNormal, "SuccessfulCreate", "succeed to create pod %s", pod.Name)
-	r.metrics.CollectPodCreateDurations(util.GetControllerKey(deploy), "success", time.Since(startTime))
+	r.metrics.CollectPodCreateDurations(util.GetControllerKey(deploy), gdmetrics.SuccessStatus, time.Since(startTime))
 	return nil
 }
 
@@ -248,12 +248,14 @@ func (r *realControl) deletePods(deploy *gdv1alpha1.GameDeployment, podsToDelete
 			pod.Name, metav1.DeleteOptions{}); err != nil {
 			r.exp.ObserveScale(util.GetControllerKey(deploy), expectations.Delete, pod.Name)
 			r.recorder.Eventf(deploy, v1.EventTypeWarning, "FailedDelete", "failed to delete pod %s: %v", pod.Name, err)
-			r.metrics.CollectPodDeleteDurations(util.GetControllerKey(deploy), "failure", time.Since(startTime))
+			r.metrics.CollectPodDeleteDurations(util.GetControllerKey(deploy), gdmetrics.FailureStatus,
+				gdmetrics.DeletePodAction, gdmetrics.IsGrace, time.Since(startTime))
 			return deleted, err
 		}
 		deleted = true
 		r.recorder.Event(deploy, v1.EventTypeNormal, "SuccessfulDelete", fmt.Sprintf("succeed to delete pod %s", pod.Name))
-		r.metrics.CollectPodDeleteDurations(util.GetControllerKey(deploy), "success", time.Since(startTime))
+		r.metrics.CollectPodDeleteDurations(util.GetControllerKey(deploy), gdmetrics.SuccessStatus,
+			gdmetrics.DeletePodAction, gdmetrics.IsGrace, time.Since(startTime))
 	}
 
 	return deleted, nil

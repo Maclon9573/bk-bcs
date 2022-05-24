@@ -49,6 +49,9 @@ func GetCVMClient(opt *cloudprovider.CommonOption) (*cvm.Client, error) {
 	credential := common.NewCredential(opt.Key, opt.Secret)
 
 	cpf := profile.NewClientProfile()
+	if opt.CommonConf.CloudInternalEnable {
+		cpf.HttpProfile.Endpoint = opt.CommonConf.MachineDomain
+	}
 
 	return cvm.NewClient(credential, opt.Region, cpf)
 }
@@ -101,7 +104,7 @@ func (nm *NodeManager) GetZoneList(opt *cloudprovider.CommonOption) ([]*proto.Zo
 }
 
 // GetRegionsInfo get regionInfo
-func (nm *NodeManager) GetRegionsInfo(opt *cloudprovider.CommonOption) ([]*proto.RegionInfo, error) {
+func (nm *NodeManager) GetCloudRegions(opt *cloudprovider.CommonOption) ([]*proto.RegionInfo, error) {
 	client, err := GetCVMClient(opt)
 	if err != nil {
 		blog.Errorf("create CVM client when GetRegionsInfo failed: %v", err)

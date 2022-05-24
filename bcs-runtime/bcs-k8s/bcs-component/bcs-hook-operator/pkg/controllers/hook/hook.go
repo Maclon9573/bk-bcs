@@ -20,6 +20,8 @@ import (
 	"strings"
 	"time"
 
+	common "github.com/Tencent/bk-bcs/bcs-common/common/version"
+	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-hook-operator/pkg/metrics"
 	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-hook-operator/pkg/providers"
 	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-hook-operator/pkg/util/constants"
 	hooksutil "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-hook-operator/pkg/util/hook"
@@ -54,7 +56,7 @@ type HookController struct {
 	newProvider func(metric v1alpha1.Metric) (providers.Provider, error)
 	queue       workqueue.RateLimitingInterface
 	// metrics used to collect prom metrics
-	metrics  *metrics
+	metrics  *metrics.Metrics
 	recorder record.EventRecorder
 	hostIP   string
 }
@@ -76,7 +78,7 @@ func NewHookController(
 		hookRunSynced:      hookRunInformer.Informer().HasSynced,
 		recorder:           recorder,
 		queue:              workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), constants.HookRunController),
-		metrics:            newMetrics(),
+		metrics:            metrics.NewMetrics(),
 		hostIP:             os.Getenv("HOST_IP"),
 	}
 
@@ -107,7 +109,8 @@ func (hc *HookController) Run(workers int, stopCh <-chan struct{}) error {
 	}
 
 	imageVersion, hookrunVersion, hooktemplateVersion := hc.getVersion()
-	hc.metrics.collectOperatorVersion(imageVersion, hookrunVersion, hooktemplateVersion)
+	hc.metrics.CollectOperatorVersion(imageVersion, hookrunVersion, hooktemplateVersion,
+		common.BcsVersion, common.BcsGitHash, common.BcsBuildTime)
 
 	for i := 0; i < workers; i++ {
 		go wait.Until(hc.worker, time.Second, stopCh)
@@ -176,12 +179,12 @@ func (hc *HookController) sync(key string) (retErr error) {
 		if retErr == nil {
 			klog.V(3).Infof("Finished syncing HookRun %s, cost time: (%v)", key, duration)
 			if needReconcile {
-				hc.metrics.collectReconcileDuration(namespace, ownerRef, "success", duration)
+				hc.metrics.CollectReconcileDuration(namespace, ownerRef, "success", duration)
 			}
 		} else {
 			klog.Errorf("Failed syncing HookRun %s, err: %v", key, retErr)
 			if needReconcile {
-				hc.metrics.collectReconcileDuration(namespace, ownerRef, "failure", duration)
+				hc.metrics.CollectReconcileDuration(namespace, ownerRef, "failure", duration)
 			}
 		}
 	}()
@@ -222,7 +225,7 @@ func (hc *HookController) sync(key string) (retErr error) {
 
 	updatedRun := hc.reconcileHookRun(run)
 	if updatedRun.Status.StartedAt != nil {
-		hc.metrics.collectHookrunSurviveTime(namespace, ownerRef, run.Name, string(updatedRun.Status.Phase),
+		hc.metrics.CollectHookrunSurviveTime(namespace, ownerRef, run.Name, string(updatedRun.Status.Phase),
 			time.Since(updatedRun.Status.StartedAt.Time))
 	}
 
@@ -246,7 +249,6 @@ func (hc *HookController) getVersion() (imageVersion, hookrunVersion, hooktempla
 	if err != nil {
 		klog.Errorf("Failed to get v1 CRD: hookruns.tkex.tencent.com, error: %s", err.Error())
 	} else {
-		klog.Infof("hookrun crd: %v", v1hookrun)
 		hookrunVersion = "v1-" + v1hookrun.GetAnnotations()["version"]
 	}
 	v1beta1hookrun, err := hc.apiextensionClient.ApiextensionsV1beta1().CustomResourceDefinitions().Get(
@@ -254,7 +256,6 @@ func (hc *HookController) getVersion() (imageVersion, hookrunVersion, hooktempla
 	if err != nil {
 		klog.Errorf("Failed to get V1beta1 CRD: hookruns.tkex.tencent.com, error: %s", err.Error())
 	} else if hookrunVersion == "" {
-		klog.Infof("hookrun crd: %v", v1beta1hookrun)
 		hookrunVersion = "v1beta1-" + v1beta1hookrun.GetAnnotations()["version"]
 	}
 

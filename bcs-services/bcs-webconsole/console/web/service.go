@@ -16,8 +16,11 @@ package web
 import (
 	"fmt"
 	"net/http"
-	"path/filepath"
+	"net/url"
+	"path"
 
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/metrics"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/console/podmanager"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-webconsole/route"
 
 	"github.com/gin-gonic/gin"
@@ -32,25 +35,120 @@ func NewRouteRegistrar(opts *route.Options) route.Registrar {
 }
 
 func (s service) RegisterRoute(router gin.IRoutes) {
-	router.Use(route.AuthRequired()).
-		GET("/projects/:projectId/clusters/:clusterId/", s.IndexPageHandler)
+	web := router.Use(route.WebAuthRequired())
+
+	// 跳转 URL
+	web.GET("/user/login/", metrics.RequestCollect("UserLoginRedirect"), s.UserLoginRedirect)
+	web.GET("/user/perm_request/", metrics.RequestCollect("UserPermRequestRedirect"), route.APIAuthRequired(), s.UserPermRequestRedirect)
+
+	// html 页面
+	web.GET("/projects/:projectId/clusters/:clusterId/", metrics.RequestCollect("IndexPage"), s.IndexPageHandler)
+	web.GET("/projects/:projectId/mgr/", metrics.RequestCollect("MgrPage"), s.MgrPageHandler)
+	web.GET("/portal/container/", metrics.RequestCollect("ContainerGatePage"), s.ContainerGatePageHandler)
+	web.GET("/portal/cluster/", metrics.RequestCollect("ClusterGatePage"), s.ClusterGatePageHandler)
+
+	// 公共接口, 如 metrics, healthy, ready, pprof 等
+	web.GET("/-/healthy", s.HealthyHandler)
+	web.GET("/-/ready", s.ReadyHandler)
+	web.GET("/metrics", metrics.PromMetricHandler())
 }
 
 func (s *service) IndexPageHandler(c *gin.Context) {
-
 	projectId := c.Param("projectId")
 	clusterId := c.Param("clusterId")
-	sessionUrl := filepath.Join(s.opts.RoutePrefix, fmt.Sprintf("/api/projects/%s/clusters/%s/session", projectId, clusterId)) + "/"
+	consoleQuery := new(podmanager.ConsoleQuery)
+	c.BindQuery(consoleQuery)
+
+	// 登入Url
+	loginUrl := path.Join(s.opts.RoutePrefix, "/user/login") + "/"
+
+	// 权限申请Url
+	promRequestQuery := url.Values{}
+	promRequestQuery.Set("project_id", projectId)
+	promRequestQuery.Set("cluster_id", clusterId)
+	promRequestUrl := path.Join(s.opts.RoutePrefix, "/user/perm_request") + "/" + "?" + promRequestQuery.Encode()
+
+	// webconsole Url
+	sessionUrl := path.Join(s.opts.RoutePrefix, fmt.Sprintf("/api/projects/%s/clusters/%s/session", projectId, clusterId)) + "/"
+
+	encodedQuery := consoleQuery.MakeEncodedQuery()
+	if encodedQuery != "" {
+		sessionUrl = fmt.Sprintf("%s?%s", sessionUrl, encodedQuery)
+	}
+
 	settings := map[string]string{
 		"SITE_STATIC_URL":      s.opts.RoutePrefix,
 		"COMMON_EXCEPTION_MSG": "",
 	}
 
 	data := gin.H{
-		"title":       clusterId,
+		"title":            clusterId,
+		"session_url":      sessionUrl,
+		"login_url":        loginUrl,
+		"perm_request_url": promRequestUrl,
+		"settings":         settings,
+	}
+
+	c.HTML(http.StatusOK, "index.html", data)
+}
+
+func (s *service) MgrPageHandler(c *gin.Context) {
+	projectId := c.Param("projectId")
+
+	settings := map[string]string{"SITE_URL": s.opts.RoutePrefix}
+
+	// 登入Url
+	loginUrl := path.Join(s.opts.RoutePrefix, "/user/login") + "/"
+
+	// 权限申请Url
+	promRequestQuery := url.Values{}
+	promRequestQuery.Set("project_id", projectId)
+	promRequestUrl := path.Join(s.opts.RoutePrefix, "/user/perm_request") + "/" + "?" + promRequestQuery.Encode()
+
+	data := gin.H{
+		"settings":         settings,
+		"project_id":       projectId,
+		"login_url":        loginUrl,
+		"perm_request_url": promRequestUrl,
+	}
+
+	c.HTML(http.StatusOK, "mgr.html", data)
+}
+
+// ContainerGatePageHandler 开放的页面WebConsole页面
+func (s *service) ContainerGatePageHandler(c *gin.Context) {
+	sessionId := c.Query("session_id")
+	containerName := c.Query("container_name")
+
+	if containerName == "" {
+		containerName = "--"
+	}
+
+	sessionUrl := path.Join(s.opts.RoutePrefix, fmt.Sprintf("/api/portal/sessions/%s/", sessionId)) + "/"
+
+	settings := map[string]string{
+		"SITE_STATIC_URL":      s.opts.RoutePrefix,
+		"COMMON_EXCEPTION_MSG": "",
+	}
+
+	data := gin.H{
+		"title":       containerName,
 		"session_url": sessionUrl,
 		"settings":    settings,
 	}
 
 	c.HTML(http.StatusOK, "index.html", data)
+}
+
+// ClusterGatePageHandler 开放的页面WebConsole页面
+func (s *service) ClusterGatePageHandler(c *gin.Context) {
+
+}
+
+func (s *service) HealthyHandler(c *gin.Context) {
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("OK"))
+}
+
+func (s *service) ReadyHandler(c *gin.Context) {
+	c.Data(http.StatusOK, "text/plain; charset=utf-8", []byte("OK"))
 }

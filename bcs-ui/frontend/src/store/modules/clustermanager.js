@@ -23,7 +23,15 @@ import {
     addClusterNode,
     deleteClusterNode,
     clusterDetail,
-    modifyCluster
+    modifyCluster,
+    importCluster,
+    kubeConfig,
+    nodeAvailable,
+    cloudAccounts,
+    createCloudAccounts,
+    deleteCloudAccounts,
+    cloudRegionByAccount,
+    cloudClusterList
 } from '@/api/base'
 
 export default {
@@ -53,7 +61,7 @@ export default {
             const data = await deleteCluster({
                 ...params,
                 operator: ctx.rootState.user?.username
-            }).catch(() => false)
+            }).then(() => true).catch(() => false)
             return data
         },
         async retryCluster (ctx, params) {
@@ -89,7 +97,7 @@ export default {
             const data = await deleteClusterNode({
                 ...params,
                 operator: ctx.rootState.user?.username
-            }).catch(() => false)
+            }).then(() => true).catch(() => false)
             return data
         },
         async clusterDetail (ctx, params) {
@@ -98,6 +106,41 @@ export default {
         },
         async modifyCluster (ctx, params) {
             const data = await modifyCluster(params).then(() => true).catch(() => false)
+            return data
+        },
+        async importCluster (ctx, params) {
+            const data = await importCluster(params).then(() => true).catch(() => false)
+            return data
+        },
+        // 可用性测试
+        async kubeConfig (ctx, params) {
+            const data = await kubeConfig(params).then(() => true).catch(() => false)
+            return data
+        },
+        // 节点是否可用
+        async nodeAvailable (ctx, params) {
+            const data = await nodeAvailable(params).catch(() => ({}))
+            return data
+        },
+        // 云账户信息
+        async cloudAccounts (ctx, params) {
+            const data = await cloudAccounts(params).catch(() => [])
+            return data
+        },
+        async createCloudAccounts (ctx, params) {
+            const result = await createCloudAccounts(params).then(() => true).catch(() => false)
+            return result
+        },
+        async deleteCloudAccounts (ctx, params) {
+            const result = await deleteCloudAccounts(params).then(() => true).catch(() => false)
+            return result
+        },
+        async cloudRegionByAccount (ctx, params) {
+            const data = await cloudRegionByAccount(params).catch(() => [])
+            return data
+        },
+        async cloudClusterList (ctx, params) {
+            const data = await cloudClusterList(params).catch(() => [])
             return data
         }
     }

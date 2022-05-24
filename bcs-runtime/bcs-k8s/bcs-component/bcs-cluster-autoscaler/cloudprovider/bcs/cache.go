@@ -51,7 +51,8 @@ const (
 // CreationType is the type of node creation
 type CreationType string
 
-func newNodeGroupCache(getNodes GetNodes) *NodeGroupCache {
+// NewNodeGroupCache news node group cache
+func NewNodeGroupCache(getNodes GetNodes) *NodeGroupCache {
 	registry := &NodeGroupCache{
 		registeredGroups:       make([]*NodeGroup, 0),
 		instanceToGroup:        make(map[InstanceRef]*NodeGroup),
@@ -177,5 +178,23 @@ func (m *NodeGroupCache) regenerateCacheForInternal() error {
 	m.lastUpdateTime = time.Now()
 	klog.V(4).Infof("Refresh RegenerateCache set latest updateTime %s", m.lastUpdateTime.Format("2006-01-02 15:04:05"))
 
+	return nil
+}
+
+// SetNodeGroupMinSize sets minsize of the nodegroup
+func (m *NodeGroupCache) SetNodeGroupMinSize(groupID string, num int) error {
+	m.cacheMutex.Lock()
+	defer m.cacheMutex.Unlock()
+	changed := false
+	for i, ng := range m.registeredGroups {
+		if ng.nodeGroupID == groupID {
+			m.registeredGroups[i].minSize = num
+			changed = true
+			break
+		}
+	}
+	if !changed {
+		return fmt.Errorf("Cannot find the nodegroup %s in cache", groupID)
+	}
 	return nil
 }

@@ -20,6 +20,7 @@ import (
 	"strings"
 	"time"
 
+	common "github.com/Tencent/bk-bcs/bcs-common/common/version"
 	gstsv1alpha1 "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-gamestatefulset-operator/pkg/apis/tkex/v1alpha1"
 	gstsclientset "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-gamestatefulset-operator/pkg/client/clientset/versioned"
 	gstsscheme "github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-gamestatefulset-operator/pkg/client/clientset/versioned/scheme"
@@ -234,7 +235,8 @@ func (ssc *GameStatefulSetController) Run(workers int, stopCh <-chan struct{}) e
 	}
 
 	imageVersion, CRDVersion := ssc.getVersion()
-	ssc.metrics.collectOperatorVersion(imageVersion, CRDVersion)
+	ssc.metrics.collectOperatorVersion(imageVersion, CRDVersion,
+		common.BcsVersion, common.BcsGitHash, common.BcsBuildTime)
 
 	for i := 0; i < workers; i++ {
 		go wait.Until(ssc.worker, time.Second, stopCh)
@@ -558,10 +560,10 @@ func (ssc *GameStatefulSetController) sync(key string) (retErr error) {
 		reconcileDuration := time.Since(startTime)
 		if retErr == nil {
 			klog.Infof("Finished syncing GameStatefulSet %s, cost time: %v", key, reconcileDuration)
-			ssc.metrics.collectReconcileDuration(namespace, name, "success", reconcileDuration)
+			ssc.metrics.collectReconcileDuration(namespace, name, successStatus, reconcileDuration)
 		} else {
 			klog.Errorf("Failed syncing GameStatefulSet %s, err: %v", key, retErr)
-			ssc.metrics.collectReconcileDuration(namespace, name, "failure", reconcileDuration)
+			ssc.metrics.collectReconcileDuration(namespace, name, failureStatus, reconcileDuration)
 		}
 	}()
 
