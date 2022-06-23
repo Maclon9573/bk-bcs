@@ -20,18 +20,17 @@ func TestStorageCli_QueryK8SGameDeployment(t *testing.T) {
 	config := &bcsapi.Config{
 		Hosts:     []string{"xxx:xxx"},
 		TLSConfig: tlsconfig,
-		Gateway:   true,
 	}
 
 	client := bcsapi.NewClient(config)
 	s := client.Storage()
-	mesosNamespaces, err := s.QueryMesosNamespace("xxx")
+	gamedeployments, err := s.QueryK8SGameDeployment("xxx")
 	if err != nil {
 		return
 	}
-	t.Logf("mesosNamespaces : %v", mesosNamespaces)
+	t.Logf("gamedeployments : %v", gamedeployments)
 
-	for _, ns := range mesosNamespaces {
+	for _, ns := range gamedeployments {
 		t.Log(ns)
 	}
 }

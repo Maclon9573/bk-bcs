@@ -19,8 +19,8 @@ import (
 	"path"
 	gosync "sync"
 
-	client "github.com/coreos/etcd/clientv3"
-	cc "github.com/coreos/etcd/clientv3/concurrency"
+	client "go.etcd.io/etcd/client/v3"
+	cc "go.etcd.io/etcd/client/v3/concurrency"
 )
 
 // Client for election

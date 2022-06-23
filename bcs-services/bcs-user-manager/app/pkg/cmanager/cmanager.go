@@ -25,7 +25,7 @@ import (
 	bcsapicm "github.com/Tencent/bk-bcs/bcs-common/pkg/bcsapi/clustermanager"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-user-manager/app/pkg/discovery"
 
-	"github.com/micro/go-micro/v2/registry"
+	"github.com/asim/go-micro/v3/registry"
 	"github.com/patrickmn/go-cache"
 )
 

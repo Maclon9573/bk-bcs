@@ -36,9 +36,9 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-user-manager/app/utils"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-user-manager/config"
 
+	"github.com/asim/go-micro/plugins/registry/etcd/v3"
+	"github.com/asim/go-micro/v3/registry"
 	"github.com/emicklei/go-restful"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/registry/etcd"
 )
 
 var (
