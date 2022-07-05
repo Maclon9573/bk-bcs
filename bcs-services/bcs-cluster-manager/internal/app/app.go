@@ -59,13 +59,17 @@ import (
 	mesoswebconsole "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/tunnelhandler/mesoswebconsole"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/utils"
 
+	grpcclient "github.com/asim/go-micro/plugins/client/grpc/v3"
+	"github.com/asim/go-micro/plugins/registry/etcd/v3"
+	grpcserver "github.com/asim/go-micro/plugins/server/grpc/v3"
+	"github.com/asim/go-micro/v3/registry"
+	"github.com/asim/go-micro/v3/server"
 	restful "github.com/emicklei/go-restful"
 	"github.com/gorilla/mux"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/registry/etcd"
-	microsvc "github.com/micro/go-micro/v2/service"
-	microgrpcsvc "github.com/micro/go-micro/v2/service/grpc"
+	//microsvc "github.com/micro/go-micro/v2/service"
+	//microgrpcsvc "github.com/micro/go-micro/v2/service/grpc"
+	microsvc "github.com/asim/go-micro/v3"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 	grpccred "google.golang.org/grpc/credentials"
@@ -631,12 +635,14 @@ func (cm *ClusterManager) initExtraModules() {
 
 func (cm *ClusterManager) initMicro() error {
 	// New Service
-	microService := microgrpcsvc.NewService(
+	microService := microsvc.NewService(
 		microsvc.Name(cmcommon.ClusterManagerServiceDomain),
 		microsvc.Metadata(map[string]string{
 			cmcommon.MicroMetaKeyHTTPPort: strconv.Itoa(int(cm.opt.HTTPPort)),
 		}),
-		microgrpcsvc.WithTLS(cm.tlsConfig),
+		//microsvc.WithTLS(cm.tlsConfig),
+		microsvc.Server(grpcserver.NewServer(server.TLSConfig(cm.tlsConfig))),
+		microsvc.Client(grpcclient.NewClient()),
 		microsvc.Address(cm.opt.Address+":"+strconv.Itoa(int(cm.opt.Port))),
 		microsvc.Registry(cm.microRegistry),
 		microsvc.Version(version.BcsVersion),
