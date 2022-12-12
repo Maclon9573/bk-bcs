@@ -16,19 +16,23 @@ package tasks
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/azure/api"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/clusterops"
+	gkeapi "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/gke/api"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/types"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
 )
 
-// ImportClusterNodesTask call aksInterface or kubeConfig import cluster nodes
+// ImportClusterNodesTask call gkeInterface or kubeConfig import cluster nodes
 func ImportClusterNodesTask(taskID string, stepName string) error {
 	start := time.Now()
 	// get task information and validate
@@ -115,32 +119,85 @@ func RegisterClusterKubeConfigTask(taskID string, stepName string) error {
 }
 
 func importClusterCredential(ctx context.Context, data *cloudprovider.CloudDependBasicInfo) error {
-	cli, err := api.NewContainerServiceClient(data.CmOption)
+	saSecret := data.Cloud.CloudCredential.ServiceAccountSecret
+	gkeProjectID := data.Cloud.CloudCredential.GkeProjectID
+	client, err := gkeapi.GetContainerServiceClient(ctx, saSecret)
 	if err != nil {
 		return err
 	}
 
-	credentials, err := cli.GetClusterCredentials(ctx, data.Cluster.SystemID)
+	// Get the kube cluster in given project.
+	parent := "projects/" + gkeProjectID + "/locations/" + data.Cluster.Region + "/clusters/" + data.Cluster.ClusterName
+	gkeCluster, err := client.Projects.Locations.Clusters.Get(parent).Do()
 	if err != nil {
-		return err
+		return fmt.Errorf("clusters list project=%s: %w", gkeProjectID, err)
 	}
-	if len(credentials) == 0 {
-		return fmt.Errorf("credentials not found")
+	name := fmt.Sprintf("%s_%s_%s", gkeProjectID, gkeCluster.Location, gkeCluster.Name)
+	cert, err := base64.StdEncoding.DecodeString(gkeCluster.MasterAuth.ClusterCaCertificate)
+	if err != nil {
+		return fmt.Errorf("invalid certificate cluster=%s: %w", name, err)
 	}
 
-	// save cluster kubeConfig
-	kubeConfig := string(*credentials[0].Value)
-	data.Cluster.KubeConfig = kubeConfig
+	restConfig := &rest.Config{
+		TLSClientConfig: rest.TLSClientConfig{
+			CAData: cert,
+		},
+		Host: "https://" + gkeCluster.Endpoint,
+		AuthProvider: &api.AuthProviderConfig{
+			Name: gkeapi.GoogleAuthPlugin,
+			Config: map[string]string{
+				"scopes":      "https://www.googleapis.com/auth/cloud-platform",
+				"credentials": saSecret,
+			},
+		},
+	}
+
+	var saToken string
+	saToken, err = GenerateSAToken(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to generate k8s serviceaccount token project=%s cluster=%s: %w",
+			gkeProjectID, data.Cluster.ClusterName, err)
+	}
+	typesConfig := &types.Config{
+		APIVersion: "v1",
+		Kind:       "Config",
+		Clusters: []types.NamedCluster{
+			{
+				Name: name,
+				Cluster: types.ClusterInfo{
+					Server:                   "https://" + gkeCluster.Endpoint,
+					CertificateAuthorityData: cert,
+				},
+			},
+		},
+		AuthInfos: []types.NamedAuthInfo{
+			{
+				Name: name,
+				AuthInfo: types.AuthInfo{
+					Token: saToken,
+				},
+			},
+		},
+		Contexts: []types.NamedContext{
+			{
+				Name: name,
+				Context: types.Context{
+					Cluster:  name,
+					AuthInfo: name,
+				},
+			},
+		},
+		CurrentContext: name,
+	}
+
+	configByte, err := json.Marshal(typesConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marsh kubeconfig, %v", err)
+	}
+	data.Cluster.KubeConfig = base64.StdEncoding.EncodeToString(configByte)
 	cloudprovider.UpdateCluster(data.Cluster)
 
-	config, err := types.GetKubeConfigFromYAMLBody(false, types.YamlInput{
-		YamlContent: string(kubeConfig),
-	})
-	if err != nil {
-		return err
-	}
-
-	err = cloudprovider.UpdateClusterCredentialByConfig(data.Cluster.ClusterID, config)
+	err = cloudprovider.UpdateClusterCredentialByConfig(data.Cluster.ClusterID, typesConfig)
 	if err != nil {
 		return err
 	}
@@ -149,12 +206,23 @@ func importClusterCredential(ctx context.Context, data *cloudprovider.CloudDepen
 }
 
 func importClusterInstances(data *cloudprovider.CloudDependBasicInfo) error {
-	// get cluster nodes
-	kubeRet := base64.StdEncoding.EncodeToString([]byte(data.Cluster.KubeConfig))
-	kubeCli, err := clusterops.NewKubeClient(kubeRet)
+	kubeConfigByte, err := base64.StdEncoding.DecodeString(data.Cluster.KubeConfig)
 	if err != nil {
-		return fmt.Errorf("new kube client failed, %s", err.Error())
+		return fmt.Errorf("decode kube config failed: %v", err)
 	}
+
+	config, err := clientcmd.RESTConfigFromKubeConfig(kubeConfigByte)
+	if err != nil {
+		return fmt.Errorf("build rest config failed: %v", err)
+	}
+
+	config.Burst = 200
+	config.QPS = 100
+	kubeCli, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("build kube client failed: %s", err)
+	}
+
 	nodes, err := kubeCli.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("list nodes failed, %s", err.Error())

@@ -1916,6 +1916,10 @@ func (m *Credential) validate(all bool) error {
 
 	// no validation rules for ClientSecret
 
+	// no validation rules for ServiceAccountSecret
+
+	// no validation rules for GkeProjectID
+
 	if len(errors) > 0 {
 		return CredentialMultiError(errors)
 	}
@@ -2904,6 +2908,10 @@ func (m *Account) validate(all bool) error {
 	// no validation rules for ClientID
 
 	// no validation rules for ClientSecret
+
+	// no validation rules for ServiceAccountSecret
+
+	// no validation rules for GkeProjectID
 
 	if len(errors) > 0 {
 		return AccountMultiError(errors)
