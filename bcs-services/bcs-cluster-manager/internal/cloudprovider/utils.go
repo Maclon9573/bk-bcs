@@ -30,6 +30,8 @@ import (
 	storeopt "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/store/options"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/types"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/utils"
+
+	k8scorev1 "k8s.io/api/core/v1"
 )
 
 var (
@@ -76,13 +78,15 @@ func GetCredential(data *CredentialData) (*CommonOption, error) {
 	// get credential from cloud
 	if data.Cloud.CloudCredential != nil {
 		option.Account = &proto.Account{
-			SecretID:          data.Cloud.CloudCredential.Key,
-			SecretKey:         data.Cloud.CloudCredential.Secret,
-			SubscriptionID:    data.Cloud.CloudCredential.SubscriptionID,
-			TenantID:          data.Cloud.CloudCredential.TenantID,
-			ResourceGroupName: data.Cloud.CloudCredential.ResourceGroupName,
-			ClientID:          data.Cloud.CloudCredential.ClientID,
-			ClientSecret:      data.Cloud.CloudCredential.ClientSecret,
+			SecretID:             data.Cloud.CloudCredential.Key,
+			SecretKey:            data.Cloud.CloudCredential.Secret,
+			SubscriptionID:       data.Cloud.CloudCredential.SubscriptionID,
+			TenantID:             data.Cloud.CloudCredential.TenantID,
+			ResourceGroupName:    data.Cloud.CloudCredential.ResourceGroupName,
+			ClientID:             data.Cloud.CloudCredential.ClientID,
+			ClientSecret:         data.Cloud.CloudCredential.ClientSecret,
+			ServiceAccountSecret: data.Cloud.CloudCredential.ServiceAccountSecret,
+			GkeProjectID:         data.Cloud.CloudCredential.GkeProjectID,
 		}
 	}
 
@@ -268,7 +272,7 @@ func UpdateClusterCredentialByConfig(clusterID string, config *types.Config) err
 	}
 
 	if server == "" || caCertData == "" || (token == "" && (clientCert == "" || clientKey == "")) {
-		return fmt.Errorf("importClusterCredential parse kubeConfig failed: %v", "[server|caCertData|token] null")
+		return fmt.Errorf("importClusterCredential parse kubeConfig failed: %v", "[server|caCertData|authInfos] null")
 	}
 
 	now := time.Now().Format(time.RFC3339)
@@ -430,6 +434,43 @@ func UpdateClusterSystemID(clusterID string, systemID string) error {
 	err = GetStorageModel().UpdateCluster(context.Background(), cluster)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// ImportClusterNodesToCM writes cluster nodes to DB
+func ImportClusterNodesToCM(ctx context.Context, nodes []k8scorev1.Node, clusterID string) error {
+	for _, n := range nodes {
+		innerIP := ""
+		for _, v := range n.Status.Addresses {
+			if v.Type == k8scorev1.NodeInternalIP {
+				innerIP = v.Address
+				break
+			}
+		}
+		if innerIP == "" {
+			continue
+		}
+		node, err := GetStorageModel().GetNodeByIP(ctx, innerIP)
+		if err != nil && !errors.Is(err, drivers.ErrTableRecordNotFound) {
+			blog.Errorf("importClusterNodes GetNodeByIP[%s] failed: %v", innerIP, err)
+			// no import node when found err
+			continue
+		}
+
+		if node == nil {
+			node = &proto.Node{
+				InnerIP:   innerIP,
+				Status:    common.StatusRunning,
+				ClusterID: clusterID,
+			}
+			err = GetStorageModel().CreateNode(ctx, node)
+			if err != nil {
+				blog.Errorf("importClusterNodes CreateNode[%s] failed: %v", innerIP, err)
+			}
+			continue
+		}
 	}
 
 	return nil
