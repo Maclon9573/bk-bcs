@@ -7736,6 +7736,8 @@ func (m *AutoScalingGroup) validate(all bool) error {
 
 	}
 
+	// no validation rules for AutoUpgrade
+
 	if len(errors) > 0 {
 		return AutoScalingGroupMultiError(errors)
 	}
@@ -9308,6 +9310,8 @@ func (m *NodeTemplate) validate(all bool) error {
 			}
 		}
 	}
+
+	// no validation rules for MaxPodsPerNode
 
 	if len(errors) > 0 {
 		return NodeTemplateMultiError(errors)

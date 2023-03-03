@@ -16,7 +16,7 @@ package api
 import (
 	"context"
 	"fmt"
-
+	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
 
 	"golang.org/x/oauth2"
@@ -99,4 +99,56 @@ func (cs *ContainerServiceClient) DeleteCluster(ctx context.Context, clusterName
 	}
 
 	return nil
+}
+
+// CreateClusterNodePool create a node pool
+func (cs *ContainerServiceClient) CreateClusterNodePool(ctx context.Context, req *CreateNodePoolRequest,
+	clusterName string) (string, error) {
+	parent := "projects/" + cs.gkeProjectID + "/locations/" + cs.region + "/clusters/" + clusterName
+	req.Parent = parent
+	newReq := genCreateNodePoolRequest(req)
+	o, err := cs.containerServiceClient.Projects.Locations.Clusters.NodePools.Create(parent, newReq).Context(ctx).Do()
+	if err != nil {
+		return "", fmt.Errorf("CreateClusterNodePool failed: %v", err)
+	}
+	blog.Infof("CreateClusterNodePool operation ID: %s", o.SelfLink)
+	return o.SelfLink, nil
+}
+
+// GetClusterNodePool create the node pool
+func (cs *ContainerServiceClient) GetClusterNodePool(ctx context.Context, clusterName, nodePoolName string) (
+	*container.NodePool, error) {
+	parent := "projects/" + cs.gkeProjectID + "/locations/" + cs.region + "/clusters/" + clusterName +
+		"/nodePools/" + nodePoolName
+	np, err := cs.containerServiceClient.Projects.Locations.Clusters.NodePools.Get(parent).Context(ctx).Do()
+	if err != nil {
+		return nil, fmt.Errorf("GetClusterNodePool failed: %v", err)
+	}
+	return np, nil
+}
+
+// UpdateClusterNodePool update the node pool
+func (cs *ContainerServiceClient) UpdateClusterNodePool(ctx context.Context,
+	req *container.UpdateNodePoolRequest, clusterName, nodePoolName string) (string, error) {
+	parent := "projects/" + cs.gkeProjectID + "/locations/" + cs.region + "/clusters/" + clusterName +
+		"/nodePools/" + nodePoolName
+	o, err := cs.containerServiceClient.Projects.Locations.Clusters.NodePools.Update(parent, req).Context(ctx).Do()
+	if err != nil {
+		return "", fmt.Errorf("UpdateClusterNodePool failed: %v", err)
+	}
+	blog.Infof("UpdateClusterNodePool operation ID: %s", o.SelfLink)
+	return o.SelfLink, nil
+}
+
+// DeleteClusterNodePool update the node pool
+func (cs *ContainerServiceClient) DeleteClusterNodePool(ctx context.Context, clusterName, nodePoolName string) (
+	string, error) {
+	parent := "projects/" + cs.gkeProjectID + "/locations/" + cs.region + "/clusters/" + clusterName +
+		"/nodePools/" + nodePoolName
+	o, err := cs.containerServiceClient.Projects.Locations.Clusters.NodePools.Delete(parent).Context(ctx).Do()
+	if err != nil {
+		return "", fmt.Errorf("DeleteClusterNodePool failed: %v", err)
+	}
+	blog.Infof("DeleteClusterNodePool operation ID: %s", o.SelfLink)
+	return o.SelfLink, nil
 }

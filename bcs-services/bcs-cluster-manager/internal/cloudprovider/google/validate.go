@@ -262,3 +262,26 @@ func (c *CloudValidate) CreateNodeGroupValidate(req *proto.CreateNodeGroupReques
 
 	return nil
 }
+
+// UpdateNodeGroupValidate xxx
+func (c *CloudValidate) UpdateNodeGroupValidate(req *proto.CreateNodeGroupRequest,
+	opt *cloudprovider.CommonOption) error {
+	// call cloud interface to check account
+	if c == nil || opt.Account == nil {
+		return fmt.Errorf("%s CreateNodeGroupValidate request is empty", cloudName)
+	}
+
+	if len(opt.Account.ServiceAccountSecret) == 0 {
+		return fmt.Errorf("%s ListCloudRegionClusterValidate request lost valid crendential info", cloudName)
+	}
+
+	if len(opt.Account.GkeProjectID) == 0 {
+		return fmt.Errorf("%s ListCloudRegionClusterValidate request lost valid gkeProjectID info", cloudName)
+	}
+
+	if len(req.Region) == 0 {
+		return fmt.Errorf("%s CreateNodeGroupValidate request lost valid region info", cloudName)
+	}
+
+	return nil
+}

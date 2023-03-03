@@ -16,6 +16,7 @@ package google
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -62,7 +63,19 @@ func (c *CloudInfoManager) SyncClusterCloudInfo(cls *cmproto.Cluster,
 		return fmt.Errorf("SyncClusterCloudInfo failed: %v", err)
 	}
 	cls.SystemID = cluster.Name
-
+	// 记录gke集群发布类型
+	if cluster.ReleaseChannel != nil {
+		if cls.ExtraInfo == nil {
+			cls.ExtraInfo = make(map[string]string, 0)
+		}
+		cls.ExtraInfo["releaseChannel"] = cluster.ReleaseChannel.Channel
+	}
+	// 区分gke集群是zone级别还是region级别
+	if len(strings.Split(cluster.Location, "-")) == 2 {
+		cls.ExtraInfo["locationType"] = "regions"
+	} else if len(strings.Split(cluster.Location, "-")) == 3 {
+		cls.ExtraInfo["locationType"] = "zones"
+	}
 	kubeConfig, err := api.GetClusterKubeConfig(context.Background(), opt.Common.Account.ServiceAccountSecret,
 		opt.Common.Account.GkeProjectID, cls.Region, cls.SystemID)
 	if err != nil {

@@ -12,3 +12,48 @@
  */
 
 package tasks
+
+import (
+	"context"
+
+	cmproto "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/api/clustermanager"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
+)
+
+// updateNodeGroupCloudNodeGroupID set nodegroup cloudNodeGroupID
+func updateNodeGroupCloudNodeGroupID(nodeGroupID string, newGroup *cmproto.NodeGroup) error {
+	group, err := cloudprovider.GetStorageModel().GetNodeGroup(context.Background(), nodeGroupID)
+	if err != nil {
+		return err
+	}
+
+	group.CloudNodeGroupID = newGroup.CloudNodeGroupID
+	if group.AutoScaling != nil && group.AutoScaling.VpcID == "" {
+		group.AutoScaling.VpcID = newGroup.AutoScaling.VpcID
+	}
+	err = cloudprovider.GetStorageModel().UpdateNodeGroup(context.Background(), group)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// updateNodeGroupDesiredSize set nodegroup desired size
+func updateNodeGroupDesiredSize(nodeGroupID string, desiredSize uint32) error {
+	group, err := cloudprovider.GetStorageModel().GetNodeGroup(context.Background(), nodeGroupID)
+	if err != nil {
+		return err
+	}
+
+	if group.AutoScaling == nil {
+		group.AutoScaling = &cmproto.AutoScalingGroup{}
+	}
+	group.AutoScaling.DesiredSize = desiredSize
+	err = cloudprovider.GetStorageModel().UpdateNodeGroup(context.Background(), group)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
