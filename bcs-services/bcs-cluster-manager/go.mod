@@ -23,6 +23,7 @@ require (
 	github.com/Tencent/bk-bcs/bcs-common v0.0.0-20220920073019-4a853c750ff6
 	github.com/Tencent/bk-bcs/bcs-services/pkg v0.0.0-20220920073019-4a853c750ff6
 	github.com/avast/retry-go v2.7.0+incompatible
+	github.com/aws/aws-sdk-go v1.44.213
 	github.com/coreos/etcd v3.3.25+incompatible
 	github.com/emicklei/go-restful v2.15.0+incompatible
 	github.com/envoyproxy/protoc-gen-validate v0.4.1
@@ -57,6 +58,7 @@ require (
 	k8s.io/apimachinery v0.23.1
 	k8s.io/client-go v11.0.0+incompatible
 	k8s.io/kubectl v0.23.1
+	sigs.k8s.io/aws-iam-authenticator v0.6.7
 )
 
 require (
@@ -75,7 +77,6 @@ require (
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/RichardKnop/logging v0.0.0-20190827224416-1a693bdd4fae // indirect
 	github.com/TencentBlueKing/iam-go-sdk v0.0.8 // indirect
-	github.com/aws/aws-sdk-go v1.37.27 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bitly/go-simplejson v0.5.0 // indirect
@@ -99,6 +100,7 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-sql-driver/mysql v1.5.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/gofrs/flock v0.7.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/snappy v0.0.4 // indirect

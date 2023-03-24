@@ -393,9 +393,6 @@ func generateNodeGroupFromAsc(group *proto.NodeGroup, cloudNodeGroup *tke.NodePo
 			group.LaunchTemplate.IsSecurityService = *asc.EnhancedService.SecurityService.Enabled
 		}
 	}
-	if asc.ProjectId != nil {
-		group.LaunchTemplate.ProjectID = fmt.Sprintf("%d", uint32(*asc.ProjectId))
-	}
 	return group
 }
 

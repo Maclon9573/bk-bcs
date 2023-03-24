@@ -14,8 +14,20 @@
 package aws
 
 import (
+	"context"
+	"fmt"
+
+	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+	"github.com/Tencent/bk-bcs/bcs-common/pkg/odm/operator"
 	proto "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/api/clustermanager"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/actions"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/aws/api"
+	storeopt "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/store/options"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/autoscaling"
+	"github.com/aws/aws-sdk-go/service/eks"
 )
 
 func init() {
@@ -29,19 +41,89 @@ type NodeGroup struct {
 // CreateNodeGroup create nodegroup by cloudprovider api, only create NodeGroup entity
 func (ng *NodeGroup) CreateNodeGroup(group *proto.NodeGroup, opt *cloudprovider.CreateNodeGroupOption) (*proto.Task,
 	error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	mgr, err := cloudprovider.GetTaskManager(cloudName)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when CreateNodeGroup %s failed, %s",
+			cloudName, group.Name, err.Error(),
+		)
+		return nil, err
+	}
+	task, err := mgr.BuildCreateNodeGroupTask(group, opt)
+	if err != nil {
+		blog.Errorf("build CreateNodeGroup task for cluster %s with cloudprovider %s failed, %s",
+			group.ClusterID, cloudName, err.Error(),
+		)
+		return nil, err
+	}
+	return task, nil
 }
 
 // DeleteNodeGroup delete nodegroup by cloudprovider api, all nodes belong to NodeGroup
 // will be released. Task is backgroup automatic task
 func (ng *NodeGroup) DeleteNodeGroup(group *proto.NodeGroup, nodes []*proto.Node,
 	opt *cloudprovider.DeleteNodeGroupOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	mgr, err := cloudprovider.GetTaskManager(cloudName)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when DeleteNodeGroup %s failed, %s",
+			cloudName, group.Name, err.Error(),
+		)
+		return nil, err
+	}
+	task, err := mgr.BuildDeleteNodeGroupTask(group, nodes, opt)
+	if err != nil {
+		blog.Errorf("build DeleteNodeGroup task for cluster %s with cloudprovider %s failed, %s",
+			group.ClusterID, cloudName, err.Error(),
+		)
+		return nil, err
+	}
+	return task, nil
 }
 
 // UpdateNodeGroup update specified nodegroup configuration
 func (ng *NodeGroup) UpdateNodeGroup(group *proto.NodeGroup, opt *cloudprovider.CommonOption) error {
-	return cloudprovider.ErrCloudNotImplemented
+	_, cluster, err := actions.GetCloudAndCluster(cloudprovider.GetStorageModel(), group.Provider, group.ClusterID)
+	if err != nil {
+		blog.Errorf("get cluster %s failed, %s", group.ClusterID, err.Error())
+		return err
+	}
+	eksCli, err := api.NewEksClient(opt)
+	if err != nil {
+		blog.Errorf("create eks client failed, err: %s", err.Error())
+		return err
+	}
+	if group.NodeGroupID == "" || group.ClusterID == "" {
+		blog.Errorf("nodegroup id or cluster id is empty")
+		return fmt.Errorf("nodegroup id or cluster id is empty")
+	}
+	_, err = eksCli.UpdateNodegroupConfig(ng.generateUpdateNodegroupConfigInput(group, cluster.SystemID))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ng *NodeGroup) generateUpdateNodegroupConfigInput(group *proto.NodeGroup,
+	cluster string) *eks.UpdateNodegroupConfigInput {
+	input := &eks.UpdateNodegroupConfigInput{
+		ClusterName:   &cluster,
+		NodegroupName: &group.CloudNodeGroupID,
+		Labels: &eks.UpdateLabelsPayload{
+			AddOrUpdateLabels: aws.StringMap(group.Labels),
+		},
+	}
+	if group.AutoScaling != nil {
+		input.ScalingConfig = &eks.NodegroupScalingConfig{
+			MaxSize: aws.Int64(int64(group.AutoScaling.MaxSize)),
+			MinSize: aws.Int64(int64(group.AutoScaling.MinSize)),
+		}
+	}
+	if group.NodeTemplate != nil && group.NodeTemplate.Taints != nil {
+		input.Taints = &eks.UpdateTaintsPayload{
+			AddOrUpdateTaints: api.MapToAwsTaints(group.NodeTemplate.Taints),
+		}
+	}
+
+	return input
 }
 
 // GetNodesInGroup get all nodes belong to NodeGroup
@@ -59,25 +141,95 @@ func (ng *NodeGroup) MoveNodesToGroup(nodes []*proto.Node, group *proto.NodeGrou
 // RemoveNodesFromGroup remove nodes from NodeGroup, nodes are still in cluster
 func (ng *NodeGroup) RemoveNodesFromGroup(nodes []*proto.Node, group *proto.NodeGroup,
 	opt *cloudprovider.RemoveNodesOption) error {
-	return cloudprovider.ErrCloudNotImplemented
+	if group.ClusterID == "" || group.NodeGroupID == "" {
+		blog.Errorf("nodegroup id or cluster id is empty")
+		return fmt.Errorf("nodegroup id or cluster id is empty")
+	}
+	client, err := api.NewAutoScalingClient(&opt.CommonOption)
+	if err != nil {
+		blog.Errorf("create gce client failed, err: %s", err.Error())
+		return err
+	}
+	ids := make([]string, 0)
+	for _, v := range nodes {
+		ids = append(ids, v.NodeID)
+	}
+	_, err = client.DetachInstances(&autoscaling.DetachInstancesInput{
+		AutoScalingGroupName: aws.String(group.AutoScaling.AutoScalingName),
+		InstanceIds:          aws.StringSlice(ids),
+	})
+	return err
 }
 
 // CleanNodesInGroup clean specified nodes in NodeGroup,
 func (ng *NodeGroup) CleanNodesInGroup(nodes []*proto.Node, group *proto.NodeGroup,
 	opt *cloudprovider.CleanNodesOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	if len(nodes) == 0 || opt == nil || opt.Cluster == nil || opt.Cloud == nil {
+		return nil, fmt.Errorf("invalid request")
+	}
+
+	mgr, err := cloudprovider.GetTaskManager(cloudName)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when CleanNodesInGroup %s failed, %s",
+			cloudName, group.Name, err.Error())
+		return nil, err
+	}
+	task, err := mgr.BuildCleanNodesInGroupTask(nodes, group, opt)
+	if err != nil {
+		blog.Errorf("build CleanNodesInGroup task for cluster %s with cloudprovider %s failed, %s",
+			group.ClusterID, cloudName, err.Error())
+		return nil, err
+	}
+	return task, nil
 }
 
 // UpdateDesiredNodes update nodegroup desired node
 func (ng *NodeGroup) UpdateDesiredNodes(desiredNode uint32, group *proto.NodeGroup,
 	opt *cloudprovider.UpdateDesiredNodeOption) (*cloudprovider.ScalingResponse, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	if group == nil || opt == nil || opt.Cluster == nil || opt.Cloud == nil {
+		return nil, fmt.Errorf("invalid request")
+	}
+
+	taskType := cloudprovider.GetTaskType(opt.Cloud.CloudProvider, cloudprovider.UpdateNodeGroupDesiredNode)
+
+	cond := operator.NewLeafCondition(operator.Eq, operator.M{
+		"clusterid":   opt.Cluster.ClusterID,
+		"tasktype":    taskType,
+		"nodegroupid": group.NodeGroupID,
+		"status":      cloudprovider.TaskStatusRunning,
+	})
+	taskList, err := cloudprovider.GetStorageModel().ListTask(context.Background(), cond, &storeopt.ListOption{})
+	if err != nil {
+		blog.Errorf("UpdateDesiredNodes failed: %v", err)
+		return nil, err
+	}
+	if len(taskList) != 0 {
+		return nil, fmt.Errorf("%d %s task(s) is still running", len(taskList), taskType)
+	}
+
+	return &cloudprovider.ScalingResponse{
+		ScalingUp: desiredNode,
+	}, nil
 }
 
 // SwitchNodeGroupAutoScaling switch nodegroup autoscaling
 func (ng *NodeGroup) SwitchNodeGroupAutoScaling(group *proto.NodeGroup, enable bool,
 	opt *cloudprovider.SwitchNodeGroupAutoScalingOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	mgr, err := cloudprovider.GetTaskManager(cloudName)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when SwitchNodeGroupAutoScaling %s failed, %s",
+			cloudName, group.NodeGroupID, err.Error(),
+		)
+		return nil, err
+	}
+	task, err := mgr.BuildSwitchNodeGroupAutoScalingTask(group, enable, opt)
+	if err != nil {
+		blog.Errorf("build SwitchNodeGroupAutoScaling task for nodeGroup %s with cloudprovider %s failed, %s",
+			group.NodeGroupID, cloudName, err.Error(),
+		)
+		return nil, err
+	}
+	return task, nil
 }
 
 // CreateAutoScalingOption create cluster autoscaling option, cloudprovider will
@@ -99,11 +251,39 @@ func (ng *NodeGroup) DeleteAutoScalingOption(scalingOption *proto.ClusterAutoSca
 // Implementation is optional.
 func (ng *NodeGroup) UpdateAutoScalingOption(scalingOption *proto.ClusterAutoScalingOption,
 	opt *cloudprovider.UpdateScalingOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	mgr, err := cloudprovider.GetTaskManager(cloudName)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when UpdateAutoScalingOption %s failed, %s",
+			cloudName, scalingOption.ClusterID, err.Error(),
+		)
+		return nil, err
+	}
+	task, err := mgr.BuildUpdateAutoScalingOptionTask(scalingOption, opt)
+	if err != nil {
+		blog.Errorf("build UpdateAutoScalingOption task for cluster %s with cloudprovider %s failed, %s",
+			scalingOption.ClusterID, cloudName, err.Error(),
+		)
+		return nil, err
+	}
+	return task, nil
 }
 
 // SwitchAutoScalingOptionStatus switch cluster autoscaling option status
 func (ng *NodeGroup) SwitchAutoScalingOptionStatus(scalingOption *proto.ClusterAutoScalingOption, enable bool,
 	opt *cloudprovider.CommonOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	mgr, err := cloudprovider.GetTaskManager(cloudName)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when SwitchAutoScalingOptionStatus %s failed, %s",
+			cloudName, scalingOption.ClusterID, err.Error(),
+		)
+		return nil, err
+	}
+	task, err := mgr.BuildSwitchAutoScalingOptionStatusTask(scalingOption, enable, opt)
+	if err != nil {
+		blog.Errorf("build SwitchAutoScalingOptionStatus task for cluster %s with cloudprovider %s failed, %s",
+			scalingOption.ClusterID, cloudName, err.Error(),
+		)
+		return nil, err
+	}
+	return task, nil
 }

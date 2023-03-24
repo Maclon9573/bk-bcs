@@ -63,6 +63,7 @@ func (c *CloudInfoManager) SyncClusterCloudInfo(cls *cmproto.Cluster,
 		return fmt.Errorf("SyncClusterCloudInfo failed: %v", err)
 	}
 	cls.SystemID = cluster.Name
+	cls.VpcID = cluster.NetworkConfig.Network
 	// 记录gke集群发布类型
 	if cluster.ReleaseChannel != nil {
 		if cls.ExtraInfo == nil {

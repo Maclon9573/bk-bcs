@@ -33,7 +33,7 @@ func (c *Cluster) CreateCluster(cls *proto.Cluster, opt *cloudprovider.CreateClu
 
 // ImportCluster import cluster according cloudprovider
 func (c *Cluster) ImportCluster(cls *proto.Cluster, opt *cloudprovider.ImportClusterOption) (*proto.Task, error) {
-	// call qcloud interface to create cluster
+	// call aws interface to create cluster
 	return nil, cloudprovider.ErrCloudNotImplemented
 }
 

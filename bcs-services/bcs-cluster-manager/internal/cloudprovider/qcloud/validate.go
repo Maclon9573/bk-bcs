@@ -235,7 +235,7 @@ func (c *CloudValidate) CreateNodeGroupValidate(req *proto.CreateNodeGroupReques
 	opt *cloudprovider.CommonOption) error {
 
 	if len(req.Region) == 0 {
-		return fmt.Errorf("%s ListCloudOsImageValidate request lost valid region info", cloudName)
+		return fmt.Errorf("%s CreateNodeGroupValidate request lost valid region info", cloudName)
 	}
 
 	// simply check instanceType conf info
