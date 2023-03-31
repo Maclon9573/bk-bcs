@@ -7610,6 +7610,8 @@ func (m *NodeGroup) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for NodeRole
+
 	if len(errors) > 0 {
 		return NodeGroupMultiError(errors)
 	}
@@ -8717,6 +8719,8 @@ func (m *LaunchConfiguration) validate(all bool) error {
 	// no validation rules for IsMonitorService
 
 	// no validation rules for UserData
+
+	// no validation rules for SshKey
 
 	if len(errors) > 0 {
 		return LaunchConfigurationMultiError(errors)
@@ -24960,6 +24964,8 @@ func (m *CreateNodeGroupRequest) validate(all bool) error {
 			}
 		}
 	}
+
+	// no validation rules for NodeRole
 
 	if len(errors) > 0 {
 		return CreateNodeGroupRequestMultiError(errors)
