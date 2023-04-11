@@ -305,7 +305,7 @@ func getImageRootDeviceName(imageID []*string, cli *api.EC2Client) (*string, err
 	if err != nil {
 		return nil, err
 	}
-	return describeOutput.RootDeviceName, nil
+	return describeOutput[0].RootDeviceName, nil
 }
 
 // CheckCloudNodeGroupStatusTask check cloud node group status task

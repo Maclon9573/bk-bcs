@@ -128,7 +128,7 @@ func (c *EC2Client) DescribeLaunchTemplateVersions(input *ec2.DescribeLaunchTemp
 }
 
 // DescribeImages gets image info
-func (c *EC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.Image, error) {
+func (c *EC2Client) DescribeImages(input *ec2.DescribeImagesInput) ([]*ec2.Image, error) {
 	blog.Infof("DescribeImages input: %", utils.ToJSONString(input))
 	output, err := c.ec2Client.DescribeImages(input)
 	if err != nil {
@@ -141,7 +141,7 @@ func (c *EC2Client) DescribeImages(input *ec2.DescribeImagesInput) (*ec2.Image, 
 	}
 	blog.Infof("ec2 client DescribeImages successful")
 
-	return output.Images[0], nil
+	return output.Images, nil
 }
 
 // DescribeInstances gets image info
