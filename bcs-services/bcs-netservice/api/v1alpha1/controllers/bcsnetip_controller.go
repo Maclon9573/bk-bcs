@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -52,7 +51,7 @@ func (r *BCSNetIPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	ctrl.Log.Info("Reconciling", fmt.Sprintf("%s/%s", req.Name, req.Namespace))
+	ctrl.Log.Info("Reconciling", req.Namespace, req.Name)
 	// 获取当前的 CR，并打印
 	obj := &tkexv1alpha1.BCSNetIP{}
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
@@ -60,7 +59,7 @@ func (r *BCSNetIPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			ctrl.Log.Error(err, "Unable to fetch object")
 		}
 	} else {
-		ctrl.Log.Info("Getting BCSNetIP", obj.Name)
+		ctrl.Log.Info("Getting BCSNetIP", obj.Namespace, obj.Name)
 		// 初始化 CR 的 Status 为 Running
 		obj.Status.Status = "Active"
 		if err := r.Status().Update(ctx, obj); err != nil {
