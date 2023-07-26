@@ -21,8 +21,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,20 +52,19 @@ func (r *BCSNetIPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	_ = log.FromContext(ctx)
 
 	// TODO(user): your logic here
-	blog.Infof("Reconciling %s", fmt.Sprintf("%s/%s", req.Name, req.Namespace))
-	fmt.Printf("Reconciling %s\n", fmt.Sprintf("%s/%s", req.Name, req.Namespace))
+	ctrl.Log.Info("Reconciling", fmt.Sprintf("%s/%s", req.Name, req.Namespace))
 	// 获取当前的 CR，并打印
 	obj := &tkexv1alpha1.BCSNetIP{}
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !strings.Contains(err.Error(), "not found") {
-			blog.Errorf("Unable to fetch object, %v", err)
+			ctrl.Log.Error(err, "Unable to fetch object")
 		}
 	} else {
-		blog.Infof("Getting BCSNetIP %s", obj.Name)
+		ctrl.Log.Info("Getting BCSNetIP", obj.Name)
 		// 初始化 CR 的 Status 为 Running
 		obj.Status.Status = "Active"
 		if err := r.Status().Update(ctx, obj); err != nil {
-			blog.Errorf("unable to update status, %v", err)
+			ctrl.Log.Error(err, "unable to update status")
 		}
 	}
 
