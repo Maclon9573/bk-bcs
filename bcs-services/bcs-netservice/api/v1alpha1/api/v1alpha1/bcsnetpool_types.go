@@ -25,17 +25,29 @@ import (
 
 // BCSNetPoolSpec defines the desired state of BCSNetPool
 type BCSNetPoolSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of BCSNetPool. Edit bcsnetpool_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// 网段掩码
+	Mask int `json:"mask,omitempty"`
+	// 网段网关
+	Gateway string `json:"gateway,omitempty"`
+	// 对应主机列表
+	Hosts []string `json:"hosts,omitempty"`
+	// 可用 IP
+	AvailableIPs []string `json:"availableIPs,omitempty"`
 }
 
 // BCSNetPoolStatus defines the observed state of BCSNetPool
 type BCSNetPoolStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// Init --初始化中，Normal --正常
+	Status         string `json:"status,omitempty"`
+	CreateTime     string `json:"createTime,omitempty"`
+	UpdateTime     string `json:"updateTime,omitempty"`
+	AvailableIPNum int    `json:"availableIPNum,omitempty"`
+	// 已使用IP
+	ActiveIPs   []string `json:"activeIPs,omitempty"`
+	ActiveIPNum int      `json:"activeIPNum,omitempty"`
+	// 保留的IP
+	ReservedIPs   []string `json:"reservedIPs,omitempty"`
+	ReservedIPNum int      `json:"reservedIPNum,omitempty"`
 }
 
 //+kubebuilder:object:root=true
