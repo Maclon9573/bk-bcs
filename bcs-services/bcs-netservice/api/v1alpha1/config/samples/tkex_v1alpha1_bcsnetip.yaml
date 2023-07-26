@@ -1,0 +1,6 @@
+apiVersion: tkex.tencent.com/v1alpha1
+kind: BCSNetIP
+metadata:
+  name: bcsnetip-sample
+spec:
+  # TODO(user): Add fields here

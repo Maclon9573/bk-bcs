@@ -1,0 +1,25 @@
+domain: tencent.com
+layout:
+- go.kubebuilder.io/v3
+projectName: v1alpha1
+repo: github.com/Tencent/bk-bcs/bcs-services/bcs-netservice
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: tencent.com
+  group: tkex
+  kind: BCSNetIP
+  path: github.com/Tencent/bk-bcs/bcs-services/bcs-netservice/api/v1alpha1
+  version: v1alpha1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: tencent.com
+  group: tkex
+  kind: BCSNetPool
+  path: github.com/Tencent/bk-bcs/bcs-services/bcs-netservice/api/v1alpha1
+  version: v1alpha1
+version: "3"
