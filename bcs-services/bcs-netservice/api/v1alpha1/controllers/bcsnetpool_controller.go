@@ -61,8 +61,11 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	} else {
 		ctrl.Log.Info("Getting BCSNetPool", obj.Namespace, obj.Name)
-		// 初始化 CR 的 Status 为 Running
-		obj.Status.Status = "Init"
+		// 初始化 CR 的 Status
+		if obj.Status.Status == "" {
+			ctrl.Log.Info("Initializing BCSNetPool", obj.Namespace, obj.Name)
+			obj.Status.Status = "Init"
+		}
 		if err := r.Status().Update(ctx, obj); err != nil {
 			ctrl.Log.Error(err, "unable to update status")
 			return ctrl.Result{}, err
