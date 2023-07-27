@@ -89,18 +89,18 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.BCSNetIPReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "BCSNetIP")
-		os.Exit(1)
-	}
 	if err = (&controllers.BCSNetPoolReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BCSNetPool")
+		os.Exit(1)
+	}
+	if err = (&controllers.BCSNetIPReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BCSNetIP")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
