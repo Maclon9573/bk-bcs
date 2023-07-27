@@ -57,6 +57,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !strings.Contains(err.Error(), "not found") {
 			ctrl.Log.Error(err, "Unable to fetch object")
+			return ctrl.Result{}, err
 		}
 	} else {
 		ctrl.Log.Info("Getting BCSNetPool", obj.Namespace, obj.Name)
@@ -64,6 +65,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		obj.Status.Status = "Init"
 		if err := r.Status().Update(ctx, obj); err != nil {
 			ctrl.Log.Error(err, "unable to update status")
+			return ctrl.Result{}, err
 		}
 	}
 

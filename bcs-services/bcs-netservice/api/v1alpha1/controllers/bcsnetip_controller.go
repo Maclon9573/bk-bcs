@@ -57,6 +57,7 @@ func (r *BCSNetIPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if !strings.Contains(err.Error(), "not found") {
 			ctrl.Log.Error(err, "Unable to fetch object")
+			return ctrl.Result{}, err
 		}
 	} else {
 		ctrl.Log.Info("Getting BCSNetIP", obj.Namespace, obj.Name)
@@ -64,6 +65,7 @@ func (r *BCSNetIPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		obj.Status.Status = "Active"
 		if err := r.Status().Update(ctx, obj); err != nil {
 			ctrl.Log.Error(err, "unable to update status")
+			return ctrl.Result{}, err
 		}
 	}
 
