@@ -79,6 +79,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *BCSNetPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		Named("bcsnetpool").
 		For(&tkexv1alpha1.BCSNetPool{}).
 		Complete(r)
 }
