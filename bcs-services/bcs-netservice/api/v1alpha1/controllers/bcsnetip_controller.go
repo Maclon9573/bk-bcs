@@ -59,16 +59,17 @@ func (r *BCSNetIPReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			ctrl.Log.Error(err, "Unable to fetch object")
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	} else {
 		ctrl.Log.Info("Getting BCSNetIP", obj.Namespace, obj.Name)
 		// 初始化 CR 的 Status
 		if obj.Status.Status == "" {
 			ctrl.Log.Info("Initializing BCSNetIP", obj.Namespace, obj.Name)
 			obj.Status.Status = "Active"
-		}
-		if err := r.Status().Update(ctx, obj); err != nil {
-			ctrl.Log.Error(err, "unable to update status")
-			return ctrl.Result{}, err
+			if err := r.Status().Update(ctx, obj); err != nil {
+				ctrl.Log.Error(err, "unable to update status")
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
