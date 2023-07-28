@@ -22,7 +22,7 @@ import (
 
 // BCSNetIPSpec defines the desired state of BCSNetIP
 type BCSNetIPSpec struct {
-	// Pool/Mask/Gateway 的信息冗余进来
+	// 所属Pool
 	Pool    string `json:"pool,omitempty"`
 	Mask    int    `json:"mask,omitempty"`
 	Gateway string `json:"gateway,omitempty"`
@@ -31,21 +31,20 @@ type BCSNetIPSpec struct {
 	Container string `json:"container,omitempty"`
 	// 对应主机信息
 	Host string `json:"host"`
-
-	// TODO: 不确定是否能拿到
-	PodName      string `json:"podName,omitempty"`
-	PodNamespace string `json:"podNamespace,omitempty"`
 }
 
 // BCSNetIPStatus defines the observed state of BCSNetIP
 type BCSNetIPStatus struct {
 	// Active --已使用，Available --可用, Reserved --保留
-	Status     string `json:"status,omitempty"`
-	CreateTime string `json:"createTime,omitempty"`
-	UpdateTime string `json:"updateTime,omitempty"`
+	Status       string `json:"status,omitempty"`
+	PodName      string `json:"podName,omitempty"`
+	PodNamespace string `json:"podNamespace,omitempty"`
+	CreateTime   string `json:"createTime,omitempty"`
+	UpdateTime   string `json:"updateTime,omitempty"`
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:resource:scope=Cluster
 //+kubebuilder:subresource:status
 
 // BCSNetIP is the Schema for the bcsnetips API
