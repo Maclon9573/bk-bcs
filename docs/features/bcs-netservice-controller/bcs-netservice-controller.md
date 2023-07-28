@@ -4,7 +4,7 @@
 
 原bcs-netservice部署复杂，多用于mesos集群，且需要使用ZK作为后端存储。为解决这些问题，决定抽象出BCSNetPool和BCSNetIP两个CRD，方便在 k8s集群中部署和管理。
 
-## 流程图
+## 架构设计
 
 ![image-20230727200122621](./bcs-netservice-controller.png)
 
