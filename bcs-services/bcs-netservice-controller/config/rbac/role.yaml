@@ -1,0 +1,33 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - networkextension.bkbcs.tencent.com
+  resources:
+  - bcsnetpools
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - networkextension.bkbcs.tencent.com
+  resources:
+  - bcsnetpools/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - networkextension.bkbcs.tencent.com
+  resources:
+  - bcsnetpools/status
+  verbs:
+  - get
+  - patch
+  - update

@@ -1,0 +1,20 @@
+# permissions for end users to view bcsnetips.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: bcsnetip-viewer-role
+rules:
+- apiGroups:
+  - networkextension.bkbcs.tencent.com
+  resources:
+  - bcsnetips
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - networkextension.bkbcs.tencent.com
+  resources:
+  - bcsnetips/status
+  verbs:
+  - get
