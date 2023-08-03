@@ -116,7 +116,7 @@ spec:
 
 Method：POST
 
-URL： http://localhost:8090/v1/allocator
+URL： http://localhost:8090/netservicecontroller/v1/allocator
 
 Body：
 
@@ -158,7 +158,7 @@ Response:
 
 Method：DELETE
 
-URL： http://localhost:8090/v1/allocator
+URL： http://localhost:8090/netservicecontroller/v1/allocator
 
 Body：
 
@@ -187,7 +187,7 @@ Response:
 
 Method：DELETE
 
-URL： http://localhost:8090/v1/allocator/host/{hostip}
+URL： http://localhost:8090/netservicecontroller/v1/allocator/host/{hostip}
 
 **hostip**: 需要释放IP地址的物理主机
 
