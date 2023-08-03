@@ -6,7 +6,7 @@
 
 ## 功能
 
-- 提供BCSNetPool和BCSNetIP两个CRD，方便在 K8S集群中部署和管理相关信息
+- 维护BCSNetPool和BCSNetIP，在K8S集群中部署和管理相应资源
 - 提供接口供cni插件申请和删除IP
 
 ## 架构设计
