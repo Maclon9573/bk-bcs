@@ -11,7 +11,7 @@
 
 ## 架构设计
 
-![image-20230803153333537](/Users/mcll/Library/Application Support/typora-user-images/image-20230803153333537.png)
+![image-20230803153333537](./bcs-netservice-controller.png)
 
 ## 数据结构
 
