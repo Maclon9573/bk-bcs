@@ -17,11 +17,15 @@ package sqlstore
 import (
 	"fmt"
 
+	"github.com/Tencent/bk-bcs/bcs-common/common/encrypt"
+
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-api/config"
 	"github.com/jinzhu/gorm"
+
 	// import empty mysql package
-	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"time"
+
+	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
 
 var GCoreDB *gorm.DB
@@ -36,6 +40,8 @@ func InitCoreDatabase(conf *config.ApiServConfig) error {
 	if dsn == "" {
 		return fmt.Errorf("core_database dsn not configured")
 	}
+	realDsn, _ := encrypt.DesDecryptFromBase([]byte(dsn))
+	dsn = string(realDsn)
 	db, err := gorm.Open("mysql", dsn)
 	if err != nil {
 		return err
