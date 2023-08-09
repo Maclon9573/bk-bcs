@@ -1,0 +1,24 @@
+domain: bkbcs.tencent.com
+layout:
+- go.kubebuilder.io/v3
+projectName: bcs-netservice-controller
+repo: github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: bkbcs.tencent.com
+  group: netservice
+  kind: BCSNetIP
+  path: github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/api/v1
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: bkbcs.tencent.com
+  group: netservice
+  kind: BCSNetPool
+  path: github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/api/v1
+  version: v1
+version: "3"

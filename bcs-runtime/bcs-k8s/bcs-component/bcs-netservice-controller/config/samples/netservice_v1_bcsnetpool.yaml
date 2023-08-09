@@ -1,0 +1,15 @@
+apiVersion: netservice.bkbcs.tencent.com/v1
+kind: BCSNetPool
+metadata:
+  name: 10.0.0.0
+spec:
+  net: 10.0.0.0
+  mask: 24
+  gateway: 10.0.0.1
+  hosts:
+  - 10.0.0.1
+  - 10.0.0.2
+  - 10.0.0.3
+  availableIPs:
+  - 10.0.0.10
+  - 10.0.0.11
