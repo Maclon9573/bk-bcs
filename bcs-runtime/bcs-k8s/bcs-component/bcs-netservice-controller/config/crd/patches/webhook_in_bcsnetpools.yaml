@@ -8,9 +8,10 @@ spec:
     strategy: Webhook
     webhook:
       clientConfig:
-        service:
-          namespace: system
-          name: webhook-service
-          path: /convert
+#        service:
+#          namespace: system
+#          name: webhook-service
+#          path: /convert
+      url: https://127.0.0.1:8080/convert
       conversionReviewVersions:
       - v1

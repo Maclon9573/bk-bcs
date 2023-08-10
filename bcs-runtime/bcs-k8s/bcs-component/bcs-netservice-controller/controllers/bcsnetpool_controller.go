@@ -40,6 +40,8 @@ type BCSNetPoolReconciler struct {
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetpools,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetpools/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetips,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetips/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;create;update;delete
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=pods,verbs=get;list;watch
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetpools/finalizers,verbs=update
 

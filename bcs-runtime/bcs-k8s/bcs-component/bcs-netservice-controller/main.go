@@ -22,6 +22,7 @@ import (
 	"strconv"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+
 	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/internal/option"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -90,17 +91,7 @@ func main() {
 		LeaderElection:          opts.EnableLeaderElect,
 		LeaderElectionID:        "ca387ddc.netservice.bkbcs.tencent.com",
 		LeaderElectionNamespace: "bcs-system",
-		// LeaderElectionReleaseOnCancel defines if the leader should step down voluntarily
-		// when the Manager ends. This requires the binary to immediately end when the
-		// Manager is stopped, otherwise, this setting is unsafe. Setting this significantly
-		// speeds up voluntary leader transitions as the new leader don't have to wait
-		// LeaseDuration time first.
-		//
-		// In the default scaffold provided, the program ends immediately after
-		// the manager stops, so would be fine to enable this option. However,
-		// if you are doing or is intended to do any operation such as perform cleanups
-		// after the manager stops then its usage might be unsafe.
-		// LeaderElectionReleaseOnCancel: true,
+		CertDir:                 "/tmp/k8s-webhook-server/serving-certs/",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -112,6 +103,10 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BCSNetPool")
+		os.Exit(1)
+	}
+	if err = (&netservicev1.BCSNetPool{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "BCSNetPool")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
