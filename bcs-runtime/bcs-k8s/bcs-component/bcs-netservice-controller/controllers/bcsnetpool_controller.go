@@ -20,6 +20,8 @@ import (
 	"context"
 	"time"
 
+	"sigs.k8s.io/controller-runtime/pkg/source"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -34,7 +36,8 @@ import (
 // BCSNetPoolReconciler reconciles a BCSNetPool object
 type BCSNetPoolReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme   *runtime.Scheme
+	IPFilter *IPFilter
 }
 
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetpools,verbs=get;list;watch;create;update;patch;delete
@@ -105,7 +108,7 @@ func (r *BCSNetPoolReconciler) syncBCSNetIP(ctx context.Context, netPool *netser
 				newNetIP := &netservicev1.BCSNetIP{
 					ObjectMeta: metav1.ObjectMeta{Name: ip},
 					Spec: netservicev1.BCSNetIPSpec{
-						Pool:    netPool.Spec.Net,
+						Pool:    netPool.Name,
 						Mask:    netPool.Spec.Mask,
 						Gateway: netPool.Spec.Gateway,
 					},
@@ -145,5 +148,6 @@ func (r *BCSNetPoolReconciler) syncBCSNetIP(ctx context.Context, netPool *netser
 func (r *BCSNetPoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&netservicev1.BCSNetPool{}).
+		Watches(&source.Kind{Type: &netservicev1.BCSNetIP{}}, r.IPFilter).
 		Complete(r)
 }
