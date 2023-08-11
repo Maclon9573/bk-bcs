@@ -52,7 +52,7 @@ func (r *BCSNetPool) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ admission.CustomDefaulter = &bcsNetPoolClient{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *bcsNetPoolClient) Default(ctx context.Context, obj runtime.Object) error {
+func (c *bcsNetPoolClient) Default(ctx context.Context, obj runtime.Object) error {
 	// TODO(user): fill in your defaulting logic.
 	return nil
 }
@@ -63,7 +63,7 @@ func (r *bcsNetPoolClient) Default(ctx context.Context, obj runtime.Object) erro
 var _ admission.CustomValidator = &bcsNetPoolClient{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *bcsNetPoolClient) ValidateCreate(ctx context.Context, obj runtime.Object) error {
+func (c *bcsNetPoolClient) ValidateCreate(ctx context.Context, obj runtime.Object) error {
 	pool, ok := obj.(*BCSNetPool)
 	if !ok {
 		return errors.New("object is not BCSNetPool")
@@ -85,7 +85,7 @@ func (r *bcsNetPoolClient) ValidateCreate(ctx context.Context, obj runtime.Objec
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) error {
+func (c *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Object, newObj runtime.Object) error {
 	pool, ok := newObj.(*BCSNetPool)
 	if !ok {
 		return errors.New("object is not BCSNetPool")
@@ -121,7 +121,7 @@ func (r *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Ob
 		}
 	}
 
-	if err := r.checkActiveIP(ctx, delIPList, pool); err != nil {
+	if err := c.checkActiveIP(ctx, delIPList, pool); err != nil {
 		return err
 	}
 
@@ -129,36 +129,36 @@ func (r *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Ob
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *bcsNetPoolClient) ValidateDelete(ctx context.Context, obj runtime.Object) error {
+func (c *bcsNetPoolClient) ValidateDelete(ctx context.Context, obj runtime.Object) error {
 	pool, ok := obj.(*BCSNetPool)
 	if !ok {
 		return errors.New("object is not BCSNetPool")
 	}
 	blog.Infof("validate delete pool %s", pool.Name)
 
-	if err := r.checkActiveIP(ctx, pool.Spec.AvailableIPs, pool); err != nil {
+	if err := c.checkActiveIP(ctx, pool.Spec.AvailableIPs, pool); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (r *bcsNetPoolClient) checkActiveIP(ctx context.Context, s []string, pool *BCSNetPool) error {
+func (c *bcsNetPoolClient) checkActiveIP(ctx context.Context, s []string, pool *BCSNetPool) error {
 	for _, ip := range s {
 		netIP := &BCSNetIP{}
-		if err := r.client.Get(ctx, types.NamespacedName{Name: ip}, netIP); err != nil {
+		if err := c.client.Get(ctx, types.NamespacedName{Name: ip}, netIP); err != nil {
 			if k8serrors.IsNotFound(err) {
 				blog.Warnf("BCSNetIP %s missing in pool %s", ip, pool.Name)
 				continue
 			}
 			return err
 		}
-		if netIP.Status.Status == "Available" {
+		if netIP.Status.Status == ActiveStatus {
 			return errors.New(fmt.Sprintf("can not delete pool %s, active IP %s exists", pool.Name, ip))
 		}
 	}
 	return nil
 }
 
-func (r *bcsNetPoolClient) ValidateVerification() error {
+func (c *bcsNetPoolClient) ValidateVerification() error {
 	return nil
 }

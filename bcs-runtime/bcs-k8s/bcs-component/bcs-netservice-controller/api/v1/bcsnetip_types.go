@@ -26,7 +26,8 @@ import (
 // BCSNetIPSpec defines the desired state of BCSNetIP
 type BCSNetIPSpec struct {
 	// 所属Pool
-	Pool string `json:"pool"`
+	// TODO: net; ip加pool labels; cache
+	Net string `json:"pool"`
 	// 网段掩码
 	Mask int `json:"mask"`
 	// 网段网关
@@ -42,12 +43,12 @@ type BCSNetIPStatus struct {
 	// 是否被用作固定IP
 	Fixed bool `json:"fixed,omitempty"`
 	// 容器ID
-	ContainerID        string `json:"containerID,omitempty"`
-	PodPrimaryKey      string `json:"podPrimaryKey,omitempty"`
-	PodName            string `json:"podName,omitempty"`
-	PodNamespace       string `json:"podNamespace,omitempty"`
-	UpdateTime         string `json:"updateTime,omitempty"`
-	FixedIPExpiredTime string `json:"fixedIPExpiredTime,omitempty"`
+	ContainerID        string      `json:"containerID,omitempty"`
+	PodPrimaryKey      string      `json:"podPrimaryKey,omitempty"`
+	PodName            string      `json:"podName,omitempty"`
+	PodNamespace       string      `json:"podNamespace,omitempty"`
+	UpdateTime         metav1.Time `json:"updateTime,omitempty"`
+	FixedIPExpiredTime string      `json:"fixedIPExpiredTime,omitempty"`
 }
 
 //+kubebuilder:object:root=true

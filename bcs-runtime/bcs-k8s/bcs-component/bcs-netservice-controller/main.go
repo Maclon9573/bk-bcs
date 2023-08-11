@@ -18,20 +18,26 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"strconv"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/Tencent/bk-bcs/bcs-common/common/http/httpserver"
+
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 
+	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/internal/httpsvr"
 	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/internal/option"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -74,6 +80,8 @@ func main() {
 	flag.StringVar(&opts.StdErrThreshold, "stderrthreshold", "2", "logs at or above this threshold go to stderr")
 	flag.StringVar(&opts.VModule, "vmodule", "", "comma-separated list of pattern=N settings for file-filtered logging")
 	flag.StringVar(&opts.TraceLocation, "log_backtrace_at", "", "when logging hits line file:N, emit a stack trace")
+
+	flag.UintVar(&opts.HttpServerPort, "http_svr_port", 8088, "port for controller http server")
 
 	flag.Parse()
 	opts.Verbosity = int32(verbosity)
@@ -120,9 +128,43 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := initHttpServer(opts, mgr.GetClient()); err != nil {
+		blog.Errorf("init http server failed, err %v", err)
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// initHttpServer init netservice controller http server
+// httpServer提供
+// 1. 申请IP地址接口
+// 2. 释放IP地址接口
+func initHttpServer(op *option.ControllerOption, client client.Client) error {
+	server := httpserver.NewHttpServer(op.HttpServerPort, op.Address, "")
+	if op.Conf.ServCert.IsSSL {
+		server.SetSsl(op.Conf.ServCert.CAFile, op.Conf.ServCert.CertFile, op.Conf.ServCert.KeyFile,
+			op.Conf.ServCert.CertPasswd)
+	}
+
+	// server.SetInsecureServer(op.Conf.InsecureAddress, op.Conf.InsecurePort)
+	server.SetInsecureServer(op.Address, op.HttpServerPort)
+	ws := server.NewWebService("/netservicecontroller", nil)
+	httpServerClient := &httpsvr.HttpServerClient{
+		Client: client,
+	}
+	httpsvr.InitRouters(ws, httpServerClient)
+
+	router := server.GetRouter()
+	webContainer := server.GetWebContainer()
+	router.Handle("/netservicecontroller/{sub_path:.*}", webContainer)
+	blog.Infof("Starting http server on %s:%d", op.Address, op.HttpServerPort)
+	if err := server.ListenAndServeMux(op.Conf.VerifyClientTLS); err != nil {
+		return fmt.Errorf("http ListenAndServe error %s", err.Error())
+	}
+	return nil
 }

@@ -38,8 +38,9 @@ func (f *IPFilter) Delete(event event.DeleteEvent, q workqueue.RateLimitingInter
 		blog.Warnf("recv delete object is not BCSNetIP, event %+v", event)
 		return
 	}
+	// TODO: Pool改为net后,改变此处name获取方式
 	q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-		Name: ip.Spec.Pool,
+		Name: ip.Spec.Net,
 	}})
 }
 

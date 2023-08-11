@@ -55,7 +55,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	netPool := &netservicev1.BCSNetPool{}
 	if err := r.Get(ctx, req.NamespacedName, netPool); err != nil {
 		if k8serrors.IsNotFound(err) {
-			blog.Infof("BCSNetPool %s deleted successfully", req.Name)
+			blog.Infof("BCSNetPool %s is not found", req.Name)
 			return ctrl.Result{}, nil
 		}
 		blog.Errorf("get BCSNetPool %s failed, err %s", req.Name, err.Error())
@@ -66,7 +66,8 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 	if netPool.Status.Status == "" {
 		blog.Infof("initializing BCSNetPool %s", req.Name)
-		netPool.Status.Status = "Initializing"
+		netPool.Status.Status = netservicev1.InitializingStatus
+		netPool.Status.UpdateTime = metav1.Now()
 		if err := r.Status().Update(ctx, netPool); err != nil {
 			blog.Errorf("update BCSNetPool %s status failed, err %s", req.Name, err.Error())
 			return ctrl.Result{
@@ -86,7 +87,8 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	// TODO: 更新/删除时, Pool状态的判断
-	netPool.Status.Status = "Normal"
+	netPool.Status.Status = netservicev1.NormalStatus
+	netPool.Status.UpdateTime = metav1.Now()
 	if err := r.Status().Update(ctx, netPool); err != nil {
 		blog.Errorf("update BCSNetPool %s status failed, err %s", req.Name, err.Error())
 		return ctrl.Result{

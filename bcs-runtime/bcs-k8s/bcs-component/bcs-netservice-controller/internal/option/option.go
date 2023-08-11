@@ -34,4 +34,28 @@ type ControllerOption struct {
 	EnableLeaderElect bool
 
 	conf.LogConfig
+
+	// HttpServerPort port for http api
+	HttpServerPort uint
+
+	Conf Conf
+
+	ServCert ServCert
+}
+
+// Conf 服务配置
+type Conf struct {
+	ServCert        ServCert
+	InsecureAddress string
+	InsecurePort    uint
+	VerifyClientTLS bool
+}
+
+// ServCert 服务证书配置
+type ServCert struct {
+	CAFile     string
+	CertFile   string
+	KeyFile    string
+	CertPasswd string
+	IsSSL      bool
 }
