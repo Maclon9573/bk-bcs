@@ -89,8 +89,8 @@ func (c *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Ob
 	if !ok {
 		return errors.New("object is not BCSNetPool")
 	}
-	oldPool, ok := oldObj.(*BCSNetPool)
-	if !ok {
+	oldPool, ok2 := oldObj.(*BCSNetPool)
+	if !ok2 {
 		return errors.New("object is not BCSNetPool")
 	}
 
@@ -129,15 +129,6 @@ func (c *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Ob
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (c *bcsNetPoolClient) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	//pool, ok := obj.(*BCSNetPool)
-	//if !ok {
-	//	return errors.New("object is not BCSNetPool")
-	//}
-	//blog.Infof("validate delete pool %s", pool.Name)
-	//
-	//if err := c.checkActiveIP(ctx, pool.Spec.AvailableIPs, pool); err != nil {
-	//	return err
-	//}
 	return nil
 }
 

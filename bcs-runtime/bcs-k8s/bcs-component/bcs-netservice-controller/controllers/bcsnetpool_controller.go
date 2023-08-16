@@ -72,11 +72,8 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		for _, ip := range netPool.Spec.AvailableIPs {
 			netIP := &netservicev1.BCSNetIP{}
 			if err := r.Get(ctx, types.NamespacedName{Name: ip}, netIP); err != nil {
-				blog.Errorf("get BCSNetPool %s failed, err %s", req.Name, err.Error())
-				return ctrl.Result{
-					Requeue:      true,
-					RequeueAfter: 5 * time.Second,
-				}, err
+				blog.Warnf("get BCSNetIP %s failed, %s", req.Name, err.Error())
+				continue
 			}
 			if netIP.Status.Status == constant.ActiveStatus {
 				blog.Errorf("can not perform operation for pool %s, active IP %s exists", netPool.Name, ip)
@@ -86,7 +83,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				}, fmt.Errorf("can not perform operation for pool %s, active IP %s exists", netPool.Name, ip)
 			}
 			if err := r.Delete(ctx, netIP); err != nil {
-				blog.Errorf("delete BCSNetPool %s failed, err %s", req.Name, err.Error())
+				blog.Errorf("delete BCSNetIP %s failed, err %s", req.Name, err.Error())
 				return ctrl.Result{
 					Requeue:      true,
 					RequeueAfter: 5 * time.Second,
