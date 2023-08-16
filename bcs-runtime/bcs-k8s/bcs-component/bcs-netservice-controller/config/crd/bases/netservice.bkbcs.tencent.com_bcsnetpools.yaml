@@ -66,6 +66,7 @@ spec:
                 description: Initializing --初始化中，Normal --正常
                 type: string
               updateTime:
+                format: date-time
                 type: string
             type: object
         type: object

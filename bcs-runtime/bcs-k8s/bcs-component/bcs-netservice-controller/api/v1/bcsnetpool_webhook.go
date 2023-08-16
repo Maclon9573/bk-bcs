@@ -1,18 +1,14 @@
 /*
-Copyright 2023.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Tencent is pleased to support the open source community by making Blueking Container Service available.,
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under,
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package v1
 
@@ -21,6 +17,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+
+	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/internal/constant"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 
@@ -37,6 +35,7 @@ type bcsNetPoolClient struct {
 	client client.Client
 }
 
+// SetupWebhookWithManager setup webhook for BCSPool with manager
 func (r *BCSNetPool) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
@@ -71,14 +70,14 @@ func (c *bcsNetPoolClient) ValidateCreate(ctx context.Context, obj runtime.Objec
 
 	blog.Infof("validate create pool %s", pool.Name)
 	if net.ParseIP(pool.Spec.Net) == nil {
-		return errors.New(fmt.Sprintf("spec.net %s is not valid when creating bcsnetpool %s", pool.Spec.Net, pool.Name))
+		return fmt.Errorf("spec.net %s is not valid when creating bcsnetpool %s", pool.Spec.Net, pool.Name)
 	}
 	if net.ParseIP(pool.Spec.Gateway) == nil {
-		return errors.New(fmt.Sprintf("spec.gateway is not valid %s when creating bcsnetpool %s", pool.Spec.Gateway, pool.Name))
+		return fmt.Errorf("spec.gateway is not valid %s when creating bcsnetpool %s", pool.Spec.Gateway, pool.Name)
 	}
 	for _, ip := range pool.Spec.AvailableIPs {
 		if net.ParseIP(ip) == nil {
-			return errors.New(fmt.Sprintf("%s in spec.availableIPs is not valid when creating bcsnetpool %s", ip, pool.Name))
+			return fmt.Errorf("%s in spec.availableIPs is not valid when creating bcsnetpool %s", ip, pool.Name)
 		}
 	}
 	return nil
@@ -97,14 +96,14 @@ func (c *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Ob
 
 	blog.Infof("validate update pool %s", pool.Name)
 	if net.ParseIP(pool.Spec.Net) == nil {
-		return errors.New(fmt.Sprintf("spec.net %s is not valid when updating bcsnetpool %s", pool.Spec.Net, pool.Name))
+		return fmt.Errorf("spec.net %s is not valid when updating bcsnetpool %s", pool.Spec.Net, pool.Name)
 	}
 	if net.ParseIP(pool.Spec.Gateway) == nil {
-		return errors.New(fmt.Sprintf("spec.gateway is not valid %s when updating bcsnetpool %s", pool.Spec.Gateway, pool.Name))
+		return fmt.Errorf("spec.gateway is not valid %s when updating bcsnetpool %s", pool.Spec.Gateway, pool.Name)
 	}
 	for _, ip := range pool.Spec.AvailableIPs {
 		if net.ParseIP(ip) == nil {
-			return errors.New(fmt.Sprintf("%s in spec.availableIPs is not valid when updating bcsnetpool %s", ip, pool.Name))
+			return fmt.Errorf("%s in spec.availableIPs is not valid when updating bcsnetpool %s", ip, pool.Name)
 		}
 	}
 
@@ -130,15 +129,15 @@ func (c *bcsNetPoolClient) ValidateUpdate(ctx context.Context, oldObj runtime.Ob
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (c *bcsNetPoolClient) ValidateDelete(ctx context.Context, obj runtime.Object) error {
-	pool, ok := obj.(*BCSNetPool)
-	if !ok {
-		return errors.New("object is not BCSNetPool")
-	}
-	blog.Infof("validate delete pool %s", pool.Name)
-
-	if err := c.checkActiveIP(ctx, pool.Spec.AvailableIPs, pool); err != nil {
-		return err
-	}
+	//pool, ok := obj.(*BCSNetPool)
+	//if !ok {
+	//	return errors.New("object is not BCSNetPool")
+	//}
+	//blog.Infof("validate delete pool %s", pool.Name)
+	//
+	//if err := c.checkActiveIP(ctx, pool.Spec.AvailableIPs, pool); err != nil {
+	//	return err
+	//}
 	return nil
 }
 
@@ -152,13 +151,9 @@ func (c *bcsNetPoolClient) checkActiveIP(ctx context.Context, s []string, pool *
 			}
 			return err
 		}
-		if netIP.Status.Status == ActiveStatus {
-			return errors.New(fmt.Sprintf("can not delete pool %s, active IP %s exists", pool.Name, ip))
+		if netIP.Status.Status == constant.ActiveStatus {
+			return fmt.Errorf("can not perform operation for pool %s, active IP %s exists", pool.Name, ip)
 		}
 	}
-	return nil
-}
-
-func (c *bcsNetPoolClient) ValidateVerification() error {
 	return nil
 }

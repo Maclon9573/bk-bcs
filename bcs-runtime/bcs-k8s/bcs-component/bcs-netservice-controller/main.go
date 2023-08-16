@@ -1,18 +1,14 @@
 /*
-Copyright 2023.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+ * Tencent is pleased to support the open source community by making Blueking Container Service available.,
+ * Copyright (C) 2019 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under,
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package main
 
@@ -54,7 +50,6 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-
 	utilruntime.Must(netservicev1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -99,7 +94,8 @@ func main() {
 		LeaderElection:          opts.EnableLeaderElect,
 		LeaderElectionID:        "ca387ddc.netservice.bkbcs.tencent.com",
 		LeaderElectionNamespace: "bcs-system",
-		CertDir:                 "/tmp/k8s-webhook-server/serving-certs/",
+		// TODO: remove after dev done
+		CertDir: "/Users/mcll/Goworks/src/github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/cert/",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -107,8 +103,9 @@ func main() {
 	}
 
 	if err = (&controllers.BCSNetPoolReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		IPFilter: controllers.NewIPFilter(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "BCSNetPool")
 		os.Exit(1)
@@ -151,11 +148,10 @@ func initHttpServer(op *option.ControllerOption, client client.Client) error {
 			op.Conf.ServCert.CertPasswd)
 	}
 
-	// server.SetInsecureServer(op.Conf.InsecureAddress, op.Conf.InsecurePort)
 	server.SetInsecureServer(op.Address, op.HttpServerPort)
 	ws := server.NewWebService("/netservicecontroller", nil)
 	httpServerClient := &httpsvr.HttpServerClient{
-		Client: client,
+		K8SClient: client,
 	}
 	httpsvr.InitRouters(ws, httpServerClient)
 

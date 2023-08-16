@@ -24,26 +24,47 @@ func NewIPFilter() *IPFilter {
 
 var _ handler.EventHandler = &IPFilter{}
 
-func (f *IPFilter) Create(event event.CreateEvent, q workqueue.RateLimitingInterface) {
-	//TODO implement me
-}
+// Create is called in response to a create event
+func (f *IPFilter) Create(event event.CreateEvent, q workqueue.RateLimitingInterface) {}
 
+// Update is called in response to an update event
 func (f *IPFilter) Update(event event.UpdateEvent, q workqueue.RateLimitingInterface) {
-	//TODO implement me
+	_, ok := event.ObjectOld.(*v1.BCSNetIP)
+	if !ok {
+		blog.Errorf("update object is not BCSNetIP, event %+v", event)
+		return
+	}
+	ip, ok := event.ObjectNew.(*v1.BCSNetIP)
+	if !ok {
+		blog.Errorf("update object is not BCSNetIP, event %+v", event)
+		return
+	}
+	poolName, ok := ip.Labels["pool"]
+	if !ok {
+		blog.Errorf("can not find pool name by labels for IP [%s]", ip.Name)
+		return
+	}
+
+	q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: poolName}})
 }
 
+// Delete is called in response to a delete event
 func (f *IPFilter) Delete(event event.DeleteEvent, q workqueue.RateLimitingInterface) {
 	ip, ok := event.Object.(*v1.BCSNetIP)
 	if !ok {
-		blog.Warnf("recv delete object is not BCSNetIP, event %+v", event)
+		blog.Errorf("delete object is not BCSNetIP, event %+v", event)
 		return
 	}
-	// TODO: Pool改为net后,改变此处name获取方式
-	q.Add(reconcile.Request{NamespacedName: types.NamespacedName{
-		Name: ip.Spec.Net,
-	}})
+
+	poolName, ok := ip.Labels["pool"]
+	if !ok {
+		blog.Errorf("can not find pool name by labels for IP [%s]", ip.Name)
+		return
+	}
+
+	q.Add(reconcile.Request{NamespacedName: types.NamespacedName{Name: poolName}})
 }
 
-func (f *IPFilter) Generic(event event.GenericEvent, q workqueue.RateLimitingInterface) {
-	//TODO implement me
-}
+// Generic is called in response to an event of an unknown type or a synthetic event triggered as a cron or
+// external trigger request
+func (f *IPFilter) Generic(event event.GenericEvent, q workqueue.RateLimitingInterface) {}

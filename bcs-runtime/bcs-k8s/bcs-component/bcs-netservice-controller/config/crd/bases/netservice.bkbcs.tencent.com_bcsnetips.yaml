@@ -41,13 +41,13 @@ spec:
               mask:
                 description: 网段掩码
                 type: integer
-              pool:
-                description: 所属Pool
+              net:
+                description: 所属网段
                 type: string
             required:
             - gateway
             - mask
-            - pool
+            - net
             type: object
           status:
             description: BCSNetIPStatus defines the observed state of BCSNetIP
@@ -58,10 +58,10 @@ spec:
               fixed:
                 description: 是否被用作固定IP
                 type: boolean
-              fixedIPExpiredTime:
-                type: string
               host:
                 description: 对应主机信息
+                type: string
+              keepDuration:
                 type: string
               podName:
                 type: string
@@ -73,6 +73,7 @@ spec:
                 description: Active --已使用，Available --可用, Reserved --保留
                 type: string
               updateTime:
+                format: date-time
                 type: string
             type: object
         type: object
