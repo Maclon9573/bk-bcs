@@ -95,7 +95,7 @@ func main() {
 		LeaderElectionID:        "ca387ddc.netservice.bkbcs.tencent.com",
 		LeaderElectionNamespace: "bcs-system",
 		// TODO: remove after dev done
-		CertDir: "/Users/mcll/Goworks/src/github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/cert/",
+		//CertDir: "/Users/mcll/Goworks/src/github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/cert/",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -112,6 +112,14 @@ func main() {
 	}
 	if err = (&netservicev1.BCSNetPool{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "BCSNetPool")
+		os.Exit(1)
+	}
+	if err = (&controllers.BCSNetIPClaimReconciler{
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("BCSNetIPClaim"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "BCSNetIPClaim")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

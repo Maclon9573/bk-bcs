@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.9.0
   creationTimestamp: null
-  name: bcsnetips.netservice.bkbcs.tencent.com
+  name: bcsnetipclaims.netservice.bkbcs.tencent.com
 spec:
   group: netservice.bkbcs.tencent.com
   names:
-    kind: BCSNetIP
-    listKind: BCSNetIPList
-    plural: bcsnetips
-    singular: bcsnetip
-  scope: Cluster
+    kind: BCSNetIPClaim
+    listKind: BCSNetIPClaimList
+    plural: bcsnetipclaims
+    singular: bcsnetipclaim
+  scope: Namespaced
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: BCSNetIP is the Schema for the bcsnetips API
+        description: BCSNetIPClaim is the Schema for the bcsnetipclaims API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,49 +33,28 @@ spec:
           metadata:
             type: object
           spec:
-            description: BCSNetIPSpec defines the desired state of BCSNetIP
+            description: BCSNetIPClaimSpec defines the desired state of BCSNetIPClaim
             properties:
-              gateway:
-                description: 网段网关
+              bcsNetIPName:
+                description: BCSNetIPName sets the name for BCSNetIP will be bounded
+                  with this claim
                 type: string
-              mask:
-                description: 网段掩码
-                type: integer
-              net:
-                description: 所属网段
+              expiredDuration:
+                description: ExpiredDuration defines expired duration for this claim
+                  after claimed IP is released
                 type: string
-            required:
-            - gateway
-            - mask
-            - net
             type: object
           status:
-            description: BCSNetIPStatus defines the observed state of BCSNetIP
+            description: BCSNetIPClaimStatus defines the observed state of BCSNetIPClaim
             properties:
-              containerID:
-                description: 容器ID
+              boundedIP:
+                description: BCSNetIPName is name for BCSNetIP bounded with this claim
                 type: string
-              fixed:
-                description: 是否被用作固定IP
-                type: boolean
-              host:
-                description: 对应主机信息
+              phase:
+                description: Phase represents the state of this claim
                 type: string
-              ipClaimKey:
-                description: BCSNetIPClaim名称
-                type: string
-              keepDuration:
-                type: string
-              podName:
-                type: string
-              podNamespace:
-                type: string
-              status:
-                description: Active --已使用，Available --可用, Reserved --保留
-                type: string
-              updateTime:
-                format: date-time
-                type: string
+            required:
+            - boundedIP
             type: object
         type: object
     served: true

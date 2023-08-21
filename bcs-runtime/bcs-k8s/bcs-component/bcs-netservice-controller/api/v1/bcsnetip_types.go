@@ -35,12 +35,13 @@ type BCSNetIPStatus struct {
 	// 是否被用作固定IP
 	Fixed bool `json:"fixed,omitempty"`
 	// 容器ID
-	ContainerID   string      `json:"containerID,omitempty"`
-	PodPrimaryKey string      `json:"podPrimaryKey,omitempty"`
-	PodName       string      `json:"podName,omitempty"`
-	PodNamespace  string      `json:"podNamespace,omitempty"`
-	UpdateTime    metav1.Time `json:"updateTime,omitempty"`
-	KeepDuration  string      `json:"keepDuration,omitempty"`
+	ContainerID string `json:"containerID,omitempty"`
+	// BCSNetIPClaim名称
+	IPClaimKey   string      `json:"ipClaimKey,omitempty"`
+	PodName      string      `json:"podName,omitempty"`
+	PodNamespace string      `json:"podNamespace,omitempty"`
+	UpdateTime   metav1.Time `json:"updateTime,omitempty"`
+	KeepDuration string      `json:"keepDuration,omitempty"`
 }
 
 //+kubebuilder:object:root=true

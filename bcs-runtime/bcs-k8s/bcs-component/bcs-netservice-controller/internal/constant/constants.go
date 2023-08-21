@@ -15,19 +15,24 @@ package constant
 import "time"
 
 const (
-	// InitializingStatus for BCSNetPool Initializing status
-	InitializingStatus = "Initializing"
-	// NormalStatus for BCSNetPool Normal status
-	NormalStatus = "Normal"
-	// TerminatingStatus for BCSNetPool Terminating status
-	TerminatingStatus = "Terminating"
+	// BCSNetPoolInitializingStatus for BCSNetPool Initializing status
+	BCSNetPoolInitializingStatus = "Initializing"
+	// BCSNetPoolNormalStatus for BCSNetPool Normal status
+	BCSNetPoolNormalStatus = "Normal"
 
-	// ActiveStatus for BCSNetIP Active status
-	ActiveStatus = "Active"
-	// AvailableStatus for BCSNetIP Available status
-	AvailableStatus = "Available"
-	// ReservedStatus for BCSNetIP Reserved status
-	ReservedStatus = "Reserved"
+	// BCSNetIPActiveStatus for BCSNetIP Active status
+	BCSNetIPActiveStatus = "Active"
+	// BCSNetIPAvailableStatus for BCSNetIP Available status
+	BCSNetIPAvailableStatus = "Available"
+	// BCSNetIPReservedStatus for BCSNetIP Reserved status
+	BCSNetIPReservedStatus = "Reserved"
+
+	// BCSNetIPClaimBoundedStatus for BCSNetIPClaim Bound status
+	BCSNetIPClaimBoundedStatus = "Bound"
+	// BCSNetIPClaimPendingStatus for BCSNetIPClaim Pending status
+	BCSNetIPClaimPendingStatus = "Pending"
+	// BCSNetIPClaimExpiredStatus for BCSNetIPClaim Expired status
+	BCSNetIPClaimExpiredStatus = "Expired"
 
 	// PodAnnotationKeyFixIP pod annotation key for fix ip
 	PodAnnotationKeyFixIP = "netservicecontroller.bkbcs.tencent.com"
@@ -37,6 +42,8 @@ const (
 	PodAnnotationKeyForExpiredDurationSeconds = "keepduration.netservicecontroller.bkbcs.tencent.com"
 	// PodAnnotationKeyForPrimaryKey pod annotation key for primary key
 	PodAnnotationKeyForPrimaryKey = "primarykey.netservicecontroller.bkbcs.tencent.com"
+	// PodAnnotationKeyForIPClaim pod annotation key for IP claim
+	PodAnnotationKeyForIPClaim = "netservicecontroller.bkbcs.tencent.com/ipclaim"
 
 	// FixIPLabel label key for fix ip
 	FixIPLabel = "fixed-ip"

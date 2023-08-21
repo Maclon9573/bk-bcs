@@ -1,0 +1,6 @@
+apiVersion: netservice.bkbcs.tencent.com/v1
+kind: BCSNetIPClaim
+metadata:
+  name: bcsnetipclaim-sample
+spec:
+  expiredDuration: 10s

@@ -46,6 +46,7 @@ type BCSNetPoolReconciler struct {
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetpools/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetips,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetips/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetipclaims/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;create;update;delete
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=pods,verbs=get;list
 //+kubebuilder:rbac:groups=netservice.bkbcs.tencent.com,resources=bcsnetpools/finalizers,verbs=update
@@ -75,7 +76,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				blog.Warnf("get BCSNetIP %s failed, %s", req.Name, err.Error())
 				continue
 			}
-			if netIP.Status.Status == constant.ActiveStatus {
+			if netIP.Status.Status == constant.BCSNetIPActiveStatus {
 				blog.Errorf("can not perform operation for pool %s, active IP %s exists", netPool.Name, ip)
 				return ctrl.Result{
 					Requeue:      true,
@@ -113,7 +114,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	if netPool.Status.Status == "" {
 		blog.Infof("initializing BCSNetPool %s", req.Name)
-		if err := r.updatePoolStatus(ctx, netPool, constant.InitializingStatus); err != nil {
+		if err := r.updatePoolStatus(ctx, netPool, constant.BCSNetPoolInitializingStatus); err != nil {
 			return ctrl.Result{
 				Requeue:      true,
 				RequeueAfter: 5 * time.Second,
@@ -127,10 +128,10 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return result, err
 	}
 
-	r.syncFixedBCSNetIP(ctx, netPool)
+	r.syncReservedBCSNetIP(ctx, netPool)
 
-	if netPool.Status.Status != constant.NormalStatus {
-		if err := r.updatePoolStatus(ctx, netPool, constant.NormalStatus); err != nil {
+	if netPool.Status.Status != constant.BCSNetPoolNormalStatus {
+		if err := r.updatePoolStatus(ctx, netPool, constant.BCSNetPoolNormalStatus); err != nil {
 			return ctrl.Result{
 				Requeue:      true,
 				RequeueAfter: 5 * time.Second,
@@ -194,7 +195,7 @@ func (r *BCSNetPoolReconciler) syncBCSNetIP(ctx context.Context, netPool *netser
 	return ctrl.Result{}, nil
 }
 
-func (r *BCSNetPoolReconciler) syncFixedBCSNetIP(ctx context.Context, netPool *netservicev1.BCSNetPool) {
+func (r *BCSNetPoolReconciler) syncReservedBCSNetIP(ctx context.Context, netPool *netservicev1.BCSNetPool) {
 	netIPList := &netservicev1.BCSNetIPList{}
 	selector, err := metav1.LabelSelectorAsSelector(&metav1.LabelSelector{
 		MatchLabels: map[string]string{"pool": netPool.Name, constant.FixIPLabel: "true"},
@@ -207,49 +208,77 @@ func (r *BCSNetPoolReconciler) syncFixedBCSNetIP(ctx context.Context, netPool *n
 		blog.Errorf("get ip list failed, err %s", err.Error())
 		return
 	}
-	var fixedIPList []netservicev1.BCSNetIP
+	var ipList []netservicev1.BCSNetIP
 	for _, ip := range netIPList.Items {
-		if ip.Status.Fixed && (ip.Status.Status != constant.ActiveStatus) {
-			fixedIPList = append(fixedIPList, ip)
+		if ip.Status.Status == constant.BCSNetIPReservedStatus && ip.Status.KeepDuration != "" {
+			ipList = append(ipList, ip)
 		}
 	}
 
-	for _, ip := range fixedIPList {
-		if ip.Status.KeepDuration == "" {
-			blog.Warnf("empty keep duration for fixed IP %s", ip.Name)
-			continue
-		}
+	for _, ip := range ipList {
 		go r.releaseExpiredIP(ip)
 	}
 }
 
 func (r *BCSNetPoolReconciler) releaseExpiredIP(ip netservicev1.BCSNetIP) {
-	if ip.Status.KeepDuration == "" {
-		blog.Warnf("empty keep duration for fixed IP %s", ip.Name)
-		return
-	}
 	duration, err := time.ParseDuration(ip.Status.KeepDuration)
 	if err != nil {
 		blog.Errorf("invalid keep duration %s for fixed IP %s", ip.Status.KeepDuration, ip.Name)
+		return
 	}
 
 	time.Sleep(duration)
-	if ip.Status.UpdateTime.Add(duration).Before(time.Now()) {
-		if ip.Status.Status != constant.ActiveStatus {
-			ip.Status = netservicev1.BCSNetIPStatus{
-				Status:     constant.AvailableStatus,
+	currentIP := &netservicev1.BCSNetIP{}
+	if err := r.Get(context.Background(), types.NamespacedName{Name: ip.Name}, currentIP); err != nil {
+		blog.Errorf("get BCSNetIP failed, %s", err.Error())
+		return
+	}
+	if currentIP.Status.UpdateTime.Add(duration).Before(time.Now()) {
+		if currentIP.Status.Status == constant.BCSNetIPReservedStatus {
+			// update claim status first
+			if err := r.updateIPClaimStatus(context.Background(), currentIP); err != nil {
+				return
+			}
+
+			currentIP.Status = netservicev1.BCSNetIPStatus{
+				Status:     constant.BCSNetIPAvailableStatus,
 				UpdateTime: metav1.Now(),
 			}
-			if err := r.Status().Update(context.Background(), &ip); err != nil {
+			if err := r.Status().Update(context.Background(), currentIP); err != nil {
 				blog.Errorf("update BCSNetPool %s status failed, err %s", ip.Name, err.Error())
+				return
 			}
-			ip.Labels[constant.FixIPLabel] = "false"
-			if err := r.Update(context.Background(), &ip); err != nil {
-				blog.Errorf("set IP [%s] label failed", ip.Name)
+			currentIP.Labels[constant.FixIPLabel] = "false"
+			if err := r.Update(context.Background(), currentIP); err != nil {
+				blog.Errorf("set IP [%s] label failed", currentIP.Name)
+				return
 			}
-			blog.V(5).Infof("released fixed IP %s", ip.Name)
+
+			blog.V(5).Infof("released IP %s", currentIP.Name)
 		}
 	}
+}
+
+func (r *BCSNetPoolReconciler) updateIPClaimStatus(ctx context.Context, ip *netservicev1.BCSNetIP) error {
+	claimInfo := strings.Split(ip.Status.IPClaimKey, "/")
+	if len(claimInfo) != 2 {
+		blog.Errorf("get claim for IP %s failed, invalid claimKey", ip.Name)
+		return fmt.Errorf("get claim for IP %s failed, invalid claimKey", ip.Name)
+	}
+	claim := &netservicev1.BCSNetIPClaim{}
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: claimInfo[0], Name: claimInfo[1]}, claim); err != nil {
+		blog.Errorf("get claim for IP %s failed, %v", ip.Name, err)
+		return fmt.Errorf("get claim for IP %s failed, %v", ip.Name, err)
+	}
+	claim.Status = netservicev1.BCSNetIPClaimStatus{
+		Phase: constant.BCSNetIPClaimExpiredStatus,
+	}
+	if err := r.Status().Update(context.Background(), claim); err != nil {
+		blog.Errorf("update claim status %s failed, %v", claim.Name, err)
+		return fmt.Errorf("update claim status %s failed, %v", claim.Name, err)
+	}
+	return nil
 }
 
 // createBCSNetIP creates IP for a Pool
@@ -274,7 +303,7 @@ func (r *BCSNetPoolReconciler) createBCSNetIP(ctx context.Context, netPool *nets
 			}
 			blog.Infof("BCSNetIP %s created successfully", ip)
 
-			newNetIP.Status.Status = constant.AvailableStatus
+			newNetIP.Status.Status = constant.BCSNetIPAvailableStatus
 			if err := r.Status().Update(ctx, newNetIP); err != nil {
 				blog.Errorf("update BCSNetIP %s status failed, err %s", ip, err.Error())
 				return err
@@ -324,10 +353,10 @@ func (r *BCSNetPoolReconciler) deleteBCSNetIP(ctx context.Context, netPool *nets
 	}
 
 	for k, v := range delIPList {
-		if strings.Contains(v, constant.ActiveStatus) {
+		if strings.Contains(v, constant.BCSNetIPActiveStatus) {
 			return fmt.Errorf("can not delete IP %s in actvie status", k)
 		}
-		if v == constant.AvailableStatus+":"+"true" {
+		if v == constant.BCSNetIPAvailableStatus+":"+"true" {
 			return fmt.Errorf("can not delete fixed IP %s", k)
 		}
 		if err := r.Delete(ctx, &netservicev1.BCSNetIP{ObjectMeta: metav1.ObjectMeta{Name: k}}); err != nil {

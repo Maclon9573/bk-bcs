@@ -37,7 +37,10 @@ spec:
       - command:
         - /manager
         args:
-        - --leader-elect
+        - --leader-elect=true
+        - --alsologtostderr=true
+        - --address=0.0.0.0
+        - --v=5
         image: controller:latest
         name: manager
         securityContext:

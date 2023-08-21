@@ -17,6 +17,32 @@ rules:
 - apiGroups:
   - netservice.bkbcs.tencent.com
   resources:
+  - bcsnetipclaims
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - netservice.bkbcs.tencent.com
+  resources:
+  - bcsnetipclaims/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - netservice.bkbcs.tencent.com
+  resources:
+  - bcsnetipclaims/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - netservice.bkbcs.tencent.com
+  resources:
   - bcsnetips
   verbs:
   - create
