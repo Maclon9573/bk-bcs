@@ -95,7 +95,7 @@ func main() {
 		LeaderElectionID:        "ca387ddc.netservice.bkbcs.tencent.com",
 		LeaderElectionNamespace: "bcs-system",
 		// TODO: remove after dev done
-		//CertDir: "/Users/mcll/Goworks/src/github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/cert/",
+		CertDir: "/Users/mcll/Goworks/src/github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/cert/",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

@@ -186,7 +186,7 @@ func (c *HttpServerClient) allocateIP(request *restful.Request, response *restfu
 func (c *HttpServerClient) updateIPStatus(ip *v1.BCSNetIP, netIPReq *NetIPAllocateRequest, claimKey, duration string,
 	fixed bool) error {
 	ip.Status = v1.BCSNetIPStatus{
-		Status:       constant.BCSNetIPActiveStatus,
+		Phase:        constant.BCSNetIPActiveStatus,
 		Host:         netIPReq.Host,
 		ContainerID:  netIPReq.ContainerID,
 		Fixed:        fixed,
@@ -217,10 +217,10 @@ func (c *HttpServerClient) getAvailableIPs(netPoolList *v1.BCSNetPoolList, netIP
 					blog.Warnf("get BCSNetIP [%s] failed, %s", v, err.Error())
 					continue
 				}
-				if netIP.Status.Status == constant.BCSNetIPAvailableStatus {
+				if netIP.Status.Phase == constant.BCSNetIPAvailableStatus {
 					availableIP = append(availableIP, netIP)
 				}
-				if netIP.Status.Status == constant.BCSNetIPReservedStatus {
+				if netIP.Status.Phase == constant.BCSNetIPReservedStatus {
 					reservedIP = append(reservedIP, netIP)
 				}
 			}
@@ -242,7 +242,7 @@ func (c *HttpServerClient) getIPFromRequest(netIPReq *NetIPAllocateRequest) (*v1
 		blog.Errorf(message)
 		return nil, errors.New(message)
 	}
-	if netIP.Status.Status == constant.BCSNetIPActiveStatus {
+	if netIP.Status.Phase == constant.BCSNetIPActiveStatus {
 		message := fmt.Sprintf("the requested IP [%s] is in use", netIPReq.IPAddr)
 		blog.Errorf(message)
 		return nil, errors.New(message)
@@ -254,7 +254,7 @@ func (c *HttpServerClient) getIPFromRequest(netIPReq *NetIPAllocateRequest) (*v1
 		return nil, errors.New(message)
 	}
 	netIP.Status = v1.BCSNetIPStatus{
-		Status:       constant.BCSNetIPActiveStatus,
+		Phase:        constant.BCSNetIPActiveStatus,
 		Host:         netIPReq.Host,
 		ContainerID:  netIPReq.ContainerID,
 		IPClaimKey:   claimKey,
@@ -314,11 +314,11 @@ func (c *HttpServerClient) deleteIP(request *restful.Request, response *restful.
 		return
 	}
 	if claimKey != "" {
-		netIP.Status.Status = constant.BCSNetIPReservedStatus
+		netIP.Status.Phase = constant.BCSNetIPReservedStatus
 		netIP.Status.UpdateTime = metav1.Now()
 	} else {
 		netIP.Status = v1.BCSNetIPStatus{
-			Status:     constant.BCSNetIPAvailableStatus,
+			Phase:      constant.BCSNetIPAvailableStatus,
 			UpdateTime: metav1.Now(),
 		}
 	}

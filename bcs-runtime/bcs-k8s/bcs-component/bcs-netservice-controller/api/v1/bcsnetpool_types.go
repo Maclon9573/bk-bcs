@@ -33,7 +33,7 @@ type BCSNetPoolSpec struct {
 // BCSNetPoolStatus defines the observed state of BCSNetPool
 type BCSNetPoolStatus struct {
 	// Initializing --初始化中，Normal --正常
-	Status     string      `json:"status,omitempty"`
+	Phase      string      `json:"phase,omitempty"`
 	UpdateTime metav1.Time `json:"updateTime,omitempty"`
 }
 

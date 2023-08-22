@@ -29,7 +29,7 @@ type BCSNetIPSpec struct {
 // BCSNetIPStatus defines the observed state of BCSNetIP
 type BCSNetIPStatus struct {
 	// Active --已使用，Available --可用, Reserved --保留
-	Status string `json:"status,omitempty"`
+	Phase string `json:"phase,omitempty"`
 	// 对应主机信息
 	Host string `json:"host,omitempty"`
 	// 是否被用作固定IP

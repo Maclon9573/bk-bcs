@@ -62,7 +62,7 @@ spec:
           status:
             description: BCSNetPoolStatus defines the observed state of BCSNetPool
             properties:
-              status:
+              phase:
                 description: Initializing --初始化中，Normal --正常
                 type: string
               updateTime:

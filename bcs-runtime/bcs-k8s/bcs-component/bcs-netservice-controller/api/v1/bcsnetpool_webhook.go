@@ -142,7 +142,7 @@ func (c *bcsNetPoolClient) checkActiveIP(ctx context.Context, s []string, pool *
 			}
 			return err
 		}
-		if netIP.Status.Status == constant.BCSNetIPActiveStatus {
+		if netIP.Status.Phase == constant.BCSNetIPActiveStatus {
 			return fmt.Errorf("can not perform operation for pool %s, active IP %s exists", pool.Name, ip)
 		}
 	}

@@ -153,7 +153,7 @@ func (r *BCSNetIPClaimReconciler) boundBCSNetIP(ctx context.Context, claim *nets
 		if err := r.Get(ctx, types.NamespacedName{Name: claim.Spec.BCSNetIPName}, netIP); err != nil {
 			return err
 		}
-		if netIP.Status.Status != constant.BCSNetIPAvailableStatus {
+		if netIP.Status.Phase != constant.BCSNetIPAvailableStatus {
 			return fmt.Errorf("claimed IP [%s] is not available", claim.Spec.BCSNetIPName)
 		}
 		if err := r.boundIP(ctx, claim, *netIP); err != nil {
@@ -170,7 +170,7 @@ func (r *BCSNetIPClaimReconciler) boundBCSNetIP(ctx context.Context, claim *nets
 	}
 	found := false
 	for _, ip := range netIPList.Items {
-		if ip.Status.Status == constant.BCSNetIPAvailableStatus {
+		if ip.Status.Phase == constant.BCSNetIPAvailableStatus {
 			found = true
 			if err := r.boundIP(ctx, claim, ip); err != nil {
 				return err
@@ -187,7 +187,7 @@ func (r *BCSNetIPClaimReconciler) boundBCSNetIP(ctx context.Context, claim *nets
 
 func (r *BCSNetIPClaimReconciler) boundIP(ctx context.Context, claim *netservicev1.BCSNetIPClaim,
 	netIP netservicev1.BCSNetIP) error {
-	netIP.Status.Status = constant.BCSNetIPReservedStatus
+	netIP.Status.Phase = constant.BCSNetIPReservedStatus
 	netIP.Status.IPClaimKey = fmt.Sprintf("%s/%s", claim.Namespace, claim.Name)
 	netIP.Status.Fixed = true
 	netIP.Status.UpdateTime = metav1.Now()

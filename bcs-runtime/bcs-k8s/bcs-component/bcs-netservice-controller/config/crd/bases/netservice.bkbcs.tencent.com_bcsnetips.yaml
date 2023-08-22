@@ -66,12 +66,12 @@ spec:
                 type: string
               keepDuration:
                 type: string
+              phase:
+                description: Active --已使用，Available --可用, Reserved --保留
+                type: string
               podName:
                 type: string
               podNamespace:
-                type: string
-              status:
-                description: Active --已使用，Available --可用, Reserved --保留
                 type: string
               updateTime:
                 format: date-time

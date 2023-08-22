@@ -76,7 +76,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 				blog.Warnf("get BCSNetIP %s failed, %s", req.Name, err.Error())
 				continue
 			}
-			if netIP.Status.Status == constant.BCSNetIPActiveStatus {
+			if netIP.Status.Phase == constant.BCSNetIPActiveStatus {
 				blog.Errorf("can not perform operation for pool %s, active IP %s exists", netPool.Name, ip)
 				return ctrl.Result{
 					Requeue:      true,
@@ -112,7 +112,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, nil
 	}
 
-	if netPool.Status.Status == "" {
+	if netPool.Status.Phase == "" {
 		blog.Infof("initializing BCSNetPool %s", req.Name)
 		if err := r.updatePoolStatus(ctx, netPool, constant.BCSNetPoolInitializingStatus); err != nil {
 			return ctrl.Result{
@@ -130,7 +130,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	r.syncReservedBCSNetIP(ctx, netPool)
 
-	if netPool.Status.Status != constant.BCSNetPoolNormalStatus {
+	if netPool.Status.Phase != constant.BCSNetPoolNormalStatus {
 		if err := r.updatePoolStatus(ctx, netPool, constant.BCSNetPoolNormalStatus); err != nil {
 			return ctrl.Result{
 				Requeue:      true,
@@ -143,7 +143,7 @@ func (r *BCSNetPoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 func (r *BCSNetPoolReconciler) updatePoolStatus(ctx context.Context, netPool *netservicev1.BCSNetPool, status string) error {
-	netPool.Status.Status = status
+	netPool.Status.Phase = status
 	netPool.Status.UpdateTime = metav1.Now()
 	if err := r.Status().Update(ctx, netPool); err != nil {
 		blog.Errorf("update BCSNetPool %s status failed, err %s", netPool.Name, err.Error())
@@ -210,7 +210,7 @@ func (r *BCSNetPoolReconciler) syncReservedBCSNetIP(ctx context.Context, netPool
 	}
 	var ipList []netservicev1.BCSNetIP
 	for _, ip := range netIPList.Items {
-		if ip.Status.Status == constant.BCSNetIPReservedStatus && ip.Status.KeepDuration != "" {
+		if ip.Status.Phase == constant.BCSNetIPReservedStatus && ip.Status.KeepDuration != "" {
 			ipList = append(ipList, ip)
 		}
 	}
@@ -234,14 +234,14 @@ func (r *BCSNetPoolReconciler) releaseExpiredIP(ip netservicev1.BCSNetIP) {
 		return
 	}
 	if currentIP.Status.UpdateTime.Add(duration).Before(time.Now()) {
-		if currentIP.Status.Status == constant.BCSNetIPReservedStatus {
+		if currentIP.Status.Phase == constant.BCSNetIPReservedStatus {
 			// update claim status first
 			if err := r.updateIPClaimStatus(context.Background(), currentIP); err != nil {
 				return
 			}
 
 			currentIP.Status = netservicev1.BCSNetIPStatus{
-				Status:     constant.BCSNetIPAvailableStatus,
+				Phase:      constant.BCSNetIPAvailableStatus,
 				UpdateTime: metav1.Now(),
 			}
 			if err := r.Status().Update(context.Background(), currentIP); err != nil {
@@ -303,7 +303,7 @@ func (r *BCSNetPoolReconciler) createBCSNetIP(ctx context.Context, netPool *nets
 			}
 			blog.Infof("BCSNetIP %s created successfully", ip)
 
-			newNetIP.Status.Status = constant.BCSNetIPAvailableStatus
+			newNetIP.Status.Phase = constant.BCSNetIPAvailableStatus
 			if err := r.Status().Update(ctx, newNetIP); err != nil {
 				blog.Errorf("update BCSNetIP %s status failed, err %s", ip, err.Error())
 				return err
@@ -337,7 +337,7 @@ func (r *BCSNetPoolReconciler) deleteBCSNetIP(ctx context.Context, netPool *nets
 		if v.Status.Fixed {
 			fixed = "true"
 		}
-		oldIPList[v.Name] = v.Status.Status + ":" + fixed
+		oldIPList[v.Name] = v.Status.Phase + ":" + fixed
 	}
 
 	delIPList := make(map[string]string)
