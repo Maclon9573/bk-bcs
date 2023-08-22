@@ -18,17 +18,15 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/internal/constant"
-
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-
-	"k8s.io/apimachinery/pkg/types"
-
-	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+	"github.com/Tencent/bk-bcs/bcs-runtime/bcs-k8s/bcs-component/bcs-netservice-controller/internal/constant"
 )
 
 type bcsNetPoolClient struct {
@@ -44,19 +42,15 @@ func (r *BCSNetPool) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
 //+kubebuilder:webhook:path=/mutate-netservice-bkbcs-tencent-com-v1-bcsnetpool,mutating=true,failurePolicy=fail,sideEffects=None,groups=netservice.bkbcs.tencent.com,resources=bcsnetpools,verbs=create;update,versions=v1,name=mbcsnetpool.kb.io,admissionReviewVersions=v1
 
 var _ admission.CustomDefaulter = &bcsNetPoolClient{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (c *bcsNetPoolClient) Default(ctx context.Context, obj runtime.Object) error {
-	// TODO(user): fill in your defaulting logic.
 	return nil
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-netservice-bkbcs-tencent-com-v1-bcsnetpool,mutating=false,failurePolicy=fail,sideEffects=None,groups=netservice.bkbcs.tencent.com,resources=bcsnetpools,verbs=create;update;delete,versions=v1,name=vbcsnetpool.kb.io,admissionReviewVersions=v1
 
 var _ admission.CustomValidator = &bcsNetPoolClient{}

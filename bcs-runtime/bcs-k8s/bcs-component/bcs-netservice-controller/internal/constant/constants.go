@@ -12,8 +12,6 @@
 
 package constant
 
-import "time"
-
 const (
 	// BCSNetPoolInitializingStatus for BCSNetPool Initializing status
 	BCSNetPoolInitializingStatus = "Initializing"
@@ -34,24 +32,11 @@ const (
 	// BCSNetIPClaimExpiredStatus for BCSNetIPClaim Expired status
 	BCSNetIPClaimExpiredStatus = "Expired"
 
-	// PodAnnotationKeyFixIP pod annotation key for fix ip
-	PodAnnotationKeyFixIP = "netservicecontroller.bkbcs.tencent.com"
-	// PodAnnotationValueFixIP pod annotation value for fix ip
-	PodAnnotationValueFixIP = "fixed-ip"
-	// PodAnnotationKeyForExpiredDurationSeconds pod annotation key for fix ip keep duration
-	PodAnnotationKeyForExpiredDurationSeconds = "keepduration.netservicecontroller.bkbcs.tencent.com"
-	// PodAnnotationKeyForPrimaryKey pod annotation key for primary key
-	PodAnnotationKeyForPrimaryKey = "primarykey.netservicecontroller.bkbcs.tencent.com"
 	// PodAnnotationKeyForIPClaim pod annotation key for IP claim
 	PodAnnotationKeyForIPClaim = "netservicecontroller.bkbcs.tencent.com/ipclaim"
 
 	// FixIPLabel label key for fix ip
 	FixIPLabel = "fixed-ip"
-
-	// DefaultFixedIPKeepDurationStr string of default fixed ip keep time
-	DefaultFixedIPKeepDurationStr = "48h"
-	// MaxFixedIPKeepDuration max keep duration for fixed ip
-	MaxFixedIPKeepDuration = 500 * time.Hour
 
 	// FinalizerNameBcsNetserviceController finalizer name of bcs netservice controller
 	FinalizerNameBcsNetserviceController = "netservicecontroller.bkbcs.tencent.com"
