@@ -74,6 +74,12 @@ func (r *BCSNetIPClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	// claim is deleted
 	if claim.DeletionTimestamp != nil {
 		if claim.Status.Phase == constant.BCSNetIPClaimBoundedStatus {
+			if err := r.unboundIP(ctx, claim); err != nil {
+				return ctrl.Result{
+					Requeue:      true,
+					RequeueAfter: 5 * time.Second,
+				}, err
+			}
 			blog.Errorf("can not delete claim %s in %s status", claim.Name, constant.BCSNetIPClaimBoundedStatus)
 			return ctrl.Result{
 				Requeue:      true,
@@ -126,6 +132,19 @@ func (r *BCSNetIPClaimReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *BCSNetIPClaimReconciler) unboundIP(ctx context.Context, claim *netservicev1.BCSNetIPClaim) error {
+	netIP := &netservicev1.BCSNetIP{}
+	if err := r.Get(ctx, types.NamespacedName{Name: claim.Status.BoundedIP}, netIP); err != nil {
+		return err
+	}
+	if netIP.Status.Phase == constant.BCSNetIPActiveStatus {
+		return fmt.Errorf("delete claim %s failed, bounded IP %s in Active status",
+			fmt.Sprintf("%s/%s", claim.Namespace, claim.Name), claim.Status.BoundedIP)
+	}
+
+	return nil
 }
 
 func (r *BCSNetIPClaimReconciler) addFinalizerForPool(claim *netservicev1.BCSNetIPClaim) error {
