@@ -657,6 +657,12 @@ func NewClusterManagerEndpoints() []*api.Endpoint {
 			Handler: "rpc",
 		},
 		&api.Endpoint{
+			Name:    "ClusterManager.GetResourceGroups",
+			Path:    []string{"/clustermanager/v1/clouds/{cloudID}/resourcegroups"},
+			Method:  []string{"GET"},
+			Handler: "rpc",
+		},
+		&api.Endpoint{
 			Name:    "ClusterManager.GetCloudRegions",
 			Path:    []string{"/clustermanager/v1/clouds/{cloudID}/regions"},
 			Method:  []string{"GET"},
@@ -993,6 +999,7 @@ type ClusterManagerService interface {
 	ListCloudAccountToPerm(ctx context.Context, in *ListCloudAccountPermRequest, opts ...client.CallOption) (*ListCloudAccountPermResponse, error)
 	VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, opts ...client.CallOption) (*VerifyCloudAccountResponse, error)
 	// Cloud Resource management
+	GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, opts ...client.CallOption) (*GetResourceGroupsResponse, error)
 	GetCloudRegions(ctx context.Context, in *GetCloudRegionsRequest, opts ...client.CallOption) (*GetCloudRegionsResponse, error)
 	GetCloudRegionZones(ctx context.Context, in *GetCloudRegionZonesRequest, opts ...client.CallOption) (*GetCloudRegionZonesResponse, error)
 	ListCloudRegionCluster(ctx context.Context, in *ListCloudRegionClusterRequest, opts ...client.CallOption) (*ListCloudRegionClusterResponse, error)
@@ -1978,6 +1985,16 @@ func (c *clusterManagerService) VerifyCloudAccount(ctx context.Context, in *Veri
 	return out, nil
 }
 
+func (c *clusterManagerService) GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, opts ...client.CallOption) (*GetResourceGroupsResponse, error) {
+	req := c.c.NewRequest(c.name, "ClusterManager.GetResourceGroups", in)
+	out := new(GetResourceGroupsResponse)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *clusterManagerService) GetCloudRegions(ctx context.Context, in *GetCloudRegionsRequest, opts ...client.CallOption) (*GetCloudRegionsResponse, error) {
 	req := c.c.NewRequest(c.name, "ClusterManager.GetCloudRegions", in)
 	out := new(GetCloudRegionsResponse)
@@ -2445,6 +2462,7 @@ type ClusterManagerHandler interface {
 	ListCloudAccountToPerm(context.Context, *ListCloudAccountPermRequest, *ListCloudAccountPermResponse) error
 	VerifyCloudAccount(context.Context, *VerifyCloudAccountRequest, *VerifyCloudAccountResponse) error
 	// Cloud Resource management
+	GetResourceGroups(context.Context, *GetResourceGroupsRequest, *GetResourceGroupsResponse) error
 	GetCloudRegions(context.Context, *GetCloudRegionsRequest, *GetCloudRegionsResponse) error
 	GetCloudRegionZones(context.Context, *GetCloudRegionZonesRequest, *GetCloudRegionZonesResponse) error
 	ListCloudRegionCluster(context.Context, *ListCloudRegionClusterRequest, *ListCloudRegionClusterResponse) error
@@ -2592,6 +2610,7 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		ListCloudAccount(ctx context.Context, in *ListCloudAccountRequest, out *ListCloudAccountResponse) error
 		ListCloudAccountToPerm(ctx context.Context, in *ListCloudAccountPermRequest, out *ListCloudAccountPermResponse) error
 		VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, out *VerifyCloudAccountResponse) error
+		GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, out *GetResourceGroupsResponse) error
 		GetCloudRegions(ctx context.Context, in *GetCloudRegionsRequest, out *GetCloudRegionsResponse) error
 		GetCloudRegionZones(ctx context.Context, in *GetCloudRegionZonesRequest, out *GetCloudRegionZonesResponse) error
 		ListCloudRegionCluster(ctx context.Context, in *ListCloudRegionClusterRequest, out *ListCloudRegionClusterResponse) error
@@ -3248,6 +3267,12 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		Handler: "rpc",
 	}))
 	opts = append(opts, api.WithEndpoint(&api.Endpoint{
+		Name:    "ClusterManager.GetResourceGroups",
+		Path:    []string{"/clustermanager/v1/clouds/{cloudID}/resourcegroups"},
+		Method:  []string{"GET"},
+		Handler: "rpc",
+	}))
+	opts = append(opts, api.WithEndpoint(&api.Endpoint{
 		Name:    "ClusterManager.GetCloudRegions",
 		Path:    []string{"/clustermanager/v1/clouds/{cloudID}/regions"},
 		Method:  []string{"GET"},
@@ -3847,6 +3872,10 @@ func (h *clusterManagerHandler) ListCloudAccountToPerm(ctx context.Context, in *
 
 func (h *clusterManagerHandler) VerifyCloudAccount(ctx context.Context, in *VerifyCloudAccountRequest, out *VerifyCloudAccountResponse) error {
 	return h.ClusterManagerHandler.VerifyCloudAccount(ctx, in, out)
+}
+
+func (h *clusterManagerHandler) GetResourceGroups(ctx context.Context, in *GetResourceGroupsRequest, out *GetResourceGroupsResponse) error {
+	return h.ClusterManagerHandler.GetResourceGroups(ctx, in, out)
 }
 
 func (h *clusterManagerHandler) GetCloudRegions(ctx context.Context, in *GetCloudRegionsRequest, out *GetCloudRegionsResponse) error {

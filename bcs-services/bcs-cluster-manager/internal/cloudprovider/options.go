@@ -481,6 +481,7 @@ type UpdateScalingOption struct {
 // CheckEndpointStatusOption check cluster endpoint status option
 type CheckEndpointStatusOption struct {
 	CommonOption
+	ResourceGroupName string
 }
 
 // AddSubnetsToClusterOption add subnet to cluster option
