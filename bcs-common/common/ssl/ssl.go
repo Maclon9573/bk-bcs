@@ -77,6 +77,17 @@ func ServerTslConfVerity(certFile, keyFile, passwd string) (*tls.Config, error) 
 
 	conf := &tls.Config{
 		Certificates: []tls.Certificate{*cert},
+		// use strong cipher suites to avoid vulnerability scanning warning for https port,
+		// the warning is like avoiding to use IDEA, DES or 3DES algorithm
+		CipherSuites: []uint16{
+			// AEADs w/ ECDHE
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			// AEADs w/o ECDHE
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		},
 	}
 
 	return conf, nil
@@ -97,6 +108,17 @@ func ServerTslConfVerityClient(caFile, certFile, keyFile, passwd string) (*tls.C
 		ClientCAs:    caPool,
 		Certificates: []tls.Certificate{*cert},
 		ClientAuth:   tls.RequireAndVerifyClientCert,
+		// use strong cipher suites to avoid vulnerability scanning warning for https port,
+		// the warning is like avoiding to use IDEA, DES or 3DES algorithm
+		CipherSuites: []uint16{
+			// AEADs w/ ECDHE
+			tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+			tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+			// AEADs w/o ECDHE
+			tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+			tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+		},
 	}
 
 	return conf, nil
