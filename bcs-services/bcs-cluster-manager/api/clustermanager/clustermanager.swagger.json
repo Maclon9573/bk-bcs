@@ -1558,6 +1558,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "resourceGroupName",
+            "description": "resourceGroupName. Azure中的resource group名称",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1877,6 +1884,13 @@
             "in": "query",
             "required": false,
             "type": "string"
+          },
+          {
+            "name": "resourceGroupName",
+            "description": "resourceGroupName. Azure中的resource group名称",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -1952,6 +1966,13 @@
             "in": "query",
             "required": false,
             "type": "boolean"
+          },
+          {
+            "name": "resourceGroupName",
+            "description": "resourceGroupName. Azure Cloud中subnet所属resource group名称",
+            "in": "query",
+            "required": false,
+            "type": "string"
           }
         ],
         "tags": [
@@ -2232,6 +2253,13 @@
           {
             "name": "vpcID",
             "description": "vpcID. 过滤查询指定vpc的信息",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "resourceGroupName",
+            "description": "resourceGroupName. Azure Cloud中Vpc所属的resource group名称",
             "in": "query",
             "required": false,
             "type": "string"

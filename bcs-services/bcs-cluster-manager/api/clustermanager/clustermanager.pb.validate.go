@@ -45006,6 +45006,8 @@ func (m *ListCloudVpcsRequest) validate(all bool) error {
 
 	// no validation rules for VpcID
 
+	// no validation rules for ResourceGroupName
+
 	if len(errors) > 0 {
 		return ListCloudVpcsRequestMultiError(errors)
 	}
@@ -45526,6 +45528,8 @@ func (m *ListCloudSubnetsRequest) validate(all bool) error {
 	// no validation rules for SubnetID
 
 	// no validation rules for InjectCluster
+
+	// no validation rules for ResourceGroupName
 
 	if len(errors) > 0 {
 		return ListCloudSubnetsRequestMultiError(errors)
@@ -46299,6 +46303,8 @@ func (m *ListCloudSecurityGroupsRequest) validate(all bool) error {
 
 	// no validation rules for AccountID
 
+	// no validation rules for ResourceGroupName
+
 	if len(errors) > 0 {
 		return ListCloudSecurityGroupsRequestMultiError(errors)
 	}
@@ -46559,6 +46565,8 @@ func (m *ListKeyPairsRequest) validate(all bool) error {
 	// no validation rules for Region
 
 	// no validation rules for AccountID
+
+	// no validation rules for ResourceGroupName
 
 	if len(errors) > 0 {
 		return ListKeyPairsRequestMultiError(errors)
