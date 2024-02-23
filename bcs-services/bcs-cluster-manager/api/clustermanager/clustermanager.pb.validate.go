@@ -14680,6 +14680,17 @@ func (m *CreateClusterReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if !_CreateClusterReq_ClusterName_Pattern.MatchString(m.GetClusterName()) {
+		err := CreateClusterReqValidationError{
+			field:  "ClusterName",
+			reason: "value does not match regex pattern \"^[^&'<>\\\"\\\\r]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if utf8.RuneCountInString(m.GetProvider()) > 32 {
 		err := CreateClusterReqValidationError{
 			field:  "Provider",
@@ -15150,6 +15161,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = CreateClusterReqValidationError{}
+
+var _CreateClusterReq_ClusterName_Pattern = regexp.MustCompile("^[^&'<>\"\\r]+$")
 
 var _CreateClusterReq_Region_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
 
@@ -15708,6 +15721,17 @@ func (m *CreateVirtualClusterReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if !_CreateVirtualClusterReq_ClusterName_Pattern.MatchString(m.GetClusterName()) {
+		err := CreateVirtualClusterReqValidationError{
+			field:  "ClusterName",
+			reason: "value does not match regex pattern \"^[^&'<>\\\"\\\\r]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if utf8.RuneCountInString(m.GetProvider()) > 32 {
 		err := CreateVirtualClusterReqValidationError{
 			field:  "Provider",
@@ -16098,6 +16122,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = CreateVirtualClusterReqValidationError{}
+
+var _CreateVirtualClusterReq_ClusterName_Pattern = regexp.MustCompile("^[^&'<>\"\\r]+$")
 
 var _CreateVirtualClusterReq_Region_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
 
@@ -17186,6 +17212,17 @@ func (m *ImportClusterReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if !_ImportClusterReq_ClusterName_Pattern.MatchString(m.GetClusterName()) {
+		err := ImportClusterReqValidationError{
+			field:  "ClusterName",
+			reason: "value does not match regex pattern \"^[^&'<>\\\"\\\\r]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	// no validation rules for Description
 
 	if l := utf8.RuneCountInString(m.GetProvider()); l < 1 || l > 1024 {
@@ -17475,6 +17512,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ImportClusterReqValidationError{}
+
+var _ImportClusterReq_ClusterName_Pattern = regexp.MustCompile("^[^&'<>\"\\r]+$")
 
 var _ImportClusterReq_Region_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
 
@@ -18662,7 +18701,27 @@ func (m *UpdateClusterReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	// no validation rules for ClusterName
+	if l := utf8.RuneCountInString(m.GetClusterName()); l < 1 || l > 1024 {
+		err := UpdateClusterReqValidationError{
+			field:  "ClusterName",
+			reason: "value length must be between 1 and 1024 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !_UpdateClusterReq_ClusterName_Pattern.MatchString(m.GetClusterName()) {
+		err := UpdateClusterReqValidationError{
+			field:  "ClusterName",
+			reason: "value does not match regex pattern \"^[^&'<>\\\"\\\\r]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if utf8.RuneCountInString(m.GetProvider()) > 1024 {
 		err := UpdateClusterReqValidationError{
@@ -19183,6 +19242,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = UpdateClusterReqValidationError{}
+
+var _UpdateClusterReq_ClusterName_Pattern = regexp.MustCompile("^[^&'<>\"\\r]+$")
 
 var _UpdateClusterReq_Status_InLookup = map[string]struct{}{
 	"CREATING":       {},
@@ -54922,6 +54983,8 @@ func (m *GetBatchCustomSettingRequest) validate(all bool) error {
 
 	// no validation rules for ScopeId
 
+	// no validation rules for ProjectID
+
 	if len(errors) > 0 {
 		return GetBatchCustomSettingRequestMultiError(errors)
 	}
@@ -55307,6 +55370,8 @@ func (m *GetBizTopologyHostRequest) validate(all bool) error {
 		}
 
 	}
+
+	// no validation rules for ProjectID
 
 	if len(errors) > 0 {
 		return GetBizTopologyHostRequestMultiError(errors)
@@ -55735,6 +55800,8 @@ func (m *GetTopologyNodesRequest) validate(all bool) error {
 	// no validation rules for Start
 
 	// no validation rules for PageSize
+
+	// no validation rules for ProjectID
 
 	if len(errors) > 0 {
 		return GetTopologyNodesRequestMultiError(errors)
@@ -56447,6 +56514,8 @@ func (m *GetTopologyHostIdsNodesRequest) validate(all bool) error {
 
 	// no validation rules for PageSize
 
+	// no validation rules for ProjectID
+
 	if len(errors) > 0 {
 		return GetTopologyHostIdsNodesRequestMultiError(errors)
 	}
@@ -57106,6 +57175,8 @@ func (m *GetHostsDetailsRequest) validate(all bool) error {
 
 	}
 
+	// no validation rules for ProjectID
+
 	if len(errors) > 0 {
 		return GetHostsDetailsRequestMultiError(errors)
 	}
@@ -57525,6 +57596,8 @@ func (m *GetScopeHostCheckRequest) validate(all bool) error {
 	// no validation rules for ScopeType
 
 	// no validation rules for ScopeId
+
+	// no validation rules for ProjectID
 
 	if len(errors) > 0 {
 		return GetScopeHostCheckRequestMultiError(errors)

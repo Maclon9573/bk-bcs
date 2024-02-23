@@ -5717,7 +5717,7 @@
         ]
       }
     },
-    "/clustermanager/v1/web/customSettings/scope/{scopeType}/{scopeId}/batchGet": {
+    "/clustermanager/v1/web/projects/{projectID}/customSettings/scope/{scopeType}/{scopeId}/batchGet": {
       "post": {
         "summary": "获取IP选择器配置项信息",
         "description": "获取IP选择器配置项信息",
@@ -5737,6 +5737,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "projectID",
+            "description": "集群所关联的项目ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "scopeType",
             "description": "资源范围类型(biz/biz_set), 目前仅支持biz",
@@ -5765,7 +5772,7 @@
         ]
       }
     },
-    "/clustermanager/v1/web/scope/{scopeType}/{scopeId}/host/check": {
+    "/clustermanager/v1/web/projects/{projectID}/scope/{scopeType}/{scopeId}/host/check": {
       "post": {
         "summary": "根据IP/IPv6/主机名等信息获取主机列表",
         "description": "获取某个业务下 用户手动输入的IP/IPv6/主机名等信息获取主机信息",
@@ -5785,6 +5792,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "projectID",
+            "description": "集群所关联的项目ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "scopeType",
             "description": "资源范围类型(biz/biz_set), 目前仅支持biz",
@@ -5813,7 +5827,7 @@
         ]
       }
     },
-    "/clustermanager/v1/web/scope/{scopeType}/{scopeId}/hosts/details": {
+    "/clustermanager/v1/web/projects/{projectID}/scope/{scopeType}/{scopeId}/hosts/details": {
       "post": {
         "summary": "根据主机IDs获取机器详情信息",
         "description": "根据主机IDs获取机器详情信息",
@@ -5833,6 +5847,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "projectID",
+            "description": "集群所关联的项目ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "scopeType",
             "description": "资源范围类型(biz/biz_set), 目前仅支持biz",
@@ -5861,7 +5882,7 @@
         ]
       }
     },
-    "/clustermanager/v1/web/scope/{scopeType}/{scopeId}/topology/hostCount": {
+    "/clustermanager/v1/web/projects/{projectID}/scope/{scopeType}/{scopeId}/topology/hostCount": {
       "post": {
         "summary": "获取业务的拓扑树, 目前仅支持业务维度",
         "description": "获取业务的拓扑树, 目前仅支持业务维度",
@@ -5881,6 +5902,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "projectID",
+            "description": "集群所关联的项目ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "scopeType",
             "description": "资源范围类型(biz/biz_set), 目前仅支持biz",
@@ -5909,7 +5937,7 @@
         ]
       }
     },
-    "/clustermanager/v1/web/scope/{scopeType}/{scopeId}/topology/hostids/nodes": {
+    "/clustermanager/v1/web/projects/{projectID}/scope/{scopeType}/{scopeId}/topology/hostids/nodes": {
       "post": {
         "summary": "获取拓扑主机ID",
         "description": "获取拓扑的主机ID, 目前仅支持业务维度下的其他集群或者模块",
@@ -5929,6 +5957,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "projectID",
+            "description": "集群所关联的项目ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "scopeType",
             "description": "资源范围类型(biz/biz_set), 目前仅支持biz",
@@ -5957,7 +5992,7 @@
         ]
       }
     },
-    "/clustermanager/v1/web/scope/{scopeType}/{scopeId}/topology/hosts/nodes": {
+    "/clustermanager/v1/web/projects/{projectID}/scope/{scopeType}/{scopeId}/topology/hosts/nodes": {
       "post": {
         "summary": "获取拓扑主机",
         "description": "获取拓扑的主机, 目前仅支持业务维度下的其他集群或者模块",
@@ -5977,6 +6012,13 @@
           }
         },
         "parameters": [
+          {
+            "name": "projectID",
+            "description": "集群所关联的项目ID",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
           {
             "name": "scopeType",
             "description": "资源范围类型(biz/biz_set), 目前仅支持biz",
@@ -10781,6 +10823,11 @@
           },
           "description": "moduleList获取配置项的模块列表，不传表示获取所有模块(目前仅支持 ip_selector_host_list)",
           "title": "moduleList"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所关联的项目ID",
+          "title": "projectID"
         }
       },
       "description": "查询配置项内容请求",
@@ -10842,6 +10889,11 @@
           },
           "description": "要获取拓扑结构的资源范围数组(目前仅支持biz维度的拓扑)",
           "title": "scopeList"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所关联的项目ID",
+          "title": "projectID"
         }
       },
       "description": "查询配置项内容请求",
@@ -11233,6 +11285,11 @@
           },
           "description": "hostIds列表",
           "title": "hostList"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所关联的项目ID",
+          "title": "projectID"
         }
       },
       "description": "根据主机IDs获取机器详情信息",
@@ -11548,6 +11605,11 @@
           },
           "description": "关键字数组, 解析出的主机名/hostId等关键字信息",
           "title": "keyList"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所关联的项目ID",
+          "title": "projectID"
         }
       },
       "description": "过滤拓扑的主机列表",
@@ -11686,6 +11748,11 @@
           "format": "int32",
           "description": "拉取数据数量，不传默认拉取所有",
           "title": "pageSize"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所关联的项目ID",
+          "title": "projectID"
         }
       },
       "description": "查询拓扑的主机ID列表",
@@ -11788,6 +11855,11 @@
           "format": "int32",
           "description": "拉取数据数量，最大500，不传默认为20",
           "title": "pageSize"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所关联的项目ID",
+          "title": "projectID"
         }
       },
       "description": "查询拓扑的主机列表",

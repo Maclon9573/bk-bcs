@@ -27,7 +27,7 @@ module.exports = {
   },
   configureWebpack() {
     return {
-      devtool: 'eval-source-map',
+      devtool: process.env.NODE_ENV === 'production' ? false : 'eval-source-map',
       resolve: {
         fallback: { "url": require.resolve("url") },
         extensions: ['.md'],
@@ -96,7 +96,7 @@ module.exports = {
       .plugin('braceTheme')
       .use(webpack.ContextReplacementPlugin, [/brace\/theme$/, /^\.\/(monokai)$/]);
 
-   
+
     if (process.env.NODE_ENV === 'production') {
       config
       .plugin('compression')
