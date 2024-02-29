@@ -276,6 +276,8 @@ type ClusterManager interface {
 	CreateVirtualCluster(cls *proto.Cluster, opt *CreateVirtualClusterOption) (*proto.Task, error)
 	// ImportCluster import different cluster by provider
 	ImportCluster(cls *proto.Cluster, opt *ImportClusterOption) (*proto.Task, error)
+	// ReimportCluster reimport cluster according cloudprovider
+	ReimportCluster(cls *proto.Cluster, opt *ReimportClusterOption) (*proto.Task, error)
 	// DeleteCluster delete kubernetes cluster according cloudprovider
 	DeleteCluster(cls *proto.Cluster, opt *DeleteClusterOption) (*proto.Task, error)
 	// DeleteVirtualCluster delete virtual cluster in hostCluster according cloudprovider
@@ -433,6 +435,8 @@ type TaskManager interface {
 	BuildDeleteVirtualClusterTask(cls *proto.Cluster, opt *DeleteVirtualClusterOption) (*proto.Task, error)
 	// BuildImportClusterTask create cluster by different cloud provider
 	BuildImportClusterTask(cls *proto.Cluster, opt *ImportClusterOption) (*proto.Task, error)
+	// BuildReimportClusterTask build reimport cluster task
+	BuildReimportClusterTask(cls *proto.Cluster, opt *ReimportClusterOption) (*proto.Task, error)
 	// BuildCreateClusterTask create cluster by different cloud provider
 	BuildCreateClusterTask(cls *proto.Cluster, opt *CreateClusterOption) (*proto.Task, error)
 	// BuildDeleteClusterTask delete cluster by different cloud provider

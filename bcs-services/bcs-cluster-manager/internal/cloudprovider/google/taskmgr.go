@@ -152,6 +152,12 @@ func (t *Task) BuildImportClusterTask(cls *proto.Cluster, opt *cloudprovider.Imp
 	return task, nil
 }
 
+// BuildReimportClusterTask build reimport cluster task
+func (t *Task) BuildReimportClusterTask(cls *proto.Cluster, opt *cloudprovider.ReimportClusterOption) (
+	*proto.Task, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}
+
 // BuildDeleteClusterTask build deleteCluster task
 func (t *Task) BuildDeleteClusterTask(cls *proto.Cluster, opt *cloudprovider.DeleteClusterOption) (*proto.Task, error) {
 	// validate request params

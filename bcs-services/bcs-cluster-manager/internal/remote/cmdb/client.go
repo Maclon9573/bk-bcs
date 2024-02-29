@@ -466,7 +466,7 @@ func (c *Client) QueryHostByBizID(bizID int, page Page) (int, []HostData, error)
 		return respData.Data.Count, respData.Data.Info, nil
 	}
 
-	return 0, nil, fmt.Errorf("call api GetBS2IDByBizID failed")
+	return 0, nil, fmt.Errorf("no hosts found in biz %d", bizID)
 }
 
 // FindHostBizRelations query host biz relations by hostID

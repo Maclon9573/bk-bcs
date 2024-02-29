@@ -279,6 +279,8 @@ const (
 	StatusImportClusterFailed = "IMPORT-FAILURE"
 	// StatusRunning status running
 	StatusRunning = "RUNNING"
+	// StatusMigrating status migrating
+	StatusMigrating = "MIGRATING"
 	// StatusDeleting status deleting for scaling down
 	StatusDeleting = "DELETING"
 	// StatusDeleted status deleted

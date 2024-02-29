@@ -46,6 +46,11 @@ func newtask() *Task {
 	// import cluster task
 	task.works[importClusterNodesStep.StepMethod] = tasks.ImportClusterNodesTask
 
+	// reimport cluster task
+	task.works[deployBCSComponentsStep.StepMethod] = tasks.DeployBCSComponents
+	task.works[checkClusterStatusStep.StepMethod] = tasks.CheckClusterStatus
+	task.works[syncClusterNodesStep.StepMethod] = tasks.SyncClusterNodes
+
 	// create cluster task
 	task.works[updateCreateClusterDBInfoStep.StepMethod] = tasks.UpdateCreateClusterDBInfoTask
 
@@ -197,6 +202,55 @@ func (t *Task) BuildImportClusterTask(cls *proto.Cluster, opt *cloudprovider.Imp
 	task.CurrentStep = task.StepSequence[0]
 	task.CommonParams[cloudprovider.OperatorKey.String()] = opt.Operator
 	task.CommonParams[cloudprovider.JobTypeKey.String()] = cloudprovider.ImportClusterJob.String()
+
+	return task, nil
+}
+
+// BuildReimportClusterTask build reimport cluster task
+func (t *Task) BuildReimportClusterTask(cls *proto.Cluster, opt *cloudprovider.ReimportClusterOption) (*proto.Task, error) {
+	// validate request params
+	if cls == nil {
+		return nil, fmt.Errorf("BuildreimportClusterTask cluster info empty")
+	}
+	if opt == nil {
+		return nil, fmt.Errorf("BuildReimportClusterTask TaskOptions is lost")
+	}
+
+	nowStr := time.Now().Format(time.RFC3339)
+	task := &proto.Task{
+		TaskID:         uuid.New().String(),
+		TaskType:       cloudprovider.GetTaskType(cloudName, cloudprovider.ImportCluster),
+		TaskName:       cloudprovider.ReimportClusterTask.String(),
+		Status:         cloudprovider.TaskStatusInit,
+		Message:        "task initializing",
+		Start:          nowStr,
+		Steps:          make(map[string]*proto.Step),
+		StepSequence:   make([]string, 0),
+		ClusterID:      cls.ClusterID,
+		ProjectID:      cls.ProjectID,
+		Creator:        opt.Operator,
+		Updater:        opt.Operator,
+		LastUpdate:     nowStr,
+		CommonParams:   make(map[string]string),
+		ForceTerminate: false,
+	}
+
+	// setting all steps details
+	// step0: deploy new kube agent
+	reimportNodesTask := &ReimportClusterTaskOption{Cluster: cls, OriginClusterID: opt.OriginClusterID}
+	reimportNodesTask.BuildDeployBCSComponentsStep(task)
+	// step1: check cluster status
+	reimportNodesTask.BuildCheckClusterStatusStepStep(task)
+	// step2: sync cluster nodes
+	reimportNodesTask.BuildSyncClusterNodesStepStep(task)
+
+	// set current step
+	if len(task.StepSequence) == 0 {
+		return nil, fmt.Errorf("BuildReimportClusterTask task StepSequence empty")
+	}
+	task.CurrentStep = task.StepSequence[0]
+	task.CommonParams[cloudprovider.OperatorKey.String()] = opt.Operator
+	task.CommonParams[cloudprovider.JobTypeKey.String()] = cloudprovider.ReimportClusterJob.String()
 
 	return task, nil
 }

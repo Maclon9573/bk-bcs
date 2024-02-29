@@ -42,6 +42,24 @@ var (
 		StepName:   "导入集群节点",
 	}
 
+	// reimport cluster task steps
+	deployBCSComponentsStep = cloudprovider.StepInfo{
+		StepMethod: fmt.Sprintf("%s-DeployBCSComponentsTask", cloudName),
+		StepName:   "部署kube agent",
+	}
+
+	// reimport cluster task steps
+	checkClusterStatusStep = cloudprovider.StepInfo{
+		StepMethod: fmt.Sprintf("%s-CheckClusterStatusTask", cloudName),
+		StepName:   "检查集群连通性",
+	}
+
+	// reimport cluster task steps
+	syncClusterNodesStep = cloudprovider.StepInfo{
+		StepMethod: fmt.Sprintf("%s-SyncClusterNodesTask", cloudName),
+		StepName:   "同步集群节点",
+	}
+
 	// create cluster task steps
 	updateCreateClusterDBInfoStep = cloudprovider.StepInfo{
 		StepMethod: fmt.Sprintf("%s-UpdateCreateClusterDBInfoTask", cloudName),
@@ -101,6 +119,46 @@ func (in *ImportClusterTaskOption) BuildImportClusterNodesStep(task *proto.Task)
 
 	task.Steps[importClusterNodesStep.StepMethod] = importNodesStep
 	task.StepSequence = append(task.StepSequence, importClusterNodesStep.StepMethod)
+}
+
+// ReimportClusterTaskOption for build import cluster step
+type ReimportClusterTaskOption struct {
+	Cluster         *proto.Cluster
+	OriginClusterID string
+}
+
+// BuildDeployBCSComponentsStep xxx
+func (rn *ReimportClusterTaskOption) BuildDeployBCSComponentsStep(task *proto.Task) {
+	deployAgentStep := cloudprovider.InitTaskStep(deployBCSComponentsStep)
+
+	deployAgentStep.Params[cloudprovider.ClusterIDKey.String()] = rn.Cluster.ClusterID
+	deployAgentStep.Params[cloudprovider.OriginClusterIDKey.String()] = rn.OriginClusterID
+
+	task.Steps[deployBCSComponentsStep.StepMethod] = deployAgentStep
+	task.StepSequence = append(task.StepSequence, deployBCSComponentsStep.StepMethod)
+}
+
+// BuildCheckClusterStatusStepStep xxx
+func (rn *ReimportClusterTaskOption) BuildCheckClusterStatusStepStep(task *proto.Task) {
+	checkStatusStep := cloudprovider.InitTaskStep(checkClusterStatusStep)
+
+	checkStatusStep.Params[cloudprovider.ClusterIDKey.String()] = rn.Cluster.ClusterID
+	checkStatusStep.Params[cloudprovider.OriginClusterIDKey.String()] = rn.OriginClusterID
+	checkStatusStep.Params[cloudprovider.CloudIDKey.String()] = rn.Cluster.Provider
+
+	task.Steps[checkClusterStatusStep.StepMethod] = checkStatusStep
+	task.StepSequence = append(task.StepSequence, checkClusterStatusStep.StepMethod)
+}
+
+// BuildSyncClusterNodesStepStep xxx
+func (rn *ReimportClusterTaskOption) BuildSyncClusterNodesStepStep(task *proto.Task) {
+	syncNodesStep := cloudprovider.InitTaskStep(syncClusterNodesStep)
+
+	syncNodesStep.Params[cloudprovider.ClusterIDKey.String()] = rn.Cluster.ClusterID
+	syncNodesStep.Params[cloudprovider.CloudIDKey.String()] = rn.Cluster.Provider
+
+	task.Steps[syncClusterNodesStep.StepMethod] = syncNodesStep
+	task.StepSequence = append(task.StepSequence, syncClusterNodesStep.StepMethod)
 }
 
 // DeleteClusterTaskOption for build delete cluster step

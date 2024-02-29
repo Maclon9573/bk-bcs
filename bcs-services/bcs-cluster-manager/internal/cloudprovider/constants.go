@@ -106,6 +106,8 @@ var (
 	CreateVirtualClusterTask TaskName = "创建虚拟集群"
 	// ImportClusterTask xx
 	ImportClusterTask TaskName = "纳管集群"
+	// ReimportClusterTask xx
+	ReimportClusterTask TaskName = "迁移集群"
 	// DeleteClusterTask xx
 	DeleteClusterTask TaskName = "删除集群"
 	// DeleteVirtualClusterTask xx
@@ -157,6 +159,8 @@ var (
 	ProjectIDKey ParamKey = "projectID"
 	// ClusterIDKey xxx
 	ClusterIDKey ParamKey = "clusterID"
+	// OriginClusterIDKey xxx
+	OriginClusterIDKey ParamKey = "originClusterID"
 	// HostClusterIDKey xxx
 	HostClusterIDKey ParamKey = "hostClusterID"
 	// NodeGroupIDKey xxx

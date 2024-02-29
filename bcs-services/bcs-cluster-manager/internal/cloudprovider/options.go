@@ -194,6 +194,14 @@ type ImportClusterOption struct {
 	Operator  string
 }
 
+// ReimportClusterOption reimport cluster option
+type ReimportClusterOption struct {
+	CommonOption
+	Cloud           *proto.Cloud
+	OriginClusterID string
+	Operator        string
+}
+
 // DeleteMode xxx
 type DeleteMode string
 

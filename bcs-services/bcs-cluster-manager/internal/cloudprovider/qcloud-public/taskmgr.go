@@ -382,6 +382,12 @@ func (t *Task) BuildImportClusterTask(cls *proto.Cluster, opt *cloudprovider.Imp
 	return task, nil
 }
 
+// BuildReimportClusterTask build reimport cluster task
+func (t *Task) BuildReimportClusterTask(cls *proto.Cluster, opt *cloudprovider.ReimportClusterOption) (
+	*proto.Task, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}
+
 // BuildDeleteVirtualClusterTask build delete virtual cluster task
 func (t *Task) BuildDeleteVirtualClusterTask(cls *proto.Cluster,
 	opt *cloudprovider.DeleteVirtualClusterOption) (*proto.Task, error) {

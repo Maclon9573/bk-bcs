@@ -2709,6 +2709,74 @@
         ]
       }
     },
+    "/clustermanager/v1/cluster/reimport": {
+      "post": {
+        "summary": "重新导入用户集群",
+        "description": "重新导入用户集群(已纳管集群的项目迁移)",
+        "operationId": "ClusterManager_ReimportCluster",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/clustermanagerReimportClusterResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/clustermanagerReimportClusterReq"
+            }
+          }
+        ],
+        "tags": [
+          "ClusterManager"
+        ]
+      }
+    },
+    "/clustermanager/v1/cluster/reimport/validate": {
+      "post": {
+        "summary": "重新导入用户集群前置校验",
+        "description": "重新导入用户集群前置校验",
+        "operationId": "ClusterManager_ReimportClusterValidate",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/clustermanagerReimportClusterValidateResp"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/clustermanagerReimportClusterValidateReq"
+            }
+          }
+        ],
+        "tags": [
+          "ClusterManager"
+        ]
+      }
+    },
     "/clustermanager/v1/cluster/{clusterID}": {
       "get": {
         "summary": "查询Cluster",
@@ -15136,6 +15204,137 @@
       },
       "description": "地域信息",
       "title": "RegionInfo"
+    },
+    "clustermanagerReimportClusterReq": {
+      "type": "object",
+      "properties": {
+        "clusterID": {
+          "type": "string",
+          "description": "当前集群ID",
+          "title": "clusterID"
+        },
+        "targetClusterID": {
+          "type": "string",
+          "description": "迁移后的集群ID",
+          "title": "targetClusterID"
+        },
+        "projectID": {
+          "type": "string",
+          "description": "集群所在的当前项目ID",
+          "title": "projectID"
+        },
+        "targetProjectID": {
+          "type": "string",
+          "description": "集群迁移的目标项目ID",
+          "title": "targetProjectID"
+        },
+        "targetBusinessID": {
+          "type": "string",
+          "description": "集群迁移的目标业务ID",
+          "title": "targetBusinessID"
+        },
+        "updater": {
+          "type": "string",
+          "description": "更新人",
+          "title": "updater"
+        }
+      },
+      "description": "重新导入用户集群(已纳管集群的项目迁移)",
+      "title": "ReimportClusterReq",
+      "required": [
+        "clusterID",
+        "projectID",
+        "targetProjectID",
+        "targetBusinessID",
+        "updater"
+      ]
+    },
+    "clustermanagerReimportClusterResp": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "description": "返回错误码",
+          "title": "code"
+        },
+        "message": {
+          "type": "string",
+          "description": "返回错误信息",
+          "title": "message"
+        },
+        "result": {
+          "type": "boolean",
+          "description": "返回结果",
+          "title": "result"
+        },
+        "data": {
+          "type": "object",
+          "description": "返回导入集群和任务",
+          "title": "data"
+        }
+      },
+      "description": "导入集群的返回",
+      "title": "ReimportClusterResp",
+      "required": [
+        "code",
+        "message",
+        "data"
+      ]
+    },
+    "clustermanagerReimportClusterValidateReq": {
+      "type": "object",
+      "properties": {
+        "projectID": {
+          "type": "string",
+          "description": "集群所在的当前项目ID",
+          "title": "projectID"
+        },
+        "targetBusinessID": {
+          "type": "string",
+          "description": "集群迁移的目标业务ID",
+          "title": "targetBusinessID"
+        },
+        "clusterID": {
+          "type": "string",
+          "description": "集群ID",
+          "title": "clusterID"
+        }
+      },
+      "description": "重新导入用户集群前置校验",
+      "title": "ReimportClusterValidateReq",
+      "required": [
+        "projectID",
+        "targetBusinessID",
+        "clusterID"
+      ]
+    },
+    "clustermanagerReimportClusterValidateResp": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "description": "返回错误码",
+          "title": "code"
+        },
+        "message": {
+          "type": "string",
+          "description": "返回错误信息",
+          "title": "message"
+        },
+        "result": {
+          "type": "boolean",
+          "description": "返回结果",
+          "title": "result"
+        }
+      },
+      "description": "重新导入集群前置校验的返回",
+      "title": "ReimportClusterValidateResp",
+      "required": [
+        "code",
+        "message"
+      ]
     },
     "clustermanagerRemoveNodesFromGroupRequest": {
       "type": "object",

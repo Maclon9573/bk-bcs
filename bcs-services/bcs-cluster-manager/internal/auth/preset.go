@@ -111,6 +111,8 @@ var ActionPermissions = map[string]string{
 	"ClusterManager.CreateCluster":             cluster.CanCreateClusterOperation,
 	"ClusterManager.RetryCreateClusterTask":    cluster.CanCreateClusterOperation,
 	"ClusterManager.ImportCluster":             cluster.CanCreateClusterOperation,
+	"ClusterManager.ReimportCluster":           cluster.CanDeleteClusterOperation,
+	"ClusterManager.ReimportClusterValidate":   project.CanViewProjectOperation,
 	"ClusterManager.UpdateCluster":             cluster.CanManageClusterOperation,
 	"ClusterManager.DeleteCluster":             cluster.CanDeleteClusterOperation,
 	"ClusterManager.GetCluster":                cluster.CanViewClusterOperation,

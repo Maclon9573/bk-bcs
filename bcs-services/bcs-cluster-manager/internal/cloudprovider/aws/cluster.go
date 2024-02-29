@@ -51,6 +51,11 @@ func (c *Cluster) ImportCluster(cls *proto.Cluster, opt *cloudprovider.ImportClu
 	return nil, cloudprovider.ErrCloudNotImplemented
 }
 
+// ReimportCluster reimport cluster according cloudprovider
+func (c *Cluster) ReimportCluster(cls *proto.Cluster, opt *cloudprovider.ReimportClusterOption) (*proto.Task, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}
+
 // DeleteCluster delete kubenretes cluster according cloudprovider
 func (c *Cluster) DeleteCluster(cls *proto.Cluster, opt *cloudprovider.DeleteClusterOption) (*proto.Task, error) {
 	return nil, cloudprovider.ErrCloudNotImplemented

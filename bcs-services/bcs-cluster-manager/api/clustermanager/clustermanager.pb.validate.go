@@ -17713,6 +17713,633 @@ var _ interface {
 	ErrorName() string
 } = ImportClusterRespValidationError{}
 
+// Validate checks the field values on ReimportClusterReq with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReimportClusterReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReimportClusterReq with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReimportClusterReqMultiError, or nil if none found.
+func (m *ReimportClusterReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReimportClusterReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if l := utf8.RuneCountInString(m.GetClusterID()); l < 1 || l > 100 {
+		err := ReimportClusterReqValidationError{
+			field:  "ClusterID",
+			reason: "value length must be between 1 and 100 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !strings.HasPrefix(m.GetClusterID(), "BCS-") {
+		err := ReimportClusterReqValidationError{
+			field:  "ClusterID",
+			reason: "value does not have prefix \"BCS-\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !_ReimportClusterReq_ClusterID_Pattern.MatchString(m.GetClusterID()) {
+		err := ReimportClusterReqValidationError{
+			field:  "ClusterID",
+			reason: "value does not match regex pattern \"^[0-9a-zA-Z-]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	// no validation rules for TargetClusterID
+
+	if l := utf8.RuneCountInString(m.GetProjectID()); l < 1 || l > 100 {
+		err := ReimportClusterReqValidationError{
+			field:  "ProjectID",
+			reason: "value length must be between 1 and 100 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !_ReimportClusterReq_ProjectID_Pattern.MatchString(m.GetProjectID()) {
+		err := ReimportClusterReqValidationError{
+			field:  "ProjectID",
+			reason: "value does not match regex pattern \"^[0-9a-zA-Z-]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetTargetProjectID()); l < 1 || l > 100 {
+		err := ReimportClusterReqValidationError{
+			field:  "TargetProjectID",
+			reason: "value length must be between 1 and 100 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !_ReimportClusterReq_TargetProjectID_Pattern.MatchString(m.GetTargetProjectID()) {
+		err := ReimportClusterReqValidationError{
+			field:  "TargetProjectID",
+			reason: "value does not match regex pattern \"^[0-9a-zA-Z-]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if utf8.RuneCountInString(m.GetTargetBusinessID()) > 100 {
+		err := ReimportClusterReqValidationError{
+			field:  "TargetBusinessID",
+			reason: "value length must be at most 100 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetUpdater()); l < 1 || l > 1024 {
+		err := ReimportClusterReqValidationError{
+			field:  "Updater",
+			reason: "value length must be between 1 and 1024 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return ReimportClusterReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReimportClusterReqMultiError is an error wrapping multiple validation errors
+// returned by ReimportClusterReq.ValidateAll() if the designated constraints
+// aren't met.
+type ReimportClusterReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReimportClusterReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReimportClusterReqMultiError) AllErrors() []error { return m }
+
+// ReimportClusterReqValidationError is the validation error returned by
+// ReimportClusterReq.Validate if the designated constraints aren't met.
+type ReimportClusterReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReimportClusterReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReimportClusterReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReimportClusterReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReimportClusterReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReimportClusterReqValidationError) ErrorName() string {
+	return "ReimportClusterReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReimportClusterReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReimportClusterReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReimportClusterReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReimportClusterReqValidationError{}
+
+var _ReimportClusterReq_ClusterID_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
+
+var _ReimportClusterReq_ProjectID_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
+
+var _ReimportClusterReq_TargetProjectID_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
+
+// Validate checks the field values on ReimportClusterResp with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReimportClusterResp) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReimportClusterResp with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReimportClusterRespMultiError, or nil if none found.
+func (m *ReimportClusterResp) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReimportClusterResp) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Code
+
+	// no validation rules for Message
+
+	// no validation rules for Result
+
+	if all {
+		switch v := interface{}(m.GetData()).(type) {
+		case interface{ ValidateAll() error }:
+			if err := v.ValidateAll(); err != nil {
+				errors = append(errors, ReimportClusterRespValidationError{
+					field:  "Data",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		case interface{ Validate() error }:
+			if err := v.Validate(); err != nil {
+				errors = append(errors, ReimportClusterRespValidationError{
+					field:  "Data",
+					reason: "embedded message failed validation",
+					cause:  err,
+				})
+			}
+		}
+	} else if v, ok := interface{}(m.GetData()).(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return ReimportClusterRespValidationError{
+				field:  "Data",
+				reason: "embedded message failed validation",
+				cause:  err,
+			}
+		}
+	}
+
+	if len(errors) > 0 {
+		return ReimportClusterRespMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReimportClusterRespMultiError is an error wrapping multiple validation
+// errors returned by ReimportClusterResp.ValidateAll() if the designated
+// constraints aren't met.
+type ReimportClusterRespMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReimportClusterRespMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReimportClusterRespMultiError) AllErrors() []error { return m }
+
+// ReimportClusterRespValidationError is the validation error returned by
+// ReimportClusterResp.Validate if the designated constraints aren't met.
+type ReimportClusterRespValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReimportClusterRespValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReimportClusterRespValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReimportClusterRespValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReimportClusterRespValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReimportClusterRespValidationError) ErrorName() string {
+	return "ReimportClusterRespValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReimportClusterRespValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReimportClusterResp.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReimportClusterRespValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReimportClusterRespValidationError{}
+
+// Validate checks the field values on ReimportClusterValidateReq with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReimportClusterValidateReq) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReimportClusterValidateReq with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReimportClusterValidateReqMultiError, or nil if none found.
+func (m *ReimportClusterValidateReq) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReimportClusterValidateReq) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if l := utf8.RuneCountInString(m.GetProjectID()); l < 1 || l > 100 {
+		err := ReimportClusterValidateReqValidationError{
+			field:  "ProjectID",
+			reason: "value length must be between 1 and 100 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !_ReimportClusterValidateReq_ProjectID_Pattern.MatchString(m.GetProjectID()) {
+		err := ReimportClusterValidateReqValidationError{
+			field:  "ProjectID",
+			reason: "value does not match regex pattern \"^[0-9a-zA-Z-]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if utf8.RuneCountInString(m.GetTargetBusinessID()) > 100 {
+		err := ReimportClusterValidateReqValidationError{
+			field:  "TargetBusinessID",
+			reason: "value length must be at most 100 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if l := utf8.RuneCountInString(m.GetClusterID()); l < 1 || l > 100 {
+		err := ReimportClusterValidateReqValidationError{
+			field:  "ClusterID",
+			reason: "value length must be between 1 and 100 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !strings.HasPrefix(m.GetClusterID(), "BCS-") {
+		err := ReimportClusterValidateReqValidationError{
+			field:  "ClusterID",
+			reason: "value does not have prefix \"BCS-\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if !_ReimportClusterValidateReq_ClusterID_Pattern.MatchString(m.GetClusterID()) {
+		err := ReimportClusterValidateReqValidationError{
+			field:  "ClusterID",
+			reason: "value does not match regex pattern \"^[0-9a-zA-Z-]+$\"",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return ReimportClusterValidateReqMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReimportClusterValidateReqMultiError is an error wrapping multiple
+// validation errors returned by ReimportClusterValidateReq.ValidateAll() if
+// the designated constraints aren't met.
+type ReimportClusterValidateReqMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReimportClusterValidateReqMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReimportClusterValidateReqMultiError) AllErrors() []error { return m }
+
+// ReimportClusterValidateReqValidationError is the validation error returned
+// by ReimportClusterValidateReq.Validate if the designated constraints aren't met.
+type ReimportClusterValidateReqValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReimportClusterValidateReqValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReimportClusterValidateReqValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReimportClusterValidateReqValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReimportClusterValidateReqValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReimportClusterValidateReqValidationError) ErrorName() string {
+	return "ReimportClusterValidateReqValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReimportClusterValidateReqValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReimportClusterValidateReq.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReimportClusterValidateReqValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReimportClusterValidateReqValidationError{}
+
+var _ReimportClusterValidateReq_ProjectID_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
+
+var _ReimportClusterValidateReq_ClusterID_Pattern = regexp.MustCompile("^[0-9a-zA-Z-]+$")
+
+// Validate checks the field values on ReimportClusterValidateResp with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *ReimportClusterValidateResp) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ReimportClusterValidateResp with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ReimportClusterValidateRespMultiError, or nil if none found.
+func (m *ReimportClusterValidateResp) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ReimportClusterValidateResp) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Code
+
+	// no validation rules for Message
+
+	// no validation rules for Result
+
+	if len(errors) > 0 {
+		return ReimportClusterValidateRespMultiError(errors)
+	}
+
+	return nil
+}
+
+// ReimportClusterValidateRespMultiError is an error wrapping multiple
+// validation errors returned by ReimportClusterValidateResp.ValidateAll() if
+// the designated constraints aren't met.
+type ReimportClusterValidateRespMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ReimportClusterValidateRespMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ReimportClusterValidateRespMultiError) AllErrors() []error { return m }
+
+// ReimportClusterValidateRespValidationError is the validation error returned
+// by ReimportClusterValidateResp.Validate if the designated constraints
+// aren't met.
+type ReimportClusterValidateRespValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ReimportClusterValidateRespValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ReimportClusterValidateRespValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ReimportClusterValidateRespValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ReimportClusterValidateRespValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ReimportClusterValidateRespValidationError) ErrorName() string {
+	return "ReimportClusterValidateRespValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e ReimportClusterValidateRespValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sReimportClusterValidateResp.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ReimportClusterValidateRespValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ReimportClusterValidateRespValidationError{}
+
 // Validate checks the field values on DeleteVirtualClusterReq with the rules
 // defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -18738,27 +19365,7 @@ func (m *UpdateClusterReq) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if l := utf8.RuneCountInString(m.GetClusterName()); l < 1 || l > 1024 {
-		err := UpdateClusterReqValidationError{
-			field:  "ClusterName",
-			reason: "value length must be between 1 and 1024 runes, inclusive",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
-
-	if !_UpdateClusterReq_ClusterName_Pattern.MatchString(m.GetClusterName()) {
-		err := UpdateClusterReqValidationError{
-			field:  "ClusterName",
-			reason: "value does not match regex pattern \"^[^&'<>\\\"\\\\r]+$\"",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
+	// no validation rules for ClusterName
 
 	if utf8.RuneCountInString(m.GetProvider()) > 1024 {
 		err := UpdateClusterReqValidationError{
@@ -19279,8 +19886,6 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = UpdateClusterReqValidationError{}
-
-var _UpdateClusterReq_ClusterName_Pattern = regexp.MustCompile("^[^&'<>\"\\r]+$")
 
 var _UpdateClusterReq_Status_InLookup = map[string]struct{}{
 	"CREATING":       {},

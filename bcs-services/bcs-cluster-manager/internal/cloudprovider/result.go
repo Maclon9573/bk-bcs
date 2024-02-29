@@ -39,6 +39,8 @@ var (
 	CreateVirtualClusterJob JobType = "create-virtual-cluster"
 	// ImportClusterJob for importCluster job
 	ImportClusterJob JobType = "import-cluster"
+	// ReimportClusterJob for reimportCluster job
+	ReimportClusterJob JobType = "reimport-cluster"
 	// DeleteClusterJob for deleteCluster job
 	DeleteClusterJob JobType = "delete-cluster"
 	// DeleteVirtualClusterJob for deleteVirtualCluster job
@@ -120,6 +122,9 @@ func (sjr *SyncJobResult) UpdateJobResultStatus(isSuccess bool) error {
 		sjr.Status = generateStatusResult("", common.StatusRemoveNodesFailed)
 		return sjr.deleteNodesResultStatus(isSuccess)
 	case ImportClusterJob:
+		sjr.Status = generateStatusResult(common.StatusRunning, common.StatusImportClusterFailed)
+		return sjr.updateClusterResultStatus(isSuccess)
+	case ReimportClusterJob:
 		sjr.Status = generateStatusResult(common.StatusRunning, common.StatusImportClusterFailed)
 		return sjr.updateClusterResultStatus(isSuccess)
 	// CA 扩容节点

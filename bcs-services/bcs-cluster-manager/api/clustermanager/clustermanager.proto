@@ -86,6 +86,26 @@ service ClusterManager {
       summary : "导入用户Cluster任务"
     };
   }
+  rpc ReimportCluster(ReimportClusterReq) returns (ReimportClusterResp) {
+    option (google.api.http) = {
+      post : "/clustermanager/v1/cluster/reimport"
+      body : "*"
+    };
+    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+      description : "重新导入用户集群(已纳管集群的项目迁移)"
+      summary : "重新导入用户集群"
+    };
+  }
+  rpc ReimportClusterValidate(ReimportClusterValidateReq) returns (ReimportClusterValidateResp) {
+    option (google.api.http) = {
+      post : "/clustermanager/v1/cluster/reimport/validate"
+      body : "*"
+    };
+    option (grpc.gateway.protoc_gen_swagger.options.openapiv2_operation) = {
+      description : "重新导入用户集群前置校验"
+      summary : "重新导入用户集群前置校验"
+    };
+  }
   rpc UpdateCluster(UpdateClusterReq) returns (UpdateClusterResp) {
     option (google.api.http) = {
       put : "/clustermanager/v1/cluster/{clusterID}"
@@ -5451,6 +5471,135 @@ message ImportClusterResp {
   }];
 }
 
+message ReimportClusterReq {
+  option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
+    json_schema : {
+      title : "ReimportClusterReq"
+      description : "重新导入用户集群(已纳管集群的项目迁移)"
+      required : [
+        "clusterID",
+        "projectID",
+        "targetProjectID",
+        "targetBusinessID",
+        "updater"
+      ]
+    }
+  };
+
+  string clusterID = 1 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "clusterID",
+      description : "当前集群ID"
+    },(validate.rules).string = {min_len : 1, max_len : 100, pattern : "^[0-9a-zA-Z-]+$", prefix: "BCS-"}
+  ];
+  string targetClusterID = 2 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "targetClusterID",
+      description : "迁移后的集群ID"
+    }
+  ];
+  string projectID = 3 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "projectID",
+      description : "集群所在的当前项目ID"
+    },(validate.rules).string = {min_len : 1, max_len : 100, pattern : "^[0-9a-zA-Z-]+$"}
+  ];
+  string targetProjectID = 4 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "targetProjectID",
+      description : "集群迁移的目标项目ID"
+    },(validate.rules).string = {min_len : 1, max_len : 100, pattern : "^[0-9a-zA-Z-]+$"}
+  ];
+  string targetBusinessID = 6 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "targetBusinessID",
+      description : "集群迁移的目标业务ID"
+    },(validate.rules).string = {max_len : 100}
+  ];
+  string updater = 7 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "updater",
+      description : "更新人"
+    },(validate.rules).string = {min_len : 1, max_len : 1024}
+  ];
+}
+
+message ReimportClusterResp {
+  option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
+    json_schema : {
+      title : "ReimportClusterResp"
+      description : "导入集群的返回"
+      required : [ "code", "message", "data"]
+    }
+  };
+
+  uint32 code = 1[(grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title : "code", description : "返回错误码"
+  }];
+  string message = 2[ (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title: "message", description: "返回错误信息"
+  }];
+  bool result = 3[(grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title : "result", description : "返回结果"
+  }];
+  google.protobuf.Struct data = 4 [(grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title : "data",
+    description : "返回导入集群和任务"
+  }];
+}
+
+message ReimportClusterValidateReq {
+  option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
+    json_schema : {
+      title : "ReimportClusterValidateReq"
+      description : "重新导入用户集群前置校验"
+      required : [
+        "projectID",
+        "targetBusinessID",
+        "clusterID"
+      ]
+    }
+  };
+
+  string projectID = 1 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "projectID",
+      description : "集群所在的当前项目ID"
+    },(validate.rules).string = {min_len : 1, max_len : 100, pattern : "^[0-9a-zA-Z-]+$"}
+  ];
+  string targetBusinessID = 2 [
+    (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+      title : "targetBusinessID",
+      description : "集群迁移的目标业务ID"
+    },(validate.rules).string = {max_len : 100}
+  ];
+  string clusterID = 3 [ (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title : "clusterID",
+    description : "集群ID"
+  },(validate.rules).string = {min_len : 1, max_len : 100, pattern : "^[0-9a-zA-Z-]+$", prefix: "BCS-"}
+  ];
+}
+
+message ReimportClusterValidateResp {
+  option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
+    json_schema : {
+      title : "ReimportClusterValidateResp"
+      description : "重新导入集群前置校验的返回"
+      required : [ "code", "message"]
+    }
+  };
+
+  uint32 code = 1[(grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title : "code", description : "返回错误码"
+  }];
+  string message = 2[ (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title: "message", description: "返回错误信息"
+  }];
+  bool result = 3[(grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
+    title : "result", description : "返回结果"
+  }];
+}
+
 message DeleteVirtualClusterReq {
   option (grpc.gateway.protoc_gen_swagger.options.openapiv2_schema) = {
     json_schema : {
@@ -5660,9 +5809,7 @@ message UpdateClusterReq {
     (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
       title : "clusterName",
       description : "集群名称"
-    },
-    (validate.rules).string = {min_len : 1, max_len : 1024, pattern: "^[^&'<>\"\\r]+$"}
-  ];
+    }];
   string provider = 3 [
     (grpc.gateway.protoc_gen_swagger.options.openapiv2_field) = {
       title : "provider",

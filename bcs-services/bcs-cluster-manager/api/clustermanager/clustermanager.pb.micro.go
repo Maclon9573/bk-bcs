@@ -77,6 +77,20 @@ func NewClusterManagerEndpoints() []*api.Endpoint {
 			Handler: "rpc",
 		},
 		&api.Endpoint{
+			Name:    "ClusterManager.ReimportCluster",
+			Path:    []string{"/clustermanager/v1/cluster/reimport"},
+			Method:  []string{"POST"},
+			Body:    "*",
+			Handler: "rpc",
+		},
+		&api.Endpoint{
+			Name:    "ClusterManager.ReimportClusterValidate",
+			Path:    []string{"/clustermanager/v1/cluster/reimport/validate"},
+			Method:  []string{"POST"},
+			Body:    "*",
+			Handler: "rpc",
+		},
+		&api.Endpoint{
 			Name:    "ClusterManager.UpdateCluster",
 			Path:    []string{"/clustermanager/v1/cluster/{clusterID}"},
 			Method:  []string{"PUT"},
@@ -895,6 +909,8 @@ type ClusterManagerService interface {
 	CheckCloudKubeConfig(ctx context.Context, in *KubeConfigReq, opts ...client.CallOption) (*KubeConfigResp, error)
 	CheckCloudKubeConfigConnect(ctx context.Context, in *KubeConfigConnectReq, opts ...client.CallOption) (*KubeConfigConnectResp, error)
 	ImportCluster(ctx context.Context, in *ImportClusterReq, opts ...client.CallOption) (*ImportClusterResp, error)
+	ReimportCluster(ctx context.Context, in *ReimportClusterReq, opts ...client.CallOption) (*ReimportClusterResp, error)
+	ReimportClusterValidate(ctx context.Context, in *ReimportClusterValidateReq, opts ...client.CallOption) (*ReimportClusterValidateResp, error)
 	UpdateCluster(ctx context.Context, in *UpdateClusterReq, opts ...client.CallOption) (*UpdateClusterResp, error)
 	AddNodesToCluster(ctx context.Context, in *AddNodesRequest, opts ...client.CallOption) (*AddNodesResponse, error)
 	DeleteNodesFromCluster(ctx context.Context, in *DeleteNodesRequest, opts ...client.CallOption) (*DeleteNodesResponse, error)
@@ -1101,6 +1117,26 @@ func (c *clusterManagerService) CheckCloudKubeConfigConnect(ctx context.Context,
 func (c *clusterManagerService) ImportCluster(ctx context.Context, in *ImportClusterReq, opts ...client.CallOption) (*ImportClusterResp, error) {
 	req := c.c.NewRequest(c.name, "ClusterManager.ImportCluster", in)
 	out := new(ImportClusterResp)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clusterManagerService) ReimportCluster(ctx context.Context, in *ReimportClusterReq, opts ...client.CallOption) (*ReimportClusterResp, error) {
+	req := c.c.NewRequest(c.name, "ClusterManager.ReimportCluster", in)
+	out := new(ReimportClusterResp)
+	err := c.c.Call(ctx, req, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *clusterManagerService) ReimportClusterValidate(ctx context.Context, in *ReimportClusterValidateReq, opts ...client.CallOption) (*ReimportClusterValidateResp, error) {
+	req := c.c.NewRequest(c.name, "ClusterManager.ReimportClusterValidate", in)
+	out := new(ReimportClusterValidateResp)
 	err := c.c.Call(ctx, req, out, opts...)
 	if err != nil {
 		return nil, err
@@ -2347,6 +2383,8 @@ type ClusterManagerHandler interface {
 	CheckCloudKubeConfig(context.Context, *KubeConfigReq, *KubeConfigResp) error
 	CheckCloudKubeConfigConnect(context.Context, *KubeConfigConnectReq, *KubeConfigConnectResp) error
 	ImportCluster(context.Context, *ImportClusterReq, *ImportClusterResp) error
+	ReimportCluster(context.Context, *ReimportClusterReq, *ReimportClusterResp) error
+	ReimportClusterValidate(context.Context, *ReimportClusterValidateReq, *ReimportClusterValidateResp) error
 	UpdateCluster(context.Context, *UpdateClusterReq, *UpdateClusterResp) error
 	AddNodesToCluster(context.Context, *AddNodesRequest, *AddNodesResponse) error
 	DeleteNodesFromCluster(context.Context, *DeleteNodesRequest, *DeleteNodesResponse) error
@@ -2505,6 +2543,8 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 		CheckCloudKubeConfig(ctx context.Context, in *KubeConfigReq, out *KubeConfigResp) error
 		CheckCloudKubeConfigConnect(ctx context.Context, in *KubeConfigConnectReq, out *KubeConfigConnectResp) error
 		ImportCluster(ctx context.Context, in *ImportClusterReq, out *ImportClusterResp) error
+		ReimportCluster(ctx context.Context, in *ReimportClusterReq, out *ReimportClusterResp) error
+		ReimportClusterValidate(ctx context.Context, in *ReimportClusterValidateReq, out *ReimportClusterValidateResp) error
 		UpdateCluster(ctx context.Context, in *UpdateClusterReq, out *UpdateClusterResp) error
 		AddNodesToCluster(ctx context.Context, in *AddNodesRequest, out *AddNodesResponse) error
 		DeleteNodesFromCluster(ctx context.Context, in *DeleteNodesRequest, out *DeleteNodesResponse) error
@@ -2663,6 +2703,20 @@ func RegisterClusterManagerHandler(s server.Server, hdlr ClusterManagerHandler, 
 	opts = append(opts, api.WithEndpoint(&api.Endpoint{
 		Name:    "ClusterManager.ImportCluster",
 		Path:    []string{"/clustermanager/v1/cluster/import"},
+		Method:  []string{"POST"},
+		Body:    "*",
+		Handler: "rpc",
+	}))
+	opts = append(opts, api.WithEndpoint(&api.Endpoint{
+		Name:    "ClusterManager.ReimportCluster",
+		Path:    []string{"/clustermanager/v1/cluster/reimport"},
+		Method:  []string{"POST"},
+		Body:    "*",
+		Handler: "rpc",
+	}))
+	opts = append(opts, api.WithEndpoint(&api.Endpoint{
+		Name:    "ClusterManager.ReimportClusterValidate",
+		Path:    []string{"/clustermanager/v1/cluster/reimport/validate"},
 		Method:  []string{"POST"},
 		Body:    "*",
 		Handler: "rpc",
@@ -3499,6 +3553,14 @@ func (h *clusterManagerHandler) CheckCloudKubeConfigConnect(ctx context.Context,
 
 func (h *clusterManagerHandler) ImportCluster(ctx context.Context, in *ImportClusterReq, out *ImportClusterResp) error {
 	return h.ClusterManagerHandler.ImportCluster(ctx, in, out)
+}
+
+func (h *clusterManagerHandler) ReimportCluster(ctx context.Context, in *ReimportClusterReq, out *ReimportClusterResp) error {
+	return h.ClusterManagerHandler.ReimportCluster(ctx, in, out)
+}
+
+func (h *clusterManagerHandler) ReimportClusterValidate(ctx context.Context, in *ReimportClusterValidateReq, out *ReimportClusterValidateResp) error {
+	return h.ClusterManagerHandler.ReimportClusterValidate(ctx, in, out)
 }
 
 func (h *clusterManagerHandler) UpdateCluster(ctx context.Context, in *UpdateClusterReq, out *UpdateClusterResp) error {

@@ -101,6 +101,36 @@ func (cm *ClusterManager) ImportCluster(ctx context.Context,
 	return nil
 }
 
+// ReimportCluster implements interface cmproto.ClusterManagerServer
+func (cm *ClusterManager) ReimportCluster(ctx context.Context,
+	req *cmproto.ReimportClusterReq, resp *cmproto.ReimportClusterResp) error {
+	reqID, err := requestIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	start := time.Now()
+	ca := clusterac.NewReimportAction(cm.model, cm.locker)
+	ca.Handle(ctx, req, resp)
+	metrics.ReportAPIRequestMetric("ReimportCluster", "grpc", strconv.Itoa(int(resp.Code)), start)
+	blog.Infof("reqID: %s, action: ReimportCluster, req %v, resp %v", reqID, req, resp)
+	return nil
+}
+
+// ReimportClusterValidate implements interface cmproto.ClusterManagerServer
+func (cm *ClusterManager) ReimportClusterValidate(ctx context.Context,
+	req *cmproto.ReimportClusterValidateReq, resp *cmproto.ReimportClusterValidateResp) error {
+	reqID, err := requestIDFromContext(ctx)
+	if err != nil {
+		return err
+	}
+	start := time.Now()
+	ca := clusterac.NewReimportClusterValidateAction(cm.model, cm.kubeOp)
+	ca.Handle(ctx, req, resp)
+	metrics.ReportAPIRequestMetric("ReimportClusterValidate", "grpc", strconv.Itoa(int(resp.Code)), start)
+	blog.Infof("reqID: %s, action: ReimportClusterValidate, req %v, resp %v", reqID, req, resp)
+	return nil
+}
+
 // RetryCreateClusterTask implements interface cmproto.ClusterManagerServer for retry create task
 func (cm *ClusterManager) RetryCreateClusterTask(ctx context.Context,
 	req *cmproto.RetryCreateClusterReq, resp *cmproto.RetryCreateClusterResp) error {
