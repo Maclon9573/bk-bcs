@@ -81,6 +81,8 @@ func (ta *TokenAuthenticater) ParseTokenString() string {
 	if token == "" && ta.config.sourceBasicAuthEnabled {
 		token = ta.ParseTokenBasicAuth()
 	}
+	blog.Log(ta.req.Context()).Infof("----------getUserInfoByToken ParseTokenString: %s", token)
+
 	return token
 }
 
@@ -324,6 +326,7 @@ func TokenAuthAuthenticate(request *restful.Request, response *restful.Response,
 		SourceBearerEnabled: true,
 	})
 	user := authenticater.GetUser()
+	blog.Log(request.Request.Context()).Infof("----------TokenAuthAuthenticate user: %v", user)
 	if user == nil || user.HasExpired() {
 		message := fmt.Sprintf("errcode: %d,  anonymous requests is forbidden, please provide a valid token",
 			common.BcsErrApiUnauthorized)
