@@ -36,7 +36,7 @@ func InitCoreDatabase(conf *config.UserMgrConfig) error {
 	if dsn == "" {
 		return fmt.Errorf("core_database dsn not configured")
 	}
-	db, err := splunkgorm.Open("mysql", dsn)
+	db, err := splunkgorm.Open("dm", dsn)
 	if err != nil {
 		return err
 	}
