@@ -16,8 +16,8 @@ import (
 	"fmt"
 	"time"
 
+	_ "gitee.com/chunanyong/dm"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/mysql" // mysql
 	"github.com/signalfx/splunk-otel-go/instrumentation/github.com/jinzhu/gorm/splunkgorm"
 
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-user-manager/config"
