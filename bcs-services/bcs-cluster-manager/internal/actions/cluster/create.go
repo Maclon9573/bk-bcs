@@ -378,7 +378,7 @@ func (ca *CreateAction) generateClusterID(cls *cmproto.Cluster) error {
 	return nil
 }
 
-func (ca *CreateAction) createNodegroup(cls *cmproto.Cluster) error {
+func (ca *CreateAction) createNodegroupInDB(cls *cmproto.Cluster) error {
 	timeStr := time.Now().Format(time.RFC3339)
 	if ca.req.NodeGroups != nil {
 		for _, ng := range ca.req.NodeGroups {
@@ -391,33 +391,12 @@ func (ca *CreateAction) createNodegroup(cls *cmproto.Cluster) error {
 			ng.CreateTime = timeStr
 			ng.UpdateTime = timeStr
 
-			if ng.LaunchTemplate == nil {
-				return fmt.Errorf("createNodegroup[%s] empty LaunchTemplate", ng.Name)
+			err := encryptKeyAndPass(ng)
+			if err != nil {
+				return fmt.Errorf("createNodegroupInDB[%s] failed, %v", ng.Name, err)
 			}
 
-			if ng.LaunchTemplate.InitLoginPassword != "" {
-				enPasswd, err := encrypt.Encrypt(nil, ng.LaunchTemplate.InitLoginPassword)
-				if err != nil {
-					return fmt.Errorf("createNodegroup[%s] Encrypt InitLoginPassword failed", ng.Name)
-				}
-				ng.LaunchTemplate.InitLoginPassword = enPasswd
-			}
-			if ng.LaunchTemplate.GetKeyPair() != nil && ng.LaunchTemplate.GetKeyPair().GetKeySecret() != "" {
-				keySecret, err := encrypt.Encrypt(nil, ng.LaunchTemplate.GetKeyPair().GetKeySecret())
-				if err != nil {
-					return fmt.Errorf("createNodegroup[%s] Encrypt KeySecret failed", ng.Name)
-				}
-				ng.LaunchTemplate.KeyPair.KeySecret = keySecret
-			}
-			if ng.LaunchTemplate.GetKeyPair() != nil && ng.LaunchTemplate.GetKeyPair().GetKeyPublic() != "" {
-				keyPublic, err := encrypt.Encrypt(nil, ng.LaunchTemplate.GetKeyPair().GetKeyPublic())
-				if err != nil {
-					return fmt.Errorf("createNodegroup[%s] Encrypt KeyPublic failed", ng.Name)
-				}
-				ng.LaunchTemplate.KeyPair.KeyPublic = keyPublic
-			}
-
-			err := ca.model.CreateNodeGroup(context.Background(), ng)
+			err = ca.model.CreateNodeGroup(context.Background(), ng)
 			if err != nil {
 				blog.Errorf("save NodeGroup %s information to store failed, %s", ng.NodeGroupID, err.Error())
 				if errors.Is(err, drivers.ErrTableRecordDuplicateKey) {
@@ -431,6 +410,36 @@ func (ca *CreateAction) createNodegroup(cls *cmproto.Cluster) error {
 				return err
 			}
 		}
+	}
+
+	return nil
+}
+
+func encryptKeyAndPass(ng *cmproto.NodeGroup) error {
+	if ng.LaunchTemplate == nil {
+		return fmt.Errorf("createNodegroupInDB[%s] empty LaunchTemplate", ng.Name)
+	}
+
+	if ng.LaunchTemplate.InitLoginPassword != "" {
+		enPasswd, err := encrypt.Encrypt(nil, ng.LaunchTemplate.InitLoginPassword)
+		if err != nil {
+			return fmt.Errorf("createNodegroup[%s] Encrypt InitLoginPassword failed", ng.Name)
+		}
+		ng.LaunchTemplate.InitLoginPassword = enPasswd
+	}
+	if ng.LaunchTemplate.GetKeyPair() != nil && ng.LaunchTemplate.GetKeyPair().GetKeySecret() != "" {
+		keySecret, err := encrypt.Encrypt(nil, ng.LaunchTemplate.GetKeyPair().GetKeySecret())
+		if err != nil {
+			return fmt.Errorf("createNodegroup[%s] Encrypt KeySecret failed", ng.Name)
+		}
+		ng.LaunchTemplate.KeyPair.KeySecret = keySecret
+	}
+	if ng.LaunchTemplate.GetKeyPair() != nil && ng.LaunchTemplate.GetKeyPair().GetKeyPublic() != "" {
+		keyPublic, err := encrypt.Encrypt(nil, ng.LaunchTemplate.GetKeyPair().GetKeyPublic())
+		if err != nil {
+			return fmt.Errorf("createNodegroup[%s] Encrypt KeyPublic failed", ng.Name)
+		}
+		ng.LaunchTemplate.KeyPair.KeyPublic = keyPublic
 	}
 
 	return nil
@@ -490,7 +499,7 @@ func (ca *CreateAction) Handle(ctx context.Context, req *cmproto.CreateClusterRe
 	}
 
 	// create nodeGroups
-	err = ca.createNodegroup(cls)
+	err = ca.createNodegroupInDB(cls)
 	if err != nil {
 		blog.Errorf("createNodegroup failed: %v", err)
 		return

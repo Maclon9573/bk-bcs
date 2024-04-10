@@ -40,9 +40,41 @@ func init() {
 type Cluster struct {
 }
 
-// CreateCluster create kubenretes cluster according cloudprovider
+// CreateCluster create kubernetes cluster according cloudprovider
 func (c *Cluster) CreateCluster(cls *proto.Cluster, opt *cloudprovider.CreateClusterOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	// call azure interface to create cluster
+	if cls == nil {
+		return nil, fmt.Errorf("%s CreateCluster cluster is empty", cloudName)
+	}
+
+	if opt == nil || opt.Cloud == nil {
+		return nil, fmt.Errorf("%s CreateCluster cluster opt or cloud is empty", cloudName)
+	}
+
+	if opt.Account == nil || len(opt.Account.SubscriptionID) == 0 || len(opt.Account.TenantID) == 0 ||
+		len(opt.Account.ClientID) == 0 || len(opt.Account.ClientSecret) == 0 || len(opt.Region) == 0 {
+		return nil, fmt.Errorf("%s CreateCluster opt lost valid crendential info", cloudName)
+	}
+
+	// GetTaskManager for nodegroup manager initialization
+	mgr, err := cloudprovider.GetTaskManager(opt.Cloud.CloudProvider)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when CreateCluster %d failed, %s",
+			opt.Cloud.CloudID, cls.ClusterName, err.Error(),
+		)
+		return nil, err
+	}
+
+	// build create cluster task
+	task, err := mgr.BuildCreateClusterTask(cls, opt)
+	if err != nil {
+		blog.Errorf("build CreateCluster task for cluster %s with cloudprovider %s failed, %s",
+			cls.ClusterName, cls.Provider, err.Error(),
+		)
+		return nil, err
+	}
+
+	return task, nil
 }
 
 // CreateVirtualCluster create virtual cluster by cloud provider

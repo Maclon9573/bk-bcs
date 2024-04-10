@@ -28,7 +28,6 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 
 	proto "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/api/clustermanager"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/qcloud/api"
 )
 
 //	nodeGroupToPool agentPool 转换器
@@ -499,11 +498,11 @@ func (c *poolToNodeGroup) setCurrentOrchestratorVersion() { // nolint
 func (c *poolToNodeGroup) setStatus() {
 	switch *c.properties.ProvisioningState {
 	case NormalState:
-		c.group.Status = api.NodeGroupLifeStateNormal
+		c.group.Status = NodeGroupLifeStateNormal
 	case CreatingState:
-		c.group.Status = api.NodeGroupLifeStateCreating
+		c.group.Status = NodeGroupLifeStateCreating
 	case UpdatingState:
-		c.group.Status = api.NodeGroupLifeStateUpdating
+		c.group.Status = NodeGroupLifeStateUpdating
 	default:
 		c.group.Status = strings.ToLower(*c.properties.ProvisioningState)
 	}
