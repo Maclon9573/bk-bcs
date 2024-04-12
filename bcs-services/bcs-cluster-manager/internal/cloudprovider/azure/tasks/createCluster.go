@@ -192,6 +192,7 @@ func generateCreateClusterRequest(info *cloudprovider.CloudDependBasicInfo, grou
 				return false
 			}(ng)),
 			Mode:          to.Ptr(armcontainerservice.AgentPoolMode(ng.NodeGroupType)),
+			MaxPods:       to.Ptr(int32(cluster.NetworkSettings.MaxNodePodNum)),
 			Name:          to.Ptr(ng.Name),
 			OSDiskSizeGB:  to.Ptr(int32(sysDiskSize)),
 			OSType:        to.Ptr(armcontainerservice.OSTypeLinux),
