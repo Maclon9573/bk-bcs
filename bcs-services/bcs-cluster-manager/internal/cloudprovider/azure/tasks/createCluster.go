@@ -16,6 +16,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -113,11 +114,6 @@ func CreateAKSClusterTask(taskID string, stepName string) error {
 func createAKSCluster(ctx context.Context, info *cloudprovider.CloudDependBasicInfo, groups []*proto.NodeGroup) (string, error) {
 	taskID := cloudprovider.GetTaskIDFromContext(ctx)
 
-	req, err := generateCreateClusterRequest(info, groups)
-	if err != nil {
-		return "", err
-	}
-
 	client, err := api.NewAksServiceImplWithCommonOption(info.CmOption)
 	if err != nil {
 		return "", fmt.Errorf("create AksService failed")
@@ -129,10 +125,24 @@ func createAKSCluster(ctx context.Context, info *cloudprovider.CloudDependBasicI
 			taskID, info.Cluster.ClusterID)
 	}
 
+	// get subnets in VPC
+	subnets, err := client.ListSubnets(ctx, rgName, info.Cluster.VpcID)
+	if err != nil {
+		return "", fmt.Errorf("createAKSCluster[%s] ListSubnets failed, %v", taskID, err)
+	}
+
+	if len(subnets) == 0 {
+		return "", fmt.Errorf("createAKSCluster[%s] no subnets in vpc[%s]", taskID, info.Cluster.VpcID)
+	}
+
+	req, err := generateCreateClusterRequest(info, groups, rgName, *subnets[0].Name)
+	if err != nil {
+		return "", fmt.Errorf("createAKSCluster[%s] generateCreateClusterRequest failed, %v", taskID, err)
+	}
+
 	aksCluster, err := client.CreateCluster(ctx, rgName, info.Cluster.ClusterName, *req)
 	if err != nil {
-		blog.Errorf("createAKSCluster aks client CreateCluster failed, %v", err)
-		return "", err
+		return "", fmt.Errorf("createAKSCluster[%s] CreateCluster failed, %v", taskID, err)
 	}
 
 	info.Cluster.SystemID = *aksCluster.Name
@@ -150,7 +160,8 @@ func createAKSCluster(ctx context.Context, info *cloudprovider.CloudDependBasicI
 	return *aksCluster.Name, nil
 }
 
-func generateCreateClusterRequest(info *cloudprovider.CloudDependBasicInfo, groups []*proto.NodeGroup) (
+func generateCreateClusterRequest(info *cloudprovider.CloudDependBasicInfo, groups []*proto.NodeGroup,
+	rgName, subnet string) (
 	*armcontainerservice.ManagedCluster, error) {
 	cluster := info.Cluster
 	if cluster.NetworkSettings == nil {
@@ -187,6 +198,9 @@ func generateCreateClusterRequest(info *cloudprovider.CloudDependBasicInfo, grou
 			ScaleDownMode: to.Ptr(armcontainerservice.ScaleDownModeDelete),
 			Type:          to.Ptr(armcontainerservice.AgentPoolTypeVirtualMachineScaleSets),
 			VMSize:        to.Ptr(ng.LaunchTemplate.InstanceType),
+			VnetSubnetID: to.Ptr(fmt.Sprintf(
+				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
+				info.CmOption.Account.SubscriptionID, rgName, cluster.VpcID, subnet)),
 		})
 	}
 	req := &armcontainerservice.ManagedCluster{
@@ -205,14 +219,45 @@ func generateCreateClusterRequest(info *cloudprovider.CloudDependBasicInfo, grou
 			LinuxProfile: &armcontainerservice.LinuxProfile{
 				AdminUsername: to.Ptr(adminUserName),
 			},
+			DNSPrefix: to.Ptr(cluster.ClusterName + "-dns"),
 			NetworkProfile: &armcontainerservice.NetworkProfile{
 				ServiceCidr:  to.Ptr(cluster.NetworkSettings.ServiceIPv4CIDR),
+				DNSServiceIP: to.Ptr(genDNSServiceIP(cluster.NetworkSettings.ServiceIPv4CIDR)),
 				ServiceCidrs: []*string{to.Ptr(cluster.NetworkSettings.ServiceIPv4CIDR)},
+			},
+			ServicePrincipalProfile: &armcontainerservice.ManagedClusterServicePrincipalProfile{
+				ClientID: to.Ptr(info.CmOption.Account.ClientID),
+				Secret:   to.Ptr(info.CmOption.Account.ClientSecret),
 			},
 		},
 	}
 
 	return req, nil
+}
+
+// 使用cidr的第11个IP作为DNS IP
+func genDNSServiceIP(cidr string) string {
+	ip, _, _ := net.ParseCIDR(cidr)
+	ip = incrementIP(ip, 10)
+	return string(ip)
+}
+
+func incrementIP(ip net.IP, index int) net.IP {
+	for i := 0; i < index; i++ {
+		incremented := false
+		for j := len(ip) - 1; j >= 0; j-- {
+			ip[j]++
+			if ip[j] > 0 {
+				incremented = true
+				break
+			}
+		}
+		if !incremented {
+			break
+		}
+	}
+
+	return ip
 }
 
 // CheckAKSClusterStatusTask check cluster create status
