@@ -62,7 +62,7 @@ func DeployBCSComponents(taskID string, stepName string) error {
 	err = deployBCSComponents(ctx, originClusterID, clusterID)
 	if err != nil {
 		blog.Errorf("DeployBCSComponents[%s] failed: %v", taskID, err)
-		retErr := fmt.Errorf("deployBCSComponents failed, %s", err.Error())
+		retErr := fmt.Errorf("DeployBCSComponents failed, %s", err.Error())
 		_ = state.UpdateStepFailure(start, stepName, retErr)
 		return retErr
 	}
@@ -95,13 +95,21 @@ func deployBCSComponents(ctx context.Context, oriClusterID, clusterID string) er
 
 	agentDeploy, watchDeploy := v1.Deployment{}, v1.Deployment{}
 	for _, deploy := range deployList.Items {
-		if strings.Contains(deploy.Name, "bcs-kube-agent") {
+		// 优先使用bcs-kube-agent-v2作为kube agent的deployment
+		if deploy.Name == "bcs-kube-agent-v2" {
+			agentDeploy = deploy
+			continue
+		}
+		if deploy.Name == "bcs-kube-agent" && agentDeploy.Name == "" {
 			agentDeploy = deploy
 			continue
 		}
 		if strings.Contains(deploy.Name, "bcs-k8s-watch") {
 			watchDeploy = deploy
 			continue
+		}
+		if agentDeploy.Name != "" && watchDeploy.Name != "" {
+			break
 		}
 	}
 
@@ -150,7 +158,7 @@ func deployK8SWatch(ctx context.Context, client *kubernetes.Clientset, deploy v1
 	}
 
 	// wait deployment state to normal
-	timeCtx, cancel := context.WithTimeout(context.TODO(), 2*time.Minute)
+	timeCtx, cancel := context.WithTimeout(context.TODO(), 5*time.Minute)
 	defer cancel()
 
 	err = loop.LoopDoFunc(timeCtx, func() error {
@@ -161,14 +169,15 @@ func deployK8SWatch(ctx context.Context, client *kubernetes.Clientset, deploy v1
 			return nil
 		}
 
-		if len(dep.Status.Conditions) != 0 && dep.Status.Conditions[0].Type == v1.DeploymentAvailable &&
-			dep.Status.Conditions[0].Status == corev1.ConditionTrue {
+		if len(dep.Status.Conditions) != 0 &&
+			dep.Status.Conditions[len(dep.Status.Conditions)-1].Type == v1.DeploymentAvailable &&
+			dep.Status.Conditions[len(dep.Status.Conditions)-1].Status == corev1.ConditionTrue {
 			blog.Infof("deployK8SWatch[%s] for cluster[%s] success", taskID, clusterID)
 			return loop.EndLoop
 		}
 
 		return nil
-	}, loop.LoopInterval(3*time.Second))
+	}, loop.LoopInterval(10*time.Second))
 	if err != nil {
 		blog.Errorf("deployK8SWatch[%s] for cluster[%s] failed, %v",
 			taskID, clusterID, err)
@@ -181,14 +190,12 @@ func deployK8SWatch(ctx context.Context, client *kubernetes.Clientset, deploy v1
 func deployKubeAgent(ctx context.Context, client *kubernetes.Clientset, deploy v1.Deployment, clusterID string) error {
 	taskID := cloudprovider.GetTaskIDFromContext(ctx)
 	if deploy.Name == "" {
-		blog.Errorf("deployKubeAgent[%s] for cluster[%s] failed, can not get kube agent",
-			taskID, clusterID)
-		return fmt.Errorf("deployKubeAgent[%s] for cluster[%s] failed, can not get kube agent",
-			taskID, clusterID)
+		blog.Errorf("deployKubeAgent[%s] for cluster[%s] failed, can not get kube agent", taskID, clusterID)
+		return fmt.Errorf("deployKubeAgent[%s] for cluster[%s] failed, can not get kube agent", taskID, clusterID)
 	}
 
 	for i, c := range deploy.Spec.Template.Spec.Containers {
-		if c.Name == "bcs-kube-agent" {
+		if c.Name == "bcs-kube-agent" || c.Name == "bcs-kube-agent-v2" {
 			args := []string{fmt.Sprintf("--cluster-id=%s", clusterID)}
 			for _, v := range deploy.Spec.Template.Spec.Containers[i].Args {
 				if !strings.Contains(v, "--cluster-id") {
@@ -203,7 +210,7 @@ func deployKubeAgent(ctx context.Context, client *kubernetes.Clientset, deploy v
 		return err
 	}
 
-	timeCtx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	timeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
 	err = loop.LoopDoFunc(timeCtx, func() error {
@@ -221,7 +228,7 @@ func deployKubeAgent(ctx context.Context, client *kubernetes.Clientset, deploy v
 		blog.Infof("deployKubeAgent[%s] for cluster[%s] success", taskID, clusterID)
 
 		return loop.EndLoop
-	}, loop.LoopInterval(3*time.Second))
+	}, loop.LoopInterval(10*time.Second))
 	if err != nil {
 		blog.Errorf("deployKubeAgent[%s] for cluster[%s] failed, %v", taskID, clusterID, err)
 		return err
@@ -241,10 +248,10 @@ func CheckClusterStatus(taskID string, stepName string) error {
 	}
 	// previous step successful when retry task
 	if step == nil {
-		blog.Infof("DeployBCSComponents[%s]: current step[%s] successful and skip", taskID, stepName)
+		blog.Infof("CheckClusterStatus[%s]: current step[%s] successful and skip", taskID, stepName)
 		return nil
 	}
-	blog.Infof("DeployBCSComponents[%s]: task %s run step %s, system: %s, old state: %s, params %v",
+	blog.Infof("CheckClusterStatus[%s]: task %s run step %s, system: %s, old state: %s, params %v",
 		taskID, taskID, stepName, step.System, step.Status, step.Params)
 
 	// step login started here
@@ -254,14 +261,14 @@ func CheckClusterStatus(taskID string, stepName string) error {
 	// import cluster instances
 	err = checkClusterStatus(ctx, clusterID, originClusterID)
 	if err != nil {
-		blog.Errorf("DeployBCSComponents[%s] failed: %v", taskID, err)
-		retErr := fmt.Errorf("deployBCSComponents failed, %s", err.Error())
+		blog.Errorf("CheckClusterStatus[%s] failed: %v", taskID, err)
+		retErr := fmt.Errorf("CheckClusterStatus failed, %s", err.Error())
 		_ = state.UpdateStepFailure(start, stepName, retErr)
 		return retErr
 	}
 	// update step
 	if err := state.UpdateStepSucc(start, stepName); err != nil {
-		blog.Errorf("DeployBCSComponents[%s]  %s update to storage fatal", taskID, stepName)
+		blog.Errorf("CheckClusterStatus[%s]  %s update to storage fatal", taskID, stepName)
 		return err
 	}
 	return nil
