@@ -263,7 +263,22 @@ func (c *CloudValidate) DeleteNodesFromClusterValidate(req *proto.DeleteNodesReq
 
 // CreateCloudAccountValidate create cloud account validate
 func (c *CloudValidate) CreateCloudAccountValidate(account *proto.Account) error {
-	return cloudprovider.ErrCloudNotImplemented
+	if c == nil || account == nil {
+		return fmt.Errorf("%s CreateCloudAccountValidate account is null", cloudName)
+	}
+	if len(account.SecretID) == 0 || len(account.SecretKey) == 0 {
+		return fmt.Errorf("%s CreateCloudAccountValidate opt lost valid crendential info", cloudName)
+	}
+
+	nm := &api.NodeManager{}
+	_, err := nm.GetCloudRegions(&cloudprovider.CommonOption{
+		Account: account,
+	})
+	if err != nil {
+		return fmt.Errorf("%s CreateCloudAccountValidate run failed: %v", cloudName, err)
+	}
+
+	return nil
 }
 
 // ListCloudVpcsValidate list cloudAccount validate

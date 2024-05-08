@@ -103,15 +103,16 @@ func NewAWSClientSet(opt *cloudprovider.CommonOption) (*AWSClientSet, error) {
 	}, nil
 }
 
-// GetClusterKubeConfig constructs the cluster kubeConfig
-func GetClusterKubeConfig(opt *cloudprovider.CommonOption, cluster *eks.Cluster) (string, error) {
+// GenerateAwsRestConf generate aws rest config
+func GenerateAwsRestConf(opt *cloudprovider.CommonOption, cluster *eks.Cluster) (*rest.Config, error) {
 	sess, err := NewSession(opt)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
+
 	generator, err := token.NewGenerator(false, false)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	awsToken, err := generator.GetWithOptions(&token.GetTokenOptions{
@@ -119,12 +120,12 @@ func GetClusterKubeConfig(opt *cloudprovider.CommonOption, cluster *eks.Cluster)
 		ClusterID: *cluster.Name,
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	decodedCA, err := base64.StdEncoding.DecodeString(*cluster.CertificateAuthority.Data)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	restConfig := &rest.Config{
@@ -137,6 +138,17 @@ func GetClusterKubeConfig(opt *cloudprovider.CommonOption, cluster *eks.Cluster)
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
 		}).DialContext,
+	}
+
+	return restConfig, nil
+}
+
+// GetClusterKubeConfig constructs the cluster kubeConfig
+func GetClusterKubeConfig(opt *cloudprovider.CommonOption, cluster *eks.Cluster) (string, error) {
+	restConfig, err := GenerateAwsRestConf(opt, cluster)
+	if err != nil {
+		return "", fmt.Errorf("GetClusterKubeConfig GenerateAwsRestConf failed, cluster=%s: %v",
+			*cluster.Name, err)
 	}
 
 	cert, err := base64.StdEncoding.DecodeString(*cluster.CertificateAuthority.Data)

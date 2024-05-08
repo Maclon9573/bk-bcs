@@ -16,6 +16,9 @@ package aws
 import (
 	"context"
 	"fmt"
+	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 
@@ -91,13 +94,13 @@ func (c *Cluster) DeleteCluster(cls *proto.Cluster, opt *cloudprovider.DeleteClu
 
 // GetCluster get kubenretes cluster detail information according cloudprovider
 func (c *Cluster) GetCluster(cloudID string, opt *cloudprovider.GetClusterOption) (*proto.Cluster, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	return opt.Cluster, nil
 }
 
 // ListCluster get cloud cluster list by region
 func (c *Cluster) ListCluster(opt *cloudprovider.ListClusterOption) ([]*proto.CloudClusterInfo, error) {
 	if opt == nil || len(opt.Account.SecretID) == 0 || len(opt.Account.SecretKey) == 0 || len(opt.Region) == 0 {
-		return nil, fmt.Errorf("qcloud ListCluster cluster lost operation")
+		return nil, fmt.Errorf("%s ListCluster cluster lost operation", cloudName)
 	}
 
 	cli, err := api.NewEksClient(&opt.CommonOption)
@@ -166,7 +169,35 @@ func (c *Cluster) ListProjects(opt *cloudprovider.CommonOption) ([]*proto.CloudP
 // CheckClusterEndpointStatus check cluster endpoint status
 func (c *Cluster) CheckClusterEndpointStatus(clusterID string, isExtranet bool,
 	opt *cloudprovider.CheckEndpointStatusOption) (bool, error) {
-	return false, cloudprovider.ErrCloudNotImplemented
+	client, err := api.NewEksClient(&opt.CommonOption)
+	if err != nil {
+		return false, fmt.Errorf("CheckClusterEndpointStatus get NewEksClient failed: %v", err)
+	}
+
+	cluster, err := client.GetEksCluster(clusterID)
+	if err != nil {
+		return false, fmt.Errorf("CheckClusterEndpointStatus GetEksCluster failed: %v", err)
+	}
+
+	restConfig, err := api.GenerateAwsRestConf(&opt.CommonOption, cluster)
+	if err != nil {
+		return false, fmt.Errorf("CheckClusterEndpointStatus GenerateAwsRestConf failed: %v", err)
+	}
+
+	clientSet, err := clientset.NewForConfig(restConfig)
+	if err != nil {
+		return false, fmt.Errorf("CheckClusterEndpointStatus get clientset failed: %v", err)
+	}
+
+	// 获取 CRD
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*120)
+	defer cancel()
+	_, err = clientSet.ApiextensionsV1().CustomResourceDefinitions().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return false, fmt.Errorf("CheckClusterEndpointStatus failed: %v", err)
+	}
+
+	return true, nil
 }
 
 // AddSubnetsToCluster add subnets to cluster
