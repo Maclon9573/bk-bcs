@@ -474,7 +474,7 @@ func (t *Task) BuildDeleteNodeGroupTask(group *proto.NodeGroup, nodes []*proto.N
 	// step1. call gke delete node group
 	deleteNodeGroup.BuildDeleteNodeGroupStep(task)
 	// step2: update autoscaler component
-	common.BuildEnsureAutoScalerTaskStep(task, group.ClusterID, group.Provider)
+	//common.BuildEnsureAutoScalerTaskStep(task, group.ClusterID, group.Provider)
 
 	// set current step
 	if len(task.StepSequence) == 0 {
@@ -569,6 +569,7 @@ func (t *Task) BuildUpdateDesiredNodesTask(desired uint32, group *proto.NodeGrou
 	// must set job-type
 	task.CommonParams[cloudprovider.ScalingNodesNumKey.String()] = strconv.Itoa(int(desired))
 	task.CommonParams[cloudprovider.JobTypeKey.String()] = cloudprovider.UpdateNodeGroupDesiredNodeJob.String()
+	task.CommonParams[cloudprovider.ManualKey.String()] = strconv.FormatBool(opt.Manual)
 	return task, nil
 }
 

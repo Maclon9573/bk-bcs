@@ -69,6 +69,7 @@ var NoAuthMethod = []string{
 	"ClusterManager.CreateCloudAccount",
 	"ClusterManager.ListCloudAccount",
 	"ClusterManager.ListCloudAccountToPerm",
+	"ClusterManager.GetServiceRoles",
 
 	// cloud module flag
 	"ClusterManager.ListCloudModuleFlag",
@@ -233,6 +234,7 @@ var ActionPermissions = map[string]string{
 	"ClusterManager.ListCloudAccount":    cloudaccount.CanUseCloudAccountOperation,
 	"ClusterManager.MigrateCloudAccount": "",
 	"ClusterManager.VerifyCloudAccount":  "",
+	"ClusterManager.GetServiceRoles":     "",
 
 	// cloud component paras
 	"ClusterManager.CreateCloudModuleFlag": "",

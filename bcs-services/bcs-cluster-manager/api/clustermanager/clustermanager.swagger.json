@@ -1945,6 +1945,53 @@
         ]
       }
     },
+    "/clustermanager/v1/clouds/{cloudID}/serviceroles": {
+      "get": {
+        "summary": "查询awsCloud service role列表",
+        "description": "查询awsCloud service role列表",
+        "operationId": "ClusterManager_GetServiceRoles",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/clustermanagerGetServiceRolesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/runtimeError"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "cloudID",
+            "description": "云信息",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "accountID",
+            "description": "accountID. 云凭证ID",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "roleType",
+            "description": "roleType. aws service role类型, 可选值为cluster,nodeGroup",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ClusterManager"
+        ]
+      }
+    },
     "/clustermanager/v1/clouds/{cloudID}/subnets": {
       "get": {
         "summary": "查询vpc子网列表",
@@ -6925,10 +6972,10 @@
           "description": "开启自动升级GKE版本功能,如果集群为发布版本,则强制开启",
           "title": "autoUpgrade"
         },
-        "nodeRole": {
+        "serviceRole": {
           "type": "string",
           "description": "创建eks节点池时指定的iam角色名称",
-          "title": "nodeRole"
+          "title": "serviceRole"
         }
       },
       "title": "AutoScalingGroup define auto scaling information"
@@ -12493,6 +12540,37 @@
         }
       }
     },
+    "clustermanagerGetServiceRolesResponse": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int64",
+          "description": "返回错误码",
+          "title": "code"
+        },
+        "message": {
+          "type": "string",
+          "description": "返回错误信息",
+          "title": "message"
+        },
+        "result": {
+          "type": "boolean",
+          "description": "返回结果",
+          "title": "result"
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/clustermanagerServiceRoleInfo"
+          },
+          "description": "获取到的信息",
+          "title": "data"
+        }
+      },
+      "description": "获取service role列表",
+      "title": "GetServiceRolesResponse"
+    },
     "clustermanagerGetTaskResponse": {
       "type": "object",
       "properties": {
@@ -16724,6 +16802,33 @@
       },
       "description": "安全组信息",
       "title": "SecurityGroup"
+    },
+    "clustermanagerServiceRoleInfo": {
+      "type": "object",
+      "properties": {
+        "roleName": {
+          "type": "string",
+          "description": "service role名称",
+          "title": "roleName"
+        },
+        "roleID": {
+          "type": "string",
+          "description": "service role ID",
+          "title": "roleID"
+        },
+        "arn": {
+          "type": "string",
+          "description": "service role arn",
+          "title": "arn"
+        },
+        "description": {
+          "type": "string",
+          "description": "service role描述",
+          "title": "description"
+        }
+      },
+      "description": "service role信息",
+      "title": "ServiceRoleInfo"
     },
     "clustermanagerSkipTaskRequest": {
       "type": "object",
