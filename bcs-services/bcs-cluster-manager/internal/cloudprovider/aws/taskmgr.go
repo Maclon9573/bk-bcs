@@ -209,7 +209,7 @@ func (t *Task) BuildCreateNodeGroupTask(group *proto.NodeGroup, opt *cloudprovid
 	// step2. wait gke create node group complete
 	createNodeGroup.BuildCheckCloudNodeGroupStatusStep(task)
 	// step3. ensure autoscaler in cluster
-	common.BuildEnsureAutoScalerTaskStep(task, group.ClusterID, group.Provider)
+	//common.BuildEnsureAutoScalerTaskStep(task, group.ClusterID, group.Provider)
 
 	// set current step
 	if len(task.StepSequence) == 0 {
@@ -341,7 +341,7 @@ func (t *Task) BuildDeleteNodeGroupTask(group *proto.NodeGroup, nodes []*proto.N
 	// step1. call gke delete node group
 	deleteNodeGroup.BuildDeleteNodeGroupStep(task)
 	// step2: update autoscaler component
-	common.BuildEnsureAutoScalerTaskStep(task, group.ClusterID, group.Provider)
+	//common.BuildEnsureAutoScalerTaskStep(task, group.ClusterID, group.Provider)
 
 	// set current step
 	if len(task.StepSequence) == 0 {
@@ -410,15 +410,15 @@ func (t *Task) BuildUpdateDesiredNodesTask(desired uint32, group *proto.NodeGrou
 	// step2. check cluster nodes and all nodes status is running
 	updateDesired.BuildCheckClusterNodeStatusStep(task)
 	// install gse agent
-	common.BuildInstallGseAgentTaskStep(task, &common.GseInstallInfo{
-		ClusterId:  opt.Cluster.ClusterID,
-		BusinessId: opt.Cluster.BusinessID,
-		CloudArea:  group.GetArea(),
-		User:       group.GetLaunchTemplate().GetInitLoginUsername(),
-		Passwd:     passwd,
-		KeyInfo:    group.GetLaunchTemplate().GetKeyPair(),
-		Port:       "",
-	})
+	//common.BuildInstallGseAgentTaskStep(task, &common.GseInstallInfo{
+	//	ClusterId:  opt.Cluster.ClusterID,
+	//	BusinessId: opt.Cluster.BusinessID,
+	//	CloudArea:  group.GetArea(),
+	//	User:       group.GetLaunchTemplate().GetInitLoginUsername(),
+	//	Passwd:     passwd,
+	//	KeyInfo:    group.GetLaunchTemplate().GetKeyPair(),
+	//	Port:       "",
+	//})
 	// transfer host module
 	if group.NodeTemplate != nil && group.NodeTemplate.Module != nil &&
 		len(group.NodeTemplate.Module.ScaleOutModuleID) != 0 {
