@@ -3,7 +3,7 @@ module github.com/Tencent/bk-bcs/bcs-services/bcs-user-manager
 go 1.20
 
 replace (
-	github.com/TencentBlueKing/iam-go-sdk => github.com/TencentBlueKing/iam-go-sdk v0.1.5
+	github.com/TencentBlueKing/iam-go-sdk => ./app/pkg/iam-go-sdk
 	github.com/smarty/assertions => github.com/smartystreets/assertions v1.15.1
 	github.com/smartystreets/assertions => github.com/smarty/assertions v1.15.1
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace => go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.17.0
