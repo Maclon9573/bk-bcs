@@ -68,7 +68,8 @@ func GetEc2Client(opt *cloudprovider.CommonOption) (*ec2.EC2, error) {
 type NodeManager struct {
 }
 
-func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.InstanceTypeInfo) error {
+func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.InstanceTypeInfo) (
+	[]*ec2.InstanceTypeInfo, error) {
 	input := &ec2.DescribeInstanceTypesInput{
 		MaxResults: aws.Int64(limit),
 	}
@@ -78,7 +79,7 @@ func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.I
 
 	output, err := cli.DescribeInstanceTypes(input)
 	if err != nil {
-		return fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
+		return instanceTypes, fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
 	}
 	instanceTypes = append(instanceTypes, output.InstanceTypes...)
 	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances", len(instanceTypes))
@@ -87,7 +88,7 @@ func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.I
 		return fetchInstanceTypes(cli, *output.NextToken, instanceTypes)
 	}
 
-	return nil
+	return instanceTypes, nil
 }
 
 // ListNodeInstanceType get node instance type list
@@ -103,7 +104,7 @@ func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 	}
 
 	cloudInstanceTypes := make([]*ec2.InstanceTypeInfo, 0)
-	err = fetchInstanceTypes(client, "", cloudInstanceTypes)
+	cloudInstanceTypes, err = fetchInstanceTypes(client, "", cloudInstanceTypes)
 	if err != nil {
 		blog.Errorf("ListNodeInstanceType fetchInstanceTypes failed, %s", err.Error())
 		return nil, err
