@@ -143,7 +143,7 @@ func (c *EC2Client) DescribeImages(input *ec2.DescribeImagesInput) ([]*ec2.Image
 	return output.Images, nil
 }
 
-// DescribeInstances gets image info
+// DescribeInstances gets vm instances
 func (c *EC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) ([]*ec2.Instance, error) {
 	blog.Infof("DescribeInstances input: %", utils.ToJSONString(input))
 	output, err := c.ec2Client.DescribeInstances(input)
@@ -173,4 +173,21 @@ func (c *EC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) ([]*e
 	}
 	blog.Infof("ec2 client TerminateInstances successful")
 	return output.TerminatingInstances, nil
+}
+
+// DescribeInstanceTypes gets vm instance types
+func (c *EC2Client) DescribeInstanceTypes(input *ec2.DescribeInstanceTypesInput) (
+	*ec2.DescribeInstanceTypesOutput, error) {
+	blog.Infof("DescribeInstanceTypes input: %", utils.ToJSONString(input))
+	output, err := c.ec2Client.DescribeInstanceTypes(input)
+	if err != nil {
+		blog.Errorf("DescribeInstanceTypes failed: %v", err)
+		return nil, err
+	}
+	if output == nil || output.InstanceTypes == nil {
+		blog.Errorf("DescribeInstanceTypes lose response information")
+		return nil, cloudprovider.ErrCloudLostResponse
+	}
+	blog.Infof("ec2 client DescribeInstanceTypes successful")
+	return output, nil
 }

@@ -14,6 +14,7 @@ package api
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"sync"
@@ -67,10 +68,80 @@ func GetEc2Client(opt *cloudprovider.CommonOption) (*ec2.EC2, error) {
 type NodeManager struct {
 }
 
+func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.InstanceTypeInfo) (
+	[]*ec2.InstanceTypeInfo, error) {
+	input := &ec2.DescribeInstanceTypesInput{
+		MaxResults: aws.Int64(100),
+	}
+	if nextToken != "" {
+		input.NextToken = aws.String(nextToken)
+	}
+
+	output, err := cli.DescribeInstanceTypes(input)
+	if err != nil {
+		return instanceTypes, fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
+	}
+	instanceTypes = append(instanceTypes, output.InstanceTypes...)
+
+	if output.NextToken != nil {
+		return fetchInstanceTypes(cli, *output.NextToken, instanceTypes)
+	}
+
+	return instanceTypes, nil
+}
+
 // ListNodeInstanceType get node instance type list
 func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 	opt *cloudprovider.CommonOption) ([]*proto.InstanceType, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	blog.Infof("ListNodeInstanceType zone: %s, nodeFamily: %s, cpu: %d, memory: %d",
+		info.Zone, info.NodeFamily, info.Cpu, info.Memory)
+
+	client, err := NewEC2Client(opt)
+	if err != nil {
+		blog.Errorf("ListNodeInstanceType create ec2 client failed, %s", err.Error())
+		return nil, err
+	}
+
+	cloudInstanceTypes := make([]*ec2.InstanceTypeInfo, 0)
+	cloudInstanceTypes, err = fetchInstanceTypes(client, "", cloudInstanceTypes)
+	if err != nil {
+		blog.Errorf("ListNodeInstanceType fetchInstanceTypes failed, %s", err.Error())
+		return nil, err
+	}
+
+	instanceTypes := make([]*proto.InstanceType, 0)
+	convertToInstanceType(instanceTypes, cloudInstanceTypes)
+
+	return instanceTypes, nil
+}
+
+func convertToInstanceType(instanceTypes []*proto.InstanceType, cloudInstanceTypes []*ec2.InstanceTypeInfo) {
+	for _, v := range cloudInstanceTypes {
+		t := &proto.InstanceType{}
+		if v.InstanceType != nil {
+			t.TypeName = *v.InstanceType
+			t.NodeType = *v.InstanceType
+			family := strings.Split(*v.InstanceType, ".")
+			t.NodeFamily = family[0]
+		}
+		if v.VCpuInfo != nil && v.VCpuInfo.DefaultVCpus != nil {
+			t.Cpu = uint32(*v.VCpuInfo.DefaultVCpus)
+		}
+		if v.MemoryInfo != nil && v.MemoryInfo.SizeInMiB != nil {
+			memGb := math.Ceil(float64(*v.MemoryInfo.SizeInMiB / 1024)) // nolint
+			t.Memory = uint32(memGb)
+		}
+		if v.GpuInfo != nil && v.GpuInfo.Gpus != nil {
+			var gpuCount uint32
+			for _, g := range v.GpuInfo.Gpus {
+				if g.Count != nil {
+					gpuCount += uint32(*g.Count)
+				}
+			}
+			t.Gpu = gpuCount
+		}
+		instanceTypes = append(instanceTypes, t)
+	}
 }
 
 // GetExternalNodeByIP xxx
