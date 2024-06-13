@@ -103,14 +103,16 @@ func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 	}
 
 	cloudInstanceTypes := make([]*ec2.InstanceTypeInfo, 0)
-	cloudInstanceTypes, err = fetchInstanceTypes(client, "", cloudInstanceTypes)
+	_, err = fetchInstanceTypes(client, "", cloudInstanceTypes)
 	if err != nil {
 		blog.Errorf("ListNodeInstanceType fetchInstanceTypes failed, %s", err.Error())
 		return nil, err
 	}
+	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances", len(cloudInstanceTypes))
 
 	instanceTypes := make([]*proto.InstanceType, 0)
 	convertToInstanceType(instanceTypes, cloudInstanceTypes)
+	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances22222", len(instanceTypes))
 
 	return instanceTypes, nil
 }
