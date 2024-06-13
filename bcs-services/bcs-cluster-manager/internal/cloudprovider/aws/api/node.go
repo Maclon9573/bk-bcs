@@ -82,7 +82,6 @@ func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.I
 		return instanceTypes, fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
 	}
 	instanceTypes = append(instanceTypes, output.InstanceTypes...)
-	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances", len(instanceTypes))
 
 	if output.NextToken != nil {
 		return fetchInstanceTypes(cli, *output.NextToken, instanceTypes)
@@ -109,16 +108,13 @@ func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 		blog.Errorf("ListNodeInstanceType fetchInstanceTypes failed, %s", err.Error())
 		return nil, err
 	}
-	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances111", len(cloudInstanceTypes))
-
-	instanceTypes := make([]*proto.InstanceType, 0)
-	convertToInstanceType(instanceTypes, cloudInstanceTypes)
-	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances222", len(instanceTypes))
+	instanceTypes := convertToInstanceType(cloudInstanceTypes)
 
 	return instanceTypes, nil
 }
 
-func convertToInstanceType(instanceTypes []*proto.InstanceType, cloudInstanceTypes []*ec2.InstanceTypeInfo) {
+func convertToInstanceType(cloudInstanceTypes []*ec2.InstanceTypeInfo) []*proto.InstanceType {
+	instanceTypes := make([]*proto.InstanceType, 0)
 	for _, v := range cloudInstanceTypes {
 		t := &proto.InstanceType{}
 		if v.InstanceType != nil {
@@ -145,6 +141,8 @@ func convertToInstanceType(instanceTypes []*proto.InstanceType, cloudInstanceTyp
 		}
 		instanceTypes = append(instanceTypes, t)
 	}
+
+	return instanceTypes
 }
 
 // GetExternalNodeByIP xxx
