@@ -68,10 +68,9 @@ func GetEc2Client(opt *cloudprovider.CommonOption) (*ec2.EC2, error) {
 type NodeManager struct {
 }
 
-func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.InstanceTypeInfo) (
-	[]*ec2.InstanceTypeInfo, error) {
+func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.InstanceTypeInfo) error {
 	input := &ec2.DescribeInstanceTypesInput{
-		MaxResults: aws.Int64(100),
+		MaxResults: aws.Int64(limit),
 	}
 	if nextToken != "" {
 		input.NextToken = aws.String(nextToken)
@@ -79,15 +78,16 @@ func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.I
 
 	output, err := cli.DescribeInstanceTypes(input)
 	if err != nil {
-		return instanceTypes, fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
+		return fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
 	}
 	instanceTypes = append(instanceTypes, output.InstanceTypes...)
+	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances", len(instanceTypes))
 
 	if output.NextToken != nil {
 		return fetchInstanceTypes(cli, *output.NextToken, instanceTypes)
 	}
 
-	return instanceTypes, nil
+	return nil
 }
 
 // ListNodeInstanceType get node instance type list
@@ -103,16 +103,16 @@ func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 	}
 
 	cloudInstanceTypes := make([]*ec2.InstanceTypeInfo, 0)
-	_, err = fetchInstanceTypes(client, "", cloudInstanceTypes)
+	err = fetchInstanceTypes(client, "", cloudInstanceTypes)
 	if err != nil {
 		blog.Errorf("ListNodeInstanceType fetchInstanceTypes failed, %s", err.Error())
 		return nil, err
 	}
-	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances", len(cloudInstanceTypes))
+	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances111", len(cloudInstanceTypes))
 
 	instanceTypes := make([]*proto.InstanceType, 0)
 	convertToInstanceType(instanceTypes, cloudInstanceTypes)
-	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances22222", len(instanceTypes))
+	blog.Infof("-------------ListNodeInstanceType fetchInstanceTypes got %d instances222", len(instanceTypes))
 
 	return instanceTypes, nil
 }
