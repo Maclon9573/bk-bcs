@@ -56,16 +56,34 @@ func (c *IAMClient) GetRole(input *iam.GetRoleInput) (*iam.Role, error) {
 // ListRoles gets the iam roles
 func (c *IAMClient) ListRoles(input *iam.ListRolesInput) ([]*iam.Role, error) {
 	blog.Infof("ListRoles input: %", utils.ToJSONString(input))
-	output, err := c.iamClient.ListRoles(input)
+	roles := make([]*iam.Role, 0)
+	err := c.iamClient.ListRolesPages(input, func(page *iam.ListRolesOutput, lastPage bool) bool {
+		roles = append(roles, page.Roles...)
+		return !lastPage
+	})
 	if err != nil {
 		blog.Errorf("ListRoles failed: %v", err)
 		return nil, err
 	}
-	if output == nil || output.Roles == nil {
-		blog.Errorf("ListRoles lose response information")
-		return nil, cloudprovider.ErrCloudLostResponse
-	}
 	blog.Infof("ListRoles %s successful: %")
 
-	return output.Roles, nil
+	return roles, nil
+}
+
+// ListAttachedRolePolicies gets attached role policies
+func (c *IAMClient) ListAttachedRolePolicies(input *iam.ListAttachedRolePoliciesInput) ([]*iam.AttachedPolicy, error) {
+	blog.Infof("ListAttachedRolePolicies input: %", utils.ToJSONString(input))
+	policy := make([]*iam.AttachedPolicy, 0)
+	err := c.iamClient.ListAttachedRolePoliciesPages(input,
+		func(page *iam.ListAttachedRolePoliciesOutput, lastPage bool) bool {
+			policy = append(policy, page.AttachedPolicies...)
+			return !lastPage
+		})
+	if err != nil {
+		blog.Errorf("ListAttachedRolePolicies failed: %v", err)
+		return nil, err
+	}
+	blog.Infof("ListAttachedRolePolicies %s successful: %")
+
+	return policy, nil
 }

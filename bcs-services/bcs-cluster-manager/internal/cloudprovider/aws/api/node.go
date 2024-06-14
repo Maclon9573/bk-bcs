@@ -14,6 +14,7 @@ package api
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"math"
 	"strconv"
 	"strings"
@@ -316,7 +317,7 @@ func (nm *NodeManager) GetCloudRegions(opt *cloudprovider.CommonOption) ([]*prot
 func (nm *NodeManager) GetZoneList(opt *cloudprovider.GetZoneListOption) ([]*proto.ZoneInfo, error) {
 	client, err := NewEC2Client(&opt.CommonOption)
 	if err != nil {
-		return nil, fmt.Errorf("create google client failed, err %s", err.Error())
+		return nil, fmt.Errorf("create ec2 client failed, err %s", err.Error())
 	}
 	zones, err := client.DescribeAvailabilityZones(
 		&ec2.DescribeAvailabilityZonesInput{AllAvailabilityZones: aws.Bool(true)})
@@ -344,4 +345,55 @@ func (nm *NodeManager) ListOsImage(provider string, opt *cloudprovider.CommonOpt
 // GetResourceGroups resource groups list
 func (nm *NodeManager) GetResourceGroups(opt *cloudprovider.CommonOption) ([]*proto.ResourceGroupInfo, error) {
 	return nil, cloudprovider.ErrCloudNotImplemented
+}
+
+func checkRoleForPolicies(client *IAMClient, roleName string) bool {
+	resp, err := client.ListAttachedRolePolicies(&iam.ListAttachedRolePoliciesInput{
+		RoleName: aws.String(roleName),
+	})
+	if err != nil {
+		blog.Errorf("checkRoleForPolicies ListAttachedRolePolicies failed, %s:", err.Error())
+		return false
+	}
+
+	index := 0
+	for _, policy := range resp {
+		switch *policy.PolicyArn {
+		case EKSRolePolicyWorkerNode:
+			index++
+		case EKSRolePolicyContainerRegistryReadOnly:
+			index++
+		case EKSRolePolicyCNI:
+			index++
+		}
+	}
+
+	return index == 3
+}
+
+// GetNodeRoles node roles list
+func (nm *NodeManager) GetNodeRoles(opt *cloudprovider.CommonOption) ([]*proto.NodeRoleInfo, error) {
+	client, err := NewIAMClient(opt)
+	if err != nil {
+		return nil, fmt.Errorf("GetNodeRoles create iam client failed, err %s", err.Error())
+	}
+
+	roles, err := client.ListRoles(&iam.ListRolesInput{})
+	if err != nil {
+		return nil, fmt.Errorf("GetNodeRoles ListRoles failed, err %s", err.Error())
+	}
+
+	result := make([]*proto.NodeRoleInfo, 0)
+	for _, r := range roles {
+		if checkRoleForPolicies(client, *r.RoleName) {
+			result = append(result, &proto.NodeRoleInfo{
+				RoleName:    *r.RoleName,
+				RoleID:      *r.RoleId,
+				Arn:         *r.Arn,
+				Description: *r.Description,
+			})
+		}
+	}
+
+	return result, nil
 }

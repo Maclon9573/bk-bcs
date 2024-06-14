@@ -145,3 +145,8 @@ func (nm *NodeManager) ListKeyPairs(opt *cloudprovider.ListNetworksOption) ([]*p
 func (nm *NodeManager) GetResourceGroups(opt *cloudprovider.CommonOption) ([]*proto.ResourceGroupInfo, error) {
 	return nil, cloudprovider.ErrCloudNotImplemented
 }
+
+// GetNodeRoles node roles list
+func (nm *NodeManager) GetNodeRoles(opt *cloudprovider.CommonOption) ([]*proto.NodeRoleInfo, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}

@@ -64,3 +64,9 @@ const (
 	// InstanceStateStopped instance state stopped
 	InstanceStateStopped = "stopped"
 )
+
+const (
+	EKSRolePolicyWorkerNode                = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
+	EKSRolePolicyContainerRegistryReadOnly = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+	EKSRolePolicyCNI                       = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+)

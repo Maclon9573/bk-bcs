@@ -127,3 +127,8 @@ func (n *NodeManager) ListOsImage(provider string, opt *cloudprovider.CommonOpti
 func (n *NodeManager) GetResourceGroups(opt *cloudprovider.CommonOption) ([]*proto.ResourceGroupInfo, error) {
 	return nil, cloudprovider.ErrCloudNotImplemented
 }
+
+// GetNodeRoles node roles list
+func (n *NodeManager) GetNodeRoles(opt *cloudprovider.CommonOption) ([]*proto.NodeRoleInfo, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}

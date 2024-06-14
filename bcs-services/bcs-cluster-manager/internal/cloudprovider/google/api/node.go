@@ -278,3 +278,8 @@ func InstanceToNode(cli *ComputeServiceClient, ins *compute.Instance) *proto.Nod
 
 	return node
 }
+
+// GetNodeRoles node roles list
+func (n *NodeManager) GetNodeRoles(opt *cloudprovider.CommonOption) ([]*proto.NodeRoleInfo, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}

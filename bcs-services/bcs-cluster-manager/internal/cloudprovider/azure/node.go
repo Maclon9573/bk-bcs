@@ -180,3 +180,8 @@ func (n *NodeManager) GetResourceGroups(opt *cloudprovider.CommonOption) ([]*pro
 
 	return groups, nil
 }
+
+// GetNodeRoles node roles list
+func (nm *NodeManager) GetNodeRoles(opt *cloudprovider.CommonOption) ([]*proto.NodeRoleInfo, error) {
+	return nil, cloudprovider.ErrCloudNotImplemented
+}
