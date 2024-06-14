@@ -191,3 +191,21 @@ func (c *EC2Client) DescribeInstanceTypes(input *ec2.DescribeInstanceTypesInput)
 	blog.Infof("ec2 client DescribeInstanceTypes successful")
 	return output, nil
 }
+
+// DescribeKeyPairs gets key pairs
+func (c *EC2Client) DescribeKeyPairs(input *ec2.DescribeKeyPairsInput) (
+	[]*ec2.KeyPairInfo, error) {
+	blog.Infof("DescribeKeyPairs input: %", utils.ToJSONString(input))
+	output, err := c.ec2Client.DescribeKeyPairs(input)
+	if err != nil {
+		blog.Errorf("DescribeKeyPairs failed: %v", err)
+		return nil, err
+	}
+	if output == nil || output.KeyPairs == nil {
+		blog.Errorf("DescribeKeyPairs lose response information")
+		return nil, cloudprovider.ErrCloudLostResponse
+	}
+	blog.Infof("ec2 client DescribeKeyPairs successful")
+
+	return output.KeyPairs, nil
+}

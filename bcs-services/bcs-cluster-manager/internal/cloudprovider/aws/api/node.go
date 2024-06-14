@@ -68,33 +68,11 @@ func GetEc2Client(opt *cloudprovider.CommonOption) (*ec2.EC2, error) {
 type NodeManager struct {
 }
 
-func fetchInstanceTypes(cli *EC2Client, nextToken string, instanceTypes []*ec2.InstanceTypeInfo) (
-	[]*ec2.InstanceTypeInfo, error) {
-	input := &ec2.DescribeInstanceTypesInput{
-		MaxResults: aws.Int64(limit),
-	}
-	if nextToken != "" {
-		input.NextToken = aws.String(nextToken)
-	}
-
-	output, err := cli.DescribeInstanceTypes(input)
-	if err != nil {
-		return instanceTypes, fmt.Errorf("fetchInstanceTypes failed, %s", err.Error())
-	}
-	instanceTypes = append(instanceTypes, output.InstanceTypes...)
-
-	if output.NextToken != nil {
-		return fetchInstanceTypes(cli, *output.NextToken, instanceTypes)
-	}
-
-	return instanceTypes, nil
-}
-
 // ListNodeInstanceType get node instance type list
 func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 	opt *cloudprovider.CommonOption) ([]*proto.InstanceType, error) {
-	blog.Infof("ListNodeInstanceType zone: %s, nodeFamily: %s, cpu: %d, memory: %d",
-		info.Zone, info.NodeFamily, info.Cpu, info.Memory)
+	blog.Infof("ListNodeInstanceType region: %s, nodeFamily: %s, cpu: %d, memory: %d",
+		info.Region, info.NodeFamily, info.Cpu, info.Memory)
 
 	client, err := NewEC2Client(opt)
 	if err != nil {
@@ -103,11 +81,16 @@ func (nm *NodeManager) ListNodeInstanceType(info cloudprovider.InstanceInfo,
 	}
 
 	cloudInstanceTypes := make([]*ec2.InstanceTypeInfo, 0)
-	cloudInstanceTypes, err = fetchInstanceTypes(client, "", cloudInstanceTypes)
+	err = client.ec2Client.DescribeInstanceTypesPages(&ec2.DescribeInstanceTypesInput{MaxResults: aws.Int64(limit)},
+		func(page *ec2.DescribeInstanceTypesOutput, lastPage bool) bool {
+			cloudInstanceTypes = append(cloudInstanceTypes, page.InstanceTypes...)
+			return !lastPage
+		})
 	if err != nil {
-		blog.Errorf("ListNodeInstanceType fetchInstanceTypes failed, %s", err.Error())
+		blog.Errorf("ListNodeInstanceType DescribeInstanceTypesPages failed, %s", err.Error())
 		return nil, err
 	}
+
 	instanceTypes := convertToInstanceType(cloudInstanceTypes)
 
 	return instanceTypes, nil
@@ -157,7 +140,28 @@ func (nm *NodeManager) ListExternalNodesByIP(ips []string, opt *cloudprovider.Li
 
 // ListKeyPairs xxx
 func (nm *NodeManager) ListKeyPairs(opt *cloudprovider.ListNetworksOption) ([]*proto.KeyPair, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	client, err := NewEC2Client(&opt.CommonOption)
+	if err != nil {
+		blog.Errorf("ListKeyPairs create ec2 client failed, %s", err.Error())
+		return nil, err
+	}
+
+	cloudKeyPairs, err := client.DescribeKeyPairs(&ec2.DescribeKeyPairsInput{})
+	if err != nil {
+		blog.Errorf("ListKeyPairs DescribeKeyPairs failed, %s", err.Error())
+		return nil, err
+	}
+
+	keyPairs := make([]*proto.KeyPair, 0)
+	for _, v := range cloudKeyPairs {
+		k := &proto.KeyPair{
+			KeyName: *v.KeyName,
+			KeyID:   *v.KeyPairId,
+		}
+		keyPairs = append(keyPairs, k)
+	}
+
+	return keyPairs, nil
 }
 
 // GetNodeByIP get specified Node by innerIP address

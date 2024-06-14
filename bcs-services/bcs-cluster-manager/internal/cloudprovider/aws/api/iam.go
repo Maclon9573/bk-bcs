@@ -52,3 +52,20 @@ func (c *IAMClient) GetRole(input *iam.GetRoleInput) (*iam.Role, error) {
 
 	return output.Role, nil
 }
+
+// ListRoles gets the iam roles
+func (c *IAMClient) ListRoles(input *iam.ListRolesInput) ([]*iam.Role, error) {
+	blog.Infof("ListRoles input: %", utils.ToJSONString(input))
+	output, err := c.iamClient.ListRoles(input)
+	if err != nil {
+		blog.Errorf("ListRoles failed: %v", err)
+		return nil, err
+	}
+	if output == nil || output.Roles == nil {
+		blog.Errorf("ListRoles lose response information")
+		return nil, cloudprovider.ErrCloudLostResponse
+	}
+	blog.Infof("ListRoles %s successful: %")
+
+	return output.Roles, nil
+}

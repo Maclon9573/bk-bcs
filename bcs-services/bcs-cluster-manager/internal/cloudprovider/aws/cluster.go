@@ -16,6 +16,7 @@ package aws
 import (
 	"context"
 	"fmt"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/utils"
 	"k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"time"
@@ -56,15 +57,15 @@ func (c *Cluster) DeleteVirtualCluster(cls *proto.Cluster,
 func (c *Cluster) ImportCluster(cls *proto.Cluster, opt *cloudprovider.ImportClusterOption) (*proto.Task, error) {
 	// call aws interface to create cluster
 	if cls == nil {
-		return nil, fmt.Errorf("qcloud ImportCluster cluster is empty")
+		return nil, fmt.Errorf("awsCloud ImportCluster cluster is empty")
 	}
 
 	if opt == nil || opt.Cloud == nil {
-		return nil, fmt.Errorf("qcloud ImportCluster cluster opt or cloud is empty")
+		return nil, fmt.Errorf("awsCloud ImportCluster cluster opt or cloud is empty")
 	}
 
 	if len(opt.Account.SecretID) == 0 || len(opt.Account.SecretKey) == 0 || len(opt.Region) == 0 {
-		return nil, fmt.Errorf("qcloud CreateCluster opt lost valid crendential info")
+		return nil, fmt.Errorf("awsCloud CreateCluster opt lost valid crendential info")
 	}
 
 	mgr, err := cloudprovider.GetTaskManager(opt.Cloud.CloudProvider)
@@ -158,7 +159,12 @@ func (c *Cluster) EnableExternalNodeSupport(cls *proto.Cluster, opt *cloudprovid
 
 // ListOsImage get osimage list
 func (c *Cluster) ListOsImage(provider string, opt *cloudprovider.CommonOption) ([]*proto.OsImage, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	if opt == nil || opt.Account == nil || len(opt.Account.SecretID) == 0 ||
+		len(opt.Account.SecretKey) == 0 || len(opt.Region) == 0 {
+		return nil, fmt.Errorf("awsCloud ListOsImage lost authoration")
+	}
+
+	return utils.EKSImageOsList, nil
 }
 
 // ListProjects list cloud projects
