@@ -291,6 +291,7 @@ func (c *CloudValidate) ListCloudVpcsValidate(req *proto.ListCloudVpcsRequest, a
 		return fmt.Errorf("%s ListCloudVpcsValidate request lost valid region info", cloudName)
 	}
 
+	return nil
 }
 
 // ListKeyPairsValidate list keyPairs validate
