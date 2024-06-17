@@ -137,6 +137,10 @@ func generateCreateNodegroupInput(group *proto.NodeGroup, cluster *proto.Cluster
 		return nil
 	}
 	sysDiskSize, _ := strconv.Atoi(group.LaunchTemplate.SystemDisk.DiskSize)
+	if len(group.Tags) == 0 {
+		group.Tags = map[string]string{"bcs-created": "true"}
+	}
+	group.Tags["bcs-created"] = "true"
 	nodeGroup := &api.CreateNodegroupInput{
 		ClusterName:   &cluster.SystemID,
 		NodegroupName: &group.NodeGroupID,
@@ -146,6 +150,7 @@ func generateCreateNodegroupInput(group *proto.NodeGroup, cluster *proto.Cluster
 			MinSize:     aws.Int64(int64(group.AutoScaling.MinSize)),
 		},
 		DiskSize: aws.Int64(int64(sysDiskSize)),
+		Subnets:  aws.StringSlice(group.AutoScaling.SubnetIDs),
 		Tags:     aws.StringMap(group.Tags),
 		Labels:   aws.StringMap(group.Labels),
 	}
@@ -285,6 +290,13 @@ func buildLaunchTemplateData(input *api.CreateNodegroupInput, group *proto.NodeG
 					DeleteOnTermination: aws.Bool(true),
 					VolumeType:          aws.String(group.LaunchTemplate.SystemDisk.DiskType),
 				},
+			},
+		},
+		NetworkInterfaces: []*ec2.LaunchTemplateInstanceNetworkInterfaceSpecificationRequest{
+			{
+				AssociatePublicIpAddress: aws.Bool(group.LaunchTemplate.InternetAccess.PublicIPAssigned),
+				SubnetId:                 aws.String(group.AutoScaling.SubnetIDs[0]),
+				Groups:                   aws.StringSlice(group.LaunchTemplate.SecurityGroupIDs),
 			},
 		},
 		TagSpecifications: api.CreateTagSpecs(aws.StringMap(group.Tags)),
