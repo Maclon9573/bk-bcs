@@ -375,12 +375,12 @@ func checkRoleForPolicies(client *IAMClient, roleName string) bool {
 func (nm *NodeManager) GetNodeRoles(opt *cloudprovider.CommonOption) ([]*proto.NodeRoleInfo, error) {
 	client, err := NewIAMClient(opt)
 	if err != nil {
-		return nil, fmt.Errorf("GetNodeRoles create iam client failed, err %s", err.Error())
+		return nil, fmt.Errorf("GetNodeRoles create iam client failed, %s", err.Error())
 	}
 
 	roles, err := client.ListRoles(&iam.ListRolesInput{})
 	if err != nil {
-		return nil, fmt.Errorf("GetNodeRoles ListRoles failed, err %s", err.Error())
+		return nil, fmt.Errorf("GetNodeRoles ListRoles failed, %s", err.Error())
 	}
 
 	result := make([]*proto.NodeRoleInfo, 0)

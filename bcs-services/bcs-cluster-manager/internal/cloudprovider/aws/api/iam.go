@@ -16,6 +16,9 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/utils"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
 
@@ -26,7 +29,13 @@ type IAMClient struct {
 
 // NewIAMClient init aws iam client
 func NewIAMClient(opt *cloudprovider.CommonOption) (*IAMClient, error) {
-	sess, err := NewSession(opt)
+	if opt == nil || opt.Account == nil || len(opt.Account.SecretID) == 0 || len(opt.Account.SecretKey) == 0 {
+		return nil, cloudprovider.ErrCloudCredentialLost
+	}
+	awsConf := &aws.Config{}
+	awsConf.Credentials = credentials.NewStaticCredentials(opt.Account.SecretID, opt.Account.SecretKey, "")
+
+	sess, err := session.NewSession(awsConf)
 	if err != nil {
 		return nil, err
 	}
