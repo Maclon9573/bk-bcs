@@ -136,11 +136,11 @@ func generateCreateNodegroupInput(group *proto.NodeGroup, cluster *proto.Cluster
 	if group.AutoScaling == nil || group.LaunchTemplate == nil || group.LaunchTemplate.SystemDisk == nil {
 		return nil
 	}
-	sysDiskSize, _ := strconv.Atoi(group.LaunchTemplate.SystemDisk.DiskSize)
-	if len(group.Tags) == 0 {
-		group.Tags = map[string]string{"bcs-created": "true"}
-	}
-	group.Tags["bcs-created"] = "true"
+	//sysDiskSize, _ := strconv.Atoi(group.LaunchTemplate.SystemDisk.DiskSize)
+	//if len(group.Tags) == 0 {
+	//	group.Tags = map[string]string{"bcs-created": "true"}
+	//}
+	//group.Tags["bcs-created"] = "true"
 	nodeGroup := &api.CreateNodegroupInput{
 		ClusterName:   &cluster.SystemID,
 		NodegroupName: &group.NodeGroupID,
@@ -149,10 +149,14 @@ func generateCreateNodegroupInput(group *proto.NodeGroup, cluster *proto.Cluster
 			MaxSize:     aws.Int64(int64(group.AutoScaling.MaxSize)),
 			MinSize:     aws.Int64(int64(group.AutoScaling.MinSize)),
 		},
-		DiskSize: aws.Int64(int64(sysDiskSize)),
-		Subnets:  aws.StringSlice(group.AutoScaling.SubnetIDs),
-		Tags:     aws.StringMap(group.Tags),
-		Labels:   aws.StringMap(group.Labels),
+		//DiskSize: aws.Int64(int64(sysDiskSize)),
+		Subnets: aws.StringSlice(group.AutoScaling.SubnetIDs),
+	}
+	if len(group.Tags) != 0 {
+		nodeGroup.Tags = aws.StringMap(group.Tags)
+	}
+	if len(group.Labels) != 0 {
+		nodeGroup.Labels = aws.StringMap(group.Labels)
 	}
 	nodeGroup.CapacityType = &group.LaunchTemplate.InstanceChargeType
 	if nodeGroup.CapacityType != aws.String(eks.CapacityTypesOnDemand) &&
@@ -299,7 +303,18 @@ func buildLaunchTemplateData(input *api.CreateNodegroupInput, group *proto.NodeG
 				Groups:                   aws.StringSlice(group.LaunchTemplate.SecurityGroupIDs),
 			},
 		},
-		TagSpecifications: api.CreateTagSpecs(aws.StringMap(group.Tags)),
+		//TagSpecifications: api.CreateTagSpecs(aws.StringMap(group.Tags)),
+		//TagSpecifications: []*api.TagSpecification{
+		//	{
+		//		ResourceType: aws.String(api.ResourceTypeLaunchTemplate),
+		//		Tags: []*api.Tag{
+		//			{
+		//				Key:   aws.String(launchTemplateTagKey),
+		//				Value: aws.String(launchTemplateTagValue),
+		//			},
+		//		},
+		//	},
+		//},
 	}
 
 	if len(group.LaunchTemplate.DataDisks) != 0 {
