@@ -142,7 +142,7 @@ func (s *Syncer) SyncCluster(cluster *cmp.Cluster) error {
 			}
 			_, err := s.CMDBClient.CreateBcsCluster(&client.CreateBcsClusterRequest{
 				BKBizID:          &clusterBkBizID,
-				Name:             &cluster.ClusterID,
+				Name:             &cluster.ClusterName,
 				SchedulingEngine: &cluster.EngineType,
 				UID:              &cluster.ClusterID,
 				XID:              &cluster.SystemID,
@@ -170,6 +170,7 @@ func (s *Syncer) SyncCluster(cluster *cmp.Cluster) error {
 			BKBizID: &bkCluster.BizID,
 			IDs:     &[]int64{bkCluster.ID},
 			Data: &client.UpdateBcsClusterRequestData{
+				Name:        &cluster.ClusterName,
 				Version:     &cluster.ClusterBasicSettings.Version,
 				NetworkType: &cluster.NetworkType,
 				Region:      &cluster.Region,
