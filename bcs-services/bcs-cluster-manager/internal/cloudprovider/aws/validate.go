@@ -15,6 +15,7 @@ package aws
 import (
 	"encoding/base64"
 	"fmt"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/common"
 	"sync"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -252,7 +253,27 @@ func (c *CloudValidate) CreateNodeGroupValidate(req *proto.CreateNodeGroupReques
 // CreateClusterValidate create cluster validate
 func (c *CloudValidate) CreateClusterValidate(req *proto.CreateClusterReq,
 	opt *cloudprovider.CommonOption) error {
-	return cloudprovider.ErrCloudNotImplemented
+	if c == nil || req == nil || opt == nil {
+		return fmt.Errorf("%s CreateClusterValidate request&options is empty", cloudName)
+	}
+
+	if len(opt.Account.SecretID) == 0 || len(opt.Account.SecretKey) == 0 || len(opt.Region) == 0 {
+		return fmt.Errorf("%s CreateClusterValidate lost valid crendential info", cloudName)
+	}
+
+	if len(req.NodeGroups) == 0 {
+		return fmt.Errorf("%s CreateClusterValidate nodeGroup is empty", cloudName)
+	}
+
+	// default not handle systemReinstall
+	req.SystemReinstall = true
+
+	// cluster category
+	if len(req.ClusterCategory) == 0 {
+		req.ClusterCategory = common.Builder
+	}
+
+	return nil
 }
 
 // AddNodesToClusterValidate addNodes validate

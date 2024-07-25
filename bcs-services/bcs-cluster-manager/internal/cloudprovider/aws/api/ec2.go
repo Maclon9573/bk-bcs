@@ -159,6 +159,26 @@ func (c *EC2Client) DescribeInstances(input *ec2.DescribeInstancesInput) ([]*ec2
 	return output.Reservations[0].Instances, nil
 }
 
+// DescribeInstancesPages gets vm instances
+func (c *EC2Client) DescribeInstancesPages(input *ec2.DescribeInstancesInput) ([]*ec2.Instance, error) {
+	blog.Infof("DescribeInstancesPages input: %s", utils.ToJSONString(input))
+	instances := make([]*ec2.Instance, 0)
+	err := c.ec2Client.DescribeInstancesPages(input, func(page *ec2.DescribeInstancesOutput, lastPage bool) bool {
+
+		for _, r := range page.Reservations {
+			instances = append(instances, r.Instances...)
+		}
+		return !lastPage
+	})
+	if err != nil {
+		blog.Errorf("DescribeInstancesPages failed: %v", err)
+		return nil, err
+	}
+
+	blog.Infof("ec2 client DescribeInstancesPages successful")
+	return instances, nil
+}
+
 // TerminateInstances terminates instances
 func (c *EC2Client) TerminateInstances(input *ec2.TerminateInstancesInput) ([]*ec2.InstanceStateChange, error) {
 	blog.Infof("TerminateInstances input: %", utils.ToJSONString(input))

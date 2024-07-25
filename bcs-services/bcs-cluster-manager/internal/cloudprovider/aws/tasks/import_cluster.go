@@ -16,6 +16,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/aws/api"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -78,11 +79,29 @@ func RegisterClusterKubeConfigTask(taskID string, stepName string) error {
 	return nil
 }
 
-func importClusterCredential(ctx context.Context, data *cloudprovider.CloudDependBasicInfo) error { // nolint
-	configByte, err := encrypt.Decrypt(nil, data.Cluster.KubeConfig)
+func importClusterCredential(ctx context.Context, data *cloudprovider.CloudDependBasicInfo) error {
+
+	client, err := api.NewEksClient(data.CmOption)
+	if err != nil {
+		return fmt.Errorf("create eks client failed, %v", err)
+	}
+
+	eksCluster, err := client.GetEksCluster(data.Cluster.SystemID)
+	if err != nil {
+		return fmt.Errorf("get eks cluster failed, %v", err)
+	}
+
+	// generate kube config
+	kubeConfig, err := api.GetClusterKubeConfig(data.CmOption, eksCluster)
+	if err != nil {
+		return fmt.Errorf("create eks client failed, %v", err)
+	}
+	// decrypt kube config
+	configByte, err := encrypt.Decrypt(nil, kubeConfig)
 	if err != nil {
 		return fmt.Errorf("failed to decode kubeconfig, %v", err)
 	}
+
 	typesConfig := &types.Config{}
 	err = json.Unmarshal([]byte(configByte), typesConfig)
 	if err != nil {

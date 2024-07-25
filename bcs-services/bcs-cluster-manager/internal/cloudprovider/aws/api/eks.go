@@ -40,6 +40,21 @@ func NewEksClient(opt *cloudprovider.CommonOption) (*EksClient, error) {
 	}, nil
 }
 
+// CreateEksCluster creates an eks cluster
+func (cli *EksClient) CreateEksCluster(input *eks.CreateClusterInput) (*eks.Cluster, error) {
+	if cli == nil {
+		return nil, cloudprovider.ErrServerIsNil
+	}
+
+	output, err := cli.eksClient.CreateCluster(input)
+	if err != nil {
+		return nil, err
+	}
+
+	blog.Infof("eksClient create eks cluster[%s] success", *input.Name)
+	return output.Cluster, nil
+}
+
 // ListEksCluster get eks cluster list, region parameter init eks client
 func (cli *EksClient) ListEksCluster() ([]*string, error) {
 	if cli == nil {
@@ -52,6 +67,7 @@ func (cli *EksClient) ListEksCluster() ([]*string, error) {
 		return nil, err
 	}
 
+	blog.Infof("eksClient list eks clusters success")
 	return output.Clusters, nil
 }
 
@@ -69,6 +85,7 @@ func (cli *EksClient) GetEksCluster(clusterName string) (*eks.Cluster, error) {
 		return nil, err
 	}
 
+	blog.Infof("eksClient get eks cluster[%s] success", clusterName)
 	return output.Cluster, nil
 }
 

@@ -48,7 +48,7 @@ func (c *IAMClient) GetRole(input *iam.GetRoleInput) (*iam.Role, error) {
 		blog.Errorf("GetRole lose response information")
 		return nil, cloudprovider.ErrCloudLostResponse
 	}
-	blog.Infof("GetRole %s successful: %", *input.RoleName)
+	blog.Infof("GetRole %s successful", *input.RoleName)
 
 	return output.Role, nil
 }

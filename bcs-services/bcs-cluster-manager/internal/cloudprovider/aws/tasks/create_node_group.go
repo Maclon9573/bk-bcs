@@ -138,10 +138,11 @@ func generateCreateNodegroupInput(group *proto.NodeGroup, cluster *proto.Cluster
 	}
 	sysDiskSize, _ := strconv.Atoi(group.LaunchTemplate.SystemDisk.DiskSize)
 	nodeGroup := &api.CreateNodegroupInput{
+
 		ClusterName:   &cluster.SystemID,
 		NodegroupName: &group.NodeGroupID,
 		ScalingConfig: &api.NodegroupScalingConfig{
-			DesiredSize: aws.Int64(0),
+			DesiredSize: aws.Int64(int64(group.AutoScaling.DesiredSize)),
 			MaxSize:     aws.Int64(int64(group.AutoScaling.MaxSize)),
 			MinSize:     aws.Int64(int64(group.AutoScaling.MinSize)),
 		},
