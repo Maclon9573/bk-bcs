@@ -16,15 +16,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	providerutils "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/utils"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/clusterops"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/options"
-	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/utils"
-	"github.com/avast/retry-go"
 	"strings"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
+	"github.com/avast/retry-go"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/eks"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -33,8 +29,12 @@ import (
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/actions"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/aws/api"
+	providerutils "github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/cloudprovider/utils"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/clusterops"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/common"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/options"
 	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/remote/loop"
+	"github.com/Tencent/bk-bcs/bcs-services/bcs-cluster-manager/internal/utils"
 )
 
 // CreateEKSClusterTask call aws interface to create cluster
@@ -377,6 +377,7 @@ func CheckEKSClusterNodesStatusTask(taskID string, stepName string) error {
 	clusterID := step.Params[cloudprovider.ClusterIDKey.String()]
 	cloudID := step.Params[cloudprovider.CloudIDKey.String()]
 	nodeGroupIDs := step.Params[cloudprovider.NodeGroupIDKey.String()]
+	state.Task.CommonParams[cloudprovider.SuccessNodeGroupIDsKey.String()] = nodeGroupIDs
 
 	dependInfo, err := cloudprovider.GetClusterDependBasicInfo(cloudprovider.GetBasicInfoReq{
 		ClusterID: clusterID,
@@ -585,8 +586,12 @@ func updateNodeToDB(ctx context.Context, state *cloudprovider.TaskState, info *c
 
 	successInstanceID := strings.Split(addSuccessNodes, ",")
 	failureInstanceID := strings.Split(addFailureNodes, ",")
-	instanceIDs = append(instanceIDs, successInstanceID...)
-	instanceIDs = append(instanceIDs, failureInstanceID...)
+	if addSuccessNodes != "" {
+		instanceIDs = append(instanceIDs, successInstanceID...)
+	}
+	if addFailureNodes != "" {
+		instanceIDs = append(instanceIDs, failureInstanceID...)
+	}
 
 	for _, ngID := range nodeGroupIDs {
 		nodeGroup, err := actions.GetNodeGroupByGroupID(cloudprovider.GetStorageModel(), ngID)

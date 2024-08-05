@@ -180,9 +180,9 @@ func generateCreateNodegroupInput(group *proto.NodeGroup, cluster *proto.Cluster
 		ClusterName:   &cluster.SystemID,
 		NodegroupName: &group.NodeGroupID,
 		ScalingConfig: &api.NodegroupScalingConfig{
-			DesiredSize: aws.Int64(0),
-			MaxSize:     aws.Int64(450),
-			MinSize:     aws.Int64(0),
+			DesiredSize: aws.Int64(int64(group.AutoScaling.DesiredSize)),
+			MaxSize:     aws.Int64(int64(group.AutoScaling.MaxSize)),
+			MinSize:     aws.Int64(int64(group.AutoScaling.MinSize)),
 		},
 		Subnets: aws.StringSlice(group.AutoScaling.SubnetIDs),
 	}

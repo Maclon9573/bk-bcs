@@ -10370,7 +10370,7 @@ func (m *AutoScalingGroup) validate(all bool) error {
 
 	// no validation rules for AutoUpgrade
 
-	// no validation rules for NodeRole
+	// no validation rules for ServiceRole
 
 	if len(errors) > 0 {
 		return AutoScalingGroupMultiError(errors)
@@ -43327,6 +43327,387 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = UpdateAutoScalingStatusResponseValidationError{}
+
+// Validate checks the field values on ServiceRoleInfo with the rules defined
+// in the proto definition for this message. If any rules are violated, the
+// first error encountered is returned, or nil if there are no violations.
+func (m *ServiceRoleInfo) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on ServiceRoleInfo with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// ServiceRoleInfoMultiError, or nil if none found.
+func (m *ServiceRoleInfo) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *ServiceRoleInfo) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for RoleName
+
+	// no validation rules for RoleID
+
+	// no validation rules for Arn
+
+	// no validation rules for Description
+
+	if len(errors) > 0 {
+		return ServiceRoleInfoMultiError(errors)
+	}
+
+	return nil
+}
+
+// ServiceRoleInfoMultiError is an error wrapping multiple validation errors
+// returned by ServiceRoleInfo.ValidateAll() if the designated constraints
+// aren't met.
+type ServiceRoleInfoMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ServiceRoleInfoMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ServiceRoleInfoMultiError) AllErrors() []error { return m }
+
+// ServiceRoleInfoValidationError is the validation error returned by
+// ServiceRoleInfo.Validate if the designated constraints aren't met.
+type ServiceRoleInfoValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ServiceRoleInfoValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ServiceRoleInfoValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ServiceRoleInfoValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ServiceRoleInfoValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ServiceRoleInfoValidationError) ErrorName() string { return "ServiceRoleInfoValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ServiceRoleInfoValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sServiceRoleInfo.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ServiceRoleInfoValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ServiceRoleInfoValidationError{}
+
+// Validate checks the field values on GetServiceRolesRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetServiceRolesRequest) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetServiceRolesRequest with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetServiceRolesRequestMultiError, or nil if none found.
+func (m *GetServiceRolesRequest) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetServiceRolesRequest) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if utf8.RuneCountInString(m.GetCloudID()) < 2 {
+		err := GetServiceRolesRequestValidationError{
+			field:  "CloudID",
+			reason: "value length must be at least 2 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	// no validation rules for AccountID
+
+	if _, ok := _GetServiceRolesRequest_RoleType_InLookup[m.GetRoleType()]; !ok {
+		err := GetServiceRolesRequestValidationError{
+			field:  "RoleType",
+			reason: "value must be in list [cluster nodeGroup]",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return GetServiceRolesRequestMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetServiceRolesRequestMultiError is an error wrapping multiple validation
+// errors returned by GetServiceRolesRequest.ValidateAll() if the designated
+// constraints aren't met.
+type GetServiceRolesRequestMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetServiceRolesRequestMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetServiceRolesRequestMultiError) AllErrors() []error { return m }
+
+// GetServiceRolesRequestValidationError is the validation error returned by
+// GetServiceRolesRequest.Validate if the designated constraints aren't met.
+type GetServiceRolesRequestValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetServiceRolesRequestValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetServiceRolesRequestValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetServiceRolesRequestValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetServiceRolesRequestValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetServiceRolesRequestValidationError) ErrorName() string {
+	return "GetServiceRolesRequestValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetServiceRolesRequestValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetServiceRolesRequest.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetServiceRolesRequestValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetServiceRolesRequestValidationError{}
+
+var _GetServiceRolesRequest_RoleType_InLookup = map[string]struct{}{
+	"cluster":   {},
+	"nodeGroup": {},
+}
+
+// Validate checks the field values on GetServiceRolesResponse with the rules
+// defined in the proto definition for this message. If any rules are
+// violated, the first error encountered is returned, or nil if there are no violations.
+func (m *GetServiceRolesResponse) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on GetServiceRolesResponse with the
+// rules defined in the proto definition for this message. If any rules are
+// violated, the result is a list of violation errors wrapped in
+// GetServiceRolesResponseMultiError, or nil if none found.
+func (m *GetServiceRolesResponse) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *GetServiceRolesResponse) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	// no validation rules for Code
+
+	// no validation rules for Message
+
+	// no validation rules for Result
+
+	for idx, item := range m.GetData() {
+		_, _ = idx, item
+
+		if all {
+			switch v := interface{}(item).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, GetServiceRolesResponseValidationError{
+						field:  fmt.Sprintf("Data[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, GetServiceRolesResponseValidationError{
+						field:  fmt.Sprintf("Data[%v]", idx),
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(item).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return GetServiceRolesResponseValidationError{
+					field:  fmt.Sprintf("Data[%v]", idx),
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
+	}
+
+	if len(errors) > 0 {
+		return GetServiceRolesResponseMultiError(errors)
+	}
+
+	return nil
+}
+
+// GetServiceRolesResponseMultiError is an error wrapping multiple validation
+// errors returned by GetServiceRolesResponse.ValidateAll() if the designated
+// constraints aren't met.
+type GetServiceRolesResponseMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m GetServiceRolesResponseMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m GetServiceRolesResponseMultiError) AllErrors() []error { return m }
+
+// GetServiceRolesResponseValidationError is the validation error returned by
+// GetServiceRolesResponse.Validate if the designated constraints aren't met.
+type GetServiceRolesResponseValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e GetServiceRolesResponseValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e GetServiceRolesResponseValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e GetServiceRolesResponseValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e GetServiceRolesResponseValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e GetServiceRolesResponseValidationError) ErrorName() string {
+	return "GetServiceRolesResponseValidationError"
+}
+
+// Error satisfies the builtin error interface
+func (e GetServiceRolesResponseValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sGetServiceRolesResponse.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = GetServiceRolesResponseValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = GetServiceRolesResponseValidationError{}
 
 // Validate checks the field values on ResourceGroupInfo with the rules defined
 // in the proto definition for this message. If any rules are violated, the
