@@ -121,12 +121,38 @@ func (c *Cluster) ImportCluster(cls *proto.Cluster, opt *cloudprovider.ImportClu
 
 // DeleteCluster delete kubenretes cluster according cloudprovider
 func (c *Cluster) DeleteCluster(cls *proto.Cluster, opt *cloudprovider.DeleteClusterOption) (*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	if cls == nil {
+		return nil, fmt.Errorf("%s DeleteCluster cluster is empty", cloudName)
+	}
+
+	if opt == nil || opt.Account == nil || len(opt.Account.SecretID) == 0 ||
+		len(opt.Account.SecretKey) == 0 || len(opt.Region) == 0 {
+		return nil, fmt.Errorf("%s DeleteCluster cluster lost oprion", cloudName)
+	}
+
+	// GetTaskManager for nodegroup manager initialization
+	mgr, err := cloudprovider.GetTaskManager(opt.Cloud.CloudProvider)
+	if err != nil {
+		blog.Errorf("get cloud %s TaskManager when DeleteCluster %d failed, %s",
+			opt.Cloud.CloudID, cls.ClusterName, err.Error(),
+		)
+		return nil, err
+	}
+
+	// build delete cluster task
+	task, err := mgr.BuildDeleteClusterTask(cls, opt)
+	if err != nil {
+		blog.Errorf("build DeleteCluster task for cluster %s with cloudprovider %s failed, %s",
+			cls.ClusterName, cls.Provider, err.Error(),
+		)
+		return nil, err
+	}
+
+	return task, nil
 }
 
 // GetCluster get kubenretes cluster detail information according cloudprovider
 func (c *Cluster) GetCluster(cloudID string, opt *cloudprovider.GetClusterOption) (*proto.Cluster, error) {
-	return opt.Cluster, nil
 	runtimeInfo, err := business.GetRuntimeInfo(opt.Cluster.ClusterID)
 	if err != nil {
 		return nil, err

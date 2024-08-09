@@ -45,16 +45,17 @@ func newtask() *Task {
 	// create cluster task
 	task.works[createEKSClusterStep.StepMethod] = tasks.CreateEKSClusterTask
 	task.works[checkEKSClusterStatusStep.StepMethod] = tasks.CheckEKSClusterStatusTask
-	// task.works[createCloudNodeGroupStep.StepMethod] = tasks.CreateCloudNodeGroupTask
-	// task.works[checkEKSNodeGroupsStatusStep.StepMethod] = tasks.CheckCloudNodeGroupStatusTask
-	//task.works[updateEKSNodeGroupsToDBStep.StepMethod] = tasks.UpdateEKSNodesGroupToDBTask
 	task.works[registerEKSClusterKubeConfigStep.StepMethod] = tasks.RegisterEKSClusterKubeConfigTask
 	task.works[checkCreateClusterNodeStatusStep.StepMethod] = tasks.CheckEKSClusterNodesStatusTask
 	task.works[updateEKSNodesToDBStep.StepMethod] = tasks.UpdateEKSNodesToDBTask
 
-	// import task
+	// import cluster task
 	task.works[importClusterNodesStep.StepMethod] = tasks.ImportClusterNodesTask
 	task.works[registerClusterKubeConfigStep.StepMethod] = tasks.RegisterClusterKubeConfigTask
+
+	// delete cluster task
+	task.works[deleteEKSClusterStep.StepMethod] = tasks.DeleteEKSClusterTask
+	task.works[cleanClusterDBInfoStep.StepMethod] = tasks.CleanClusterDBInfoTask
 
 	// create nodeGroup task
 	task.works[createCloudNodeGroupStep.StepMethod] = tasks.CreateCloudNodeGroupTask
@@ -286,7 +287,57 @@ func (t *Task) BuildImportClusterTask(cls *proto.Cluster, opt *cloudprovider.Imp
 // BuildDeleteClusterTask build deleteCluster task
 func (t *Task) BuildDeleteClusterTask(cls *proto.Cluster, opt *cloudprovider.DeleteClusterOption) (
 	*proto.Task, error) {
-	return nil, cloudprovider.ErrCloudNotImplemented
+	// validate request params
+	if cls == nil {
+		return nil, fmt.Errorf("BuildDeleteClusterTask cluster info empty")
+	}
+	if opt == nil || opt.Operator == "" || opt.Cloud == nil || opt.Cluster == nil {
+		return nil, fmt.Errorf("BuildDeleteClusterTask TaskOptions is lost")
+	}
+
+	// init task information
+	nowStr := time.Now().Format(time.RFC3339)
+	task := &proto.Task{
+		TaskID:         uuid.New().String(),
+		TaskType:       cloudprovider.GetTaskType(cloudName, cloudprovider.DeleteCluster),
+		TaskName:       cloudprovider.DeleteClusterTask.String(),
+		Status:         cloudprovider.TaskStatusInit,
+		Message:        "task initializing",
+		Start:          nowStr,
+		Steps:          make(map[string]*proto.Step),
+		StepSequence:   make([]string, 0),
+		ClusterID:      cls.ClusterID,
+		ProjectID:      cls.ProjectID,
+		Creator:        opt.Operator,
+		Updater:        opt.Operator,
+		LastUpdate:     nowStr,
+		CommonParams:   make(map[string]string),
+		ForceTerminate: false,
+	}
+	taskName := fmt.Sprintf(deleteClusterTaskTemplate, cls.ClusterID)
+	task.CommonParams[cloudprovider.TaskNameKey.String()] = taskName
+	task.CommonParams[cloudprovider.UserKey.String()] = opt.Operator
+
+	// setting all steps details
+	deleteClusterTask := &DeleteClusterTaskOption{
+		Cluster:           cls,
+		DeleteMode:        opt.DeleteMode.String(),
+		LastClusterStatus: opt.LatsClusterStatus,
+	}
+	// step1: DeleteEKSCluster delete tke cluster
+	deleteClusterTask.BuildDeleteEKSClusterStep(task)
+	// step2: update cluster DB info and associated data
+	deleteClusterTask.BuildCleanClusterDBInfoStep(task)
+
+	// set current step
+	if len(task.StepSequence) == 0 {
+		return nil, fmt.Errorf("BuildDeleteClusterTask task StepSequence empty")
+	}
+	task.CurrentStep = task.StepSequence[0]
+	task.CommonParams[cloudprovider.JobTypeKey.String()] = cloudprovider.DeleteClusterJob.String()
+	task.CommonParams[cloudprovider.OperatorKey.String()] = opt.Operator
+
+	return task, nil
 }
 
 // BuildAddNodesToClusterTask build addNodes task

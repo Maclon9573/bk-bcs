@@ -99,6 +99,16 @@ var (
 		StepName:   "注册集群kubeConfig认证",
 	}
 
+	// delete cluster task
+	deleteEKSClusterStep = cloudprovider.StepInfo{
+		StepMethod: fmt.Sprintf("%s-DeleteEKSClusterTask", cloudName),
+		StepName:   "删除集群",
+	}
+	cleanClusterDBInfoStep = cloudprovider.StepInfo{
+		StepMethod: fmt.Sprintf("%s-CleanClusterDBInfoTask", cloudName),
+		StepName:   "清理集群数据",
+	}
+
 	// create nodeGroup task
 	createCloudNodeGroupStep = cloudprovider.StepInfo{
 		StepMethod: fmt.Sprintf("%s-CreateCloudNodeGroupTask", cloudName),
@@ -270,6 +280,35 @@ func (ic *ImportClusterTaskOption) BuildImportClusterNodesStep(task *proto.Task)
 
 	task.Steps[importClusterNodesStep.StepMethod] = importNodesStep
 	task.StepSequence = append(task.StepSequence, importClusterNodesStep.StepMethod)
+}
+
+// DeleteClusterTaskOption 删除集群
+type DeleteClusterTaskOption struct {
+	Cluster           *proto.Cluster
+	DeleteMode        string
+	LastClusterStatus string
+}
+
+// BuildDeleteEKSClusterStep 删除集群
+func (dc *DeleteClusterTaskOption) BuildDeleteEKSClusterStep(task *proto.Task) {
+	deleteStep := cloudprovider.InitTaskStep(deleteEKSClusterStep)
+	deleteStep.Params[cloudprovider.ClusterIDKey.String()] = dc.Cluster.ClusterID
+	deleteStep.Params[cloudprovider.CloudIDKey.String()] = dc.Cluster.Provider
+	deleteStep.Params[cloudprovider.DeleteModeKey.String()] = dc.DeleteMode
+	deleteStep.Params[cloudprovider.LastClusterStatus.String()] = dc.LastClusterStatus
+
+	task.Steps[deleteEKSClusterStep.StepMethod] = deleteStep
+	task.StepSequence = append(task.StepSequence, deleteEKSClusterStep.StepMethod)
+}
+
+// BuildCleanClusterDBInfoStep 清理集群数据
+func (dc *DeleteClusterTaskOption) BuildCleanClusterDBInfoStep(task *proto.Task) {
+	updateStep := cloudprovider.InitTaskStep(cleanClusterDBInfoStep)
+	updateStep.Params[cloudprovider.ClusterIDKey.String()] = dc.Cluster.ClusterID
+	updateStep.Params[cloudprovider.CloudIDKey.String()] = dc.Cluster.Provider
+
+	task.Steps[cleanClusterDBInfoStep.StepMethod] = updateStep
+	task.StepSequence = append(task.StepSequence, cleanClusterDBInfoStep.StepMethod)
 }
 
 // CreateNodeGroupTaskOption 创建节点组
