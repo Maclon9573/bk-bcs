@@ -4,6 +4,7 @@ go 1.20
 
 replace (
 	github.com/TencentBlueKing/iam-go-sdk => github.com/TencentBlueKing/iam-go-sdk v0.1.5
+	github.com/jinzhu/gorm v1.9.16 => ./app/pkg/gorm
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace => go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.17.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc => go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.17.0
 )

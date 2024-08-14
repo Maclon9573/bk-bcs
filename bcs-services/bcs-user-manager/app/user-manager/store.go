@@ -16,6 +16,7 @@ package usermanager
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Tencent/bk-bcs/bcs-common/common/blog"
@@ -33,10 +34,22 @@ import (
 
 // SetupStore setup db
 func SetupStore(conf *config.UserMgrConfig) error {
+	dsn := conf.DSN
+	// 连接SYS数据库, 创建bcs数据库
+	conf.DSN = strings.ReplaceAll(dsn, "/bcs", "/SYS")
 	if err := sqlstore.InitCoreDatabase(conf); err != nil {
 		return fmt.Errorf("error initing database: %s", err.Error())
 	}
+	err := sqlstore.GCoreDB.Exec("CREATE DATABASE IF NOT EXISTS bcs CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci").Error
+	if err != nil {
+		return err
+	}
 
+	// 连接bcs数据库
+	conf.DSN = dsn
+	if err = sqlstore.InitCoreDatabase(conf); err != nil {
+		return fmt.Errorf("error initing database: %s", err.Error())
+	}
 	// Migrate db schemas
 	sqlstore.GCoreDB.AutoMigrate(
 		&models.BcsUser{},
@@ -58,7 +71,7 @@ func SetupStore(conf *config.UserMgrConfig) error {
 	// so we can't use unique index to check user name
 	sqlstore.GCoreDB.Model(&models.BcsUser{}).RemoveIndex("name")
 
-	err := createBootstrapUsers(conf.BootStrapUsers)
+	err = createBootstrapUsers(conf.BootStrapUsers)
 	if err != nil {
 		return err
 	}
