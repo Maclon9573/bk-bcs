@@ -276,7 +276,8 @@ func importVpcID(info *cloudprovider.CloudDependBasicInfo) error {
 
 	// blog.Infof("importVpcID list:%s", toPrettyJsonString(list))
 	if len(list) > 0 {
-		cluster.VpcID = *list[0].ID
+		vpcinfo := strings.Split(*list[0].ID, "/")
+		cluster.VpcID = vpcinfo[len(vpcinfo)-1]
 	}
 
 	return nil
