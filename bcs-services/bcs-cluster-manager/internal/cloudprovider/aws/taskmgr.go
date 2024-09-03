@@ -429,6 +429,9 @@ func (t *Task) BuildCleanNodesInGroupTask(nodes []*proto.Node, group *proto.Node
 	for _, node := range nodes {
 		nodeIPs = append(nodeIPs, node.InnerIP)
 		nodeIDs = append(nodeIDs, node.NodeID)
+		if node.NodeName != "" {
+			nodeNames = append(nodeNames, node.NodeName)
+		}
 	}
 
 	nowStr := time.Now().Format(time.RFC3339)
