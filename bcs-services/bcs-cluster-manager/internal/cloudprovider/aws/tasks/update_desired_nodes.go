@@ -437,7 +437,6 @@ func transInstancesToNode(ctx context.Context, state *cloudprovider.TaskState, s
 		}
 		state.Task.CommonParams[cloudprovider.NodeNamesKey.String()] = strings.Join(successNodeNames, ",")
 		state.Task.CommonParams[cloudprovider.NodeIDsKey.String()] = strings.Join(successNodeNames, ",")
-		state.Task.CommonParams[cloudprovider.SuccessNodeIDsKey.String()] = strings.Join(successNodeNames, ",")
 	}
 
 	return nodeIPs, nil
@@ -495,7 +494,7 @@ func CheckClusterNodesStatusTask(taskID string, stepName string) error {
 	clusterID := step.Params[cloudprovider.ClusterIDKey.String()]
 	nodeGroupID := step.Params[cloudprovider.NodeGroupIDKey.String()]
 	cloudID := step.Params[cloudprovider.CloudIDKey.String()]
-	successNodeNames := strings.Split(state.Task.CommonParams[cloudprovider.SuccessNodeIDsKey.String()], ",")
+	successNodeNames := strings.Split(state.Task.CommonParams[cloudprovider.NodeNamesKey.String()], ",")
 	manual := state.Task.CommonParams[cloudprovider.ManualKey.String()]
 
 	if len(clusterID) == 0 || len(nodeGroupID) == 0 || len(cloudID) == 0 || len(successNodeNames) == 0 {
@@ -518,7 +517,7 @@ func CheckClusterNodesStatusTask(taskID string, stepName string) error {
 
 	// inject taskID
 	ctx := cloudprovider.WithTaskIDForContext(context.Background(), taskID)
-	successInstances, failureInstances, err := checkClusterInstanceStatus(ctx, dependInfo, successNodeNames)
+	successInstances, failureInstances, successIP, err := checkClusterInstanceStatus(ctx, dependInfo, successNodeNames)
 	if err != nil || len(successInstances) == 0 {
 		if manual != common.True {
 			// rollback failed nodes
@@ -546,7 +545,7 @@ func CheckClusterNodesStatusTask(taskID string, stepName string) error {
 	if len(successInstances) > 0 {
 		state.Task.CommonParams[cloudprovider.SuccessClusterNodeIDsKey.String()] = strings.Join(successInstances, ",")
 		// dynamic inject paras
-		state.Task.CommonParams[cloudprovider.DynamicNodeIPListKey.String()] = strings.Join(successInstances, ",")
+		state.Task.CommonParams[cloudprovider.DynamicNodeIPListKey.String()] = strings.Join(successIP, ",")
 	}
 	if len(failureInstances) > 0 {
 		state.Task.CommonParams[cloudprovider.FailedClusterNodeIDsKey.String()] = strings.Join(failureInstances, ",")
@@ -562,10 +561,11 @@ func CheckClusterNodesStatusTask(taskID string, stepName string) error {
 }
 
 func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDependBasicInfo,
-	instanceNames []string) ([]string, []string, error) { //  nolint
+	instanceNames []string) ([]string, []string, []string, error) { //  nolint
 	var (
-		addSuccessNodes = make([]string, 0)
-		addFailureNodes = make([]string, 0)
+		addSuccessNodes   = make([]string, 0)
+		addFailureNodes   = make([]string, 0)
+		addSuccessNodesIP = make([]string, 0)
 	)
 
 	taskID := cloudprovider.GetTaskIDFromContext(ctx)
@@ -594,7 +594,7 @@ func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDe
 			n, ok := nodeNameMap[ins]
 			if ok && utils.CheckNodeIfReady(n) {
 				blog.Infof("checkClusterInstanceStatus[%s] node[%s] ready", taskID, ins)
-				running = append(running, ins)
+				running = append(running, getEksNodeIDFromNode(n))
 			}
 		}
 
@@ -609,17 +609,17 @@ func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDe
 	// other error
 	if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 		blog.Errorf("checkClusterInstanceStatus[%s] check nodes status failed: %v", taskID, err)
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// timeout error
 	if errors.Is(err, context.DeadlineExceeded) {
-		running, failure := make([]string, 0), make([]string, 0)
+		running, failure, successIP := make([]string, 0), make([]string, 0), make([]string, 0)
 
 		nodes, err := k8sOperator.ListClusterNodes(context.Background(), info.Cluster.ClusterID) // nolint
 		if err != nil {
 			blog.Errorf("checkClusterInstanceStatus[%s] cluster[%s] failed: %v", taskID, info.Cluster.ClusterID, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 
 		var nodeNameMap = make(map[string]*corev1.Node, 0)
@@ -630,14 +630,17 @@ func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDe
 		for _, ins := range instanceNames {
 			n, ok := nodeNameMap[ins]
 			if ok && utils.CheckNodeIfReady(n) {
-				running = append(running, ins)
+				running = append(running, getEksNodeIDFromNode(n))
+				ipv4, _ := utils.GetNodeIPAddress(n)
+				successIP = append(successIP, ipv4[0])
 			} else {
-				failure = append(failure, ins)
+				failure = append(failure, getEksNodeIDFromNode(n))
 			}
 		}
 
 		addSuccessNodes = running
 		addFailureNodes = failure
+		addSuccessNodesIP = successIP
 	}
 	blog.Infof("checkClusterInstanceStatus[%s] success[%v] failure[%v]", taskID, addSuccessNodes, addFailureNodes)
 
@@ -649,7 +652,16 @@ func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDe
 		}
 	}
 
-	return addSuccessNodes, addFailureNodes, nil
+	return addSuccessNodes, addFailureNodes, addSuccessNodesIP, nil
+}
+
+func getEksNodeIDFromNode(node *corev1.Node) string {
+	nodeInfo := strings.Split(node.Spec.ProviderID, "/")
+	if len(nodeInfo) == 0 {
+		return ""
+	}
+
+	return nodeInfo[len(nodeInfo)-1]
 }
 
 func returnEksInstancesAndCleanNodes(ctx context.Context, info *cloudprovider.CloudDependBasicInfo,
