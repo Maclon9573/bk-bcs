@@ -436,7 +436,6 @@ func transInstancesToNode(ctx context.Context, state *cloudprovider.TaskState, s
 			successNodeNames[i] = nodes[i].NodeName
 		}
 		state.Task.CommonParams[cloudprovider.NodeNamesKey.String()] = strings.Join(successNodeNames, ",")
-		state.Task.CommonParams[cloudprovider.NodeIDsKey.String()] = strings.Join(successNodeNames, ",")
 	}
 
 	return nodeIPs, nil
@@ -578,6 +577,7 @@ func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDe
 	// wait all nodes to be ready
 	err := loop.LoopDoFunc(timeCtx, func() error {
 		running := make([]string, 0)
+		successIP := make([]string, 0)
 
 		nodes, err := k8sOperator.ListClusterNodes(context.Background(), info.Cluster.ClusterID)
 		if err != nil {
@@ -595,12 +595,15 @@ func checkClusterInstanceStatus(ctx context.Context, info *cloudprovider.CloudDe
 			if ok && utils.CheckNodeIfReady(n) {
 				blog.Infof("checkClusterInstanceStatus[%s] node[%s] ready", taskID, ins)
 				running = append(running, getEksNodeIDFromNode(n))
+				ipv4, _ := utils.GetNodeIPAddress(n)
+				successIP = append(successIP, ipv4[0])
 			}
 		}
 
 		blog.Infof("checkClusterInstanceStatus[%s] ready nodes[%+v]", taskID, running)
 		if len(running) == len(instanceNames) {
 			addSuccessNodes = running
+			addSuccessNodesIP = successIP
 			return loop.EndLoop
 		}
 
